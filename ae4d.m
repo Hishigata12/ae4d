@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 22-May-2018 15:20:17
+% Last Modified by GUIDE v2.5 23-May-2018 13:05:04
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -385,12 +385,21 @@ assignin('base','ax',ax);
 assignin('base','LF',LF);
 assignin('base','PEparam',PE);
 set(handles.LF_chan,'String',num2str(size(LF,2)));
+set(handles.tms,'String',num2str([ax.stime(1) ax.stime(end)]));
+set(handles.tsamp,'String',num2str([1 length(ax.stime)]));
+set(handles.xmm,'String',num2str([ax.x(1) ax.x(end)]));
+set(handles.xsamp,'String',num2str([1 length(ax.x)]));
+set(handles.ymm,'String',num2str([ax.y(1) ax.y(end)]));
+set(handles.ysamp,'String',num2str([1 length(ax.y)]));
+set(handles.zmm,'String',num2str([ax.depth(1) ax.depth(end)]));
+set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
 
 if handles.reset_axes.Value == 1    
 set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
 set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
 set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
 set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+
 end
 
 
@@ -574,6 +583,7 @@ if handles.save_fig.Value == 0
         caxis(aeR)
         end
         title(['t = ' num2str(ax.stime(k))]);
+        text(15,15,['t = ' num2str(ax.stime(k))]);
         handles.axes2.XLabel.String = 'Lateral (mm)';
         handles.axes2.YLabel.String = 'Depth (mm)';
         drawnow
@@ -1306,22 +1316,22 @@ if handles.LF_FFT.Value == 1
     lf = fft(LF);
     x = linspace(0,param.daq.LFdaq.fs_Hz,length(lf));
     if handles.use_ext_fig.Value == 1
-        figure(3)
+        figure(33)
         plot(x,abs(lf))
     else
-        axes(handles.axes2)
+        axes(handles.axes3)
         plot(x,abs(lf))         
     end
-else
-    x = linspace(0,param.daq.HFdaq.duration_ms,length(LF));
-      if handles.use_ext_fig.Value == 1
-        figure(3)
-        plot(x,abs(LF))
-    else
-        axes(handles.axes2)
-        plot(x,abs(LF))
-      end
 end
+x = linspace(0,param.daq.HFdaq.duration_ms,length(LF));
+if handles.use_ext_fig.Value == 1
+    figure(3)
+    plot(x,abs(LF))
+else
+    axes(handles.axes2)
+    plot(x,abs(LF))
+end
+
 if ~isempty(handles.xlims.String)
     xlim(str2num(handles.xlims.String));
 end
@@ -1354,8 +1364,840 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in pushbutton15.
-function pushbutton15_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton15 (see GCBO)
+function ylims_Callback(hObject, eventdata, handles)
+% hObject    handle to ylims (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of ylims as text
+%        str2double(get(hObject,'String')) returns contents of ylims as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function ylims_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to ylims (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+%%%% Add to here at end %%%%%%%%%%% 05/22/18
+
+% --- Executes on button press in overlay.
+function overlay_Callback(hObject, eventdata, handles)
+% hObject    handle to overlay (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% --- Executes on button press in sense_button.
+function sense_button_Callback(hObject, eventdata, handles)
+% hObject    handle to sense_button (see GCBO)
+%datacursormode on
+%dcm = datacursormode(gcf);
+[x,y] = ginput(1);
+if handles.use_chop.Value == 0
+    Xfilt = evalin('base','Xfilt');
+    param = evalin('base','param');
+    ax = evalin('base','ax');
+else
+    Xfilt = evalin('base','X_c');
+    param = evalin('base','param');
+    ax = evalin('base','ax_c');
+end
+dims = size(Xfilt);
+LF = evalin('base','LF');
+lchan = str2double(handles.LF_chan.String);
+LF = LF(:,lchan);
+LF_axis = linspace(0,param.daq.HFdaq.duration_ms,param.daq.LFdaq.pts);
+q.lf = 1:length(LF);
+C = handles.axes1.Children.CData; %Gets image data, Y is dim 1, X is dim 2
+xax = handles.axes1.Children.XData;
+yax = handles.axes1.Children.YData;
+%Get whether from from space varying or time varying plot
+if handles.plotbox1.Value == 2 || handles.plotbox1.Value == 3 || handles.plotbox1.Value == 5
+    tR = str2num(handles.tR.String);
+    if length(tR) <2
+        errordlg('Time input must be a range');
+        return
+    end
+    q.t = 1:dims(4);
+    tInd = q.t(find(ax.stime >= tR(1),1):find(ax.stime >= tR(2),1));
+    lfInd = q.lf(find(LF_axis >= tR(1),1):find(LF_axis >= tR(2),1));
+    Lae = LF(lfInd);
+    if handles.plotbox1.Value == 3
+        yR = str2num(handles.yR.String);
+        if length(yR) > 1
+            yR = yR(1);
+        end
+        sx = find(ax.x>=x,1);
+        sz = find(ax.depth>=y,1);
+        Sae = squeeze(Xfilt(sx,yR,sz,tInd));
+        Sae2 = resample(Sae,length(Lae),dims(4));  %This might need to be interp1
+        %Sae2 = interp1(linspace(0,dims(4),dims(4)),Sae,linspace(0,dims(4),length(Lae)));
+        
+    end
+       if handles.plotbox1.Value == 2
+        zR = str2num(handles.zR.String);
+        if length(zR) > 1
+            zR = zR(1);
+        end
+        sx = find(ax.x>=x,1);
+        sy = find(ax.y>=y,1);
+        Sae = squeeze(Xfilt(sx,sy,zR,tInd));
+        Sae2 = resample(Sae,length(Lae),dims(4));  
+        
+       end
+       if handles.plotbox1.Value == 5
+        xR = str2num(handles.xR.String);
+        if length(xR) > 1
+            xR = xR(1);
+        end
+        sx = find(ax.y>=x,1);
+        sz = find(ax.depth>=y,1);
+        Sae = squeeze(Xfilt(xR,sx,sz,tInd));
+        Sae2 = resample(Sae,length(Lae),dims(4));  
+        
+    end
+end
+
+Lnorm = Lae-min(abs(Lae));
+Lnorm = Lnorm./max(Lnorm);
+Snorm = Sae2 - min(Sae2);
+Snorm = Snorm./max(Snorm);
+T_axis = linspace(tR(1),tR(2),length(Lae));
+R = corrcoef(abs(Sae2),abs(Lae));
+R = R(2);
+
+if handles.use_ext_fig.Value == 1
+    figure(6);
+    hold off;
+    plot(0)
+    scatter(abs(Lae),abs(Sae2));
+    figure(66)
+    hold on
+    plot(T_axis,abs(Lnorm),'k')
+plot(T_axis,Snorm,'r')
+title(['R^2 = ' num2str(R)]);
+hold off
+else
+axes(handles.axes2)
+hold off
+plot(0)
+scatter(abs(Lae),abs(Sae2));
+axes(handles.axes3)
+hold on
+plot(T_axis,abs(Lnorm),'k')
+plot(T_axis,Snorm,'r')
+title(['R^2 = ' num2str(R)]);
+hold off
+end
+
+m = round(mean(Sae2./Lae)*1000,2);
+ave = round(mean(abs(Sae2))*1000,2);
+dev = round(std((Sae2))*1000,2);
+
+set(handles.param1,'String','slope')
+set(handles.param2,'String','mean')
+set(handles.param3,'String','std')
+set(handles.output1,'String',num2str(m));
+set(handles.output2,'String',num2str(ave));
+set(handles.output3,'String',num2str(dev));
+
+
+p = 7;
+
+
+
+% --- Executes on button press in fwhm_button.
+function fwhm_button_Callback(hObject, eventdata, handles)
+[x,y] = ginput(1);
+
+C = handles.axes1.Children.CData; %Gets image data, Y is dim 1, X is dim 2
+xax = handles.axes1.Children.XData;
+yax = handles.axes1.Children.YData;
+
+[~,yloc] = find(yax>y,1);
+S = C(yloc,:);
+if max(S) <= 0
+ydb(1:length(S)) = max(S)-6;
+else 
+    ydb(1:length(S)) = max(S)/2;
+end
+
+if handles.use_ext_fig.Value == 1
+    figure(5);
+    if handles.hold_box.Value == 0
+        hold off
+        plot(0)
+    end
+else
+    axes(handles.axes2);
+    if handles.hold_box.Value == 0
+        hold off
+        plot(0)
+    end
+end
+
+hold on
+plot(xax,S,'k')
+plot(xax,ydb,'r--')
+
+P = round(max(S)*1000,2);
+set(handles.param1,'String','peak')
+set(handles.output1,'String',num2str(P));
+
+if ~isempty(handles.xlims.String)
+    xlim(str2num(handles.xlims.String));
+end
+if ~isempty(handles.ylims.String)
+    ylim(str2num(handles.ylims.String));
+end
+
+
+
+% --- Executes on button press in hold_box.
+function hold_box_Callback(hObject, eventdata, handles)
+% hObject    handle to hold_box (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of hold_box
+
+
+% --- Executes on button press in reset_button.
+function reset_button_Callback(hObject, eventdata, handles)
+% hObject    handle to reset_button (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+axes(handles.axes2)
+hold off
+plot(0);
+axes(handles.axes3)
+hold off
+plot(0)
+axes(handles.axes4)
+hold off
+plot(0)
+
+
+% --- Executes during object creation, after setting all properties.
+function text6_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to text6 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+
+% --- Executes on button press in modify_button.
+function modify_button_Callback(hObject, eventdata, handles)
+if handles.use_chop.Value == 0
+    Xfilt = evalin('base','Xfilt');
+    
+    X = circshift(Xfilt,str2double(handles.tshift.String),4);
+    assignin('base','Xfilt',X)
+else
+    Xfilt = evalin('base','X_c');
+    param = evalin('base','param');
+    ax = evalin('base','ax_c');
+    X = circshift(Xfilt,str2double(handles.tshift.String),4);
+    assignin('base','X_c',X)
+end
+
+
+
+function tshift_Callback(hObject, eventdata, handles)
+% hObject    handle to tshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of tshift as text
+%        str2double(get(hObject,'String')) returns contents of tshift as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function tshift_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to tshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function output1_Callback(hObject, eventdata, handles)
+% hObject    handle to output1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of output1 as text
+%        str2double(get(hObject,'String')) returns contents of output1 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function output1_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to output1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function output2_Callback(hObject, eventdata, handles)
+% hObject    handle to output2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of output2 as text
+%        str2double(get(hObject,'String')) returns contents of output2 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function output2_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to output2 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+function output3_Callback(hObject, eventdata, handles)
+% hObject    handle to output3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of output3 as text
+%        str2double(get(hObject,'String')) returns contents of output3 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function output3_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to output3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+% --- Executes on button press in IJ_butts.
+function IJ_butts_Callback(hObject, eventdata, handles)
+% hObject    handle to IJ_butts (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in AE_4dbox.
+function AE_4dbox_Callback(hObject, eventdata, handles)
+% hObject    handle to AE_4dbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of AE_4dbox
+
+
+% --- Executes on button press in PE_4dbox.
+function PE_4dbox_Callback(hObject, eventdata, handles)
+% hObject    handle to PE_4dbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of PE_4dbox
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -80,12 +80,13 @@ elseif mode == 1
     
     RefPulse = RefPulse/(sum(abs(RefPulse)));
     H = fft(RefPulse);
-a = find(f_us > 50,1);
-s = length(RefPulse);
-H2(1:(a-1)) = 0;
-H2(a:s-(a-1)) = 1;
-H2(s-(a-1):s) = 0;
-H = H.*H2';
+    a = find(f_us > 50,1);
+    s = length(RefPulse);
+    H2(1:(a-1)) = 0;
+    H2(a:s-(a-1)) = 1;
+    H2(s-(a-1):s) = 0;
+    H = H.*H2';
+end
     
         
         
@@ -129,7 +130,7 @@ H = H.*H2';
     end
     delete(b)
     
-elseif mode == 2
+if mode == 2
     
     %%%%%CONVOLUTION FILTERING %%%%%%%%%%%%%
     

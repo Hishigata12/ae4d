@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 23-May-2018 13:05:04
+% Last Modified by GUIDE v2.5 23-May-2018 14:31:25
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -1387,11 +1387,7 @@ end
 
 %%%% Add to here at end %%%%%%%%%%% 05/22/18
 
-% --- Executes on button press in overlay.
-function overlay_Callback(hObject, eventdata, handles)
-% hObject    handle to overlay (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+
 
 % --- Executes on button press in sense_button.
 function sense_button_Callback(hObject, eventdata, handles)
@@ -2163,41 +2159,8 @@ function PE_4dbox_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of PE_4dbox
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+% --- Executes on button press in overlay.
+function overlay_Callback(hObject, eventdata, handles)
+% hObject    handle to overlay (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

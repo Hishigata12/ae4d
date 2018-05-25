@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 23-May-2018 14:31:25
+% Last Modified by GUIDE v2.5 25-May-2018 11:12:27
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -254,17 +254,26 @@ dims = size(Xfilt);
 q.x = 1:dims(1);
 q.y = 1:dims(2);
 q.z = 1:dims(3);
-q.t = 1:dims(4);
+
 xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
+
+if length(size(Xfilt)) == 3
+    Y = squeeze(Xfilt(xInd,yInd,zInd));
+else
+q.t = 1:dims(4);
 tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
 Y = squeeze(Xfilt(xInd,yInd,zInd,tInd));
+end
+
 if length(size(Y)) > 2
     errordlg('Too many dimensions; check ranges')
     return
 end
-Y = medfilt2(Y,[3 3]);
+if handles.med_box.Value == 1
+    Y = medfilt2(Y,[3 3]);
+end
 if handles.use_ext_fig.Value == 0
     axes(handles.axes1)
     if handles.plotbox1.Value == 1
@@ -372,9 +381,10 @@ end
 % --- Executes on button press in load_data.
 function load_data_Callback(hObject, eventdata, handles)
 % hObject    handle to load_data (see GCBO)
-
+[f,  p] = uigetfile(fullfile(pwd,'*4d_data.mat'));
+cd(p)
 fprintf('Loading 4D Dataset...')
-load(uigetfile(pwd,'*4D_data.mat'));
+load([p f]);
 [~, ax] = make_axes(param,size(Xfilt),[1 2],1);
 set(handles.fname,'String',file);
 fprintf('Done\n')
@@ -383,7 +393,7 @@ assignin('base','fpath',[path file]);
 assignin('base','param',param);
 assignin('base','ax',ax);
 assignin('base','LF',LF);
-assignin('base','PEparam',PE);
+%assignin('base','PEparam',PE);
 set(handles.LF_chan,'String',num2str(size(LF,2)));
 set(handles.tms,'String',num2str([ax.stime(1) ax.stime(end)]));
 set(handles.tsamp,'String',num2str([1 length(ax.stime)]));
@@ -391,7 +401,7 @@ set(handles.xmm,'String',num2str([ax.x(1) ax.x(end)]));
 set(handles.xsamp,'String',num2str([1 length(ax.x)]));
 set(handles.ymm,'String',num2str([ax.y(1) ax.y(end)]));
 set(handles.ysamp,'String',num2str([1 length(ax.y)]));
-set(handles.zmm,'String',num2str([ax.depth(1) ax.depth(end)]));
+set(handles.zmm,'String',num2str([ax.depth(1) round(ax.depth(end))]));
 set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
 
 if handles.reset_axes.Value == 1    
@@ -419,6 +429,7 @@ function create_4d_Callback(hObject, eventdata, handles)
 [file, path] = uigetfile(fullfile(pwd,'*_info.dat')); %Gets file location
 param = read_ucsdi_info([path file]); %Gets scan parameters
 [~,~,LF] = read_ucsdi_data([path file],1); %Gets input current waveform
+cd(path);
 if handles.match_box.Value == 1
 [file2, path2] = uigetfile(fullfile(pwd,'*PEParm.mat')); %gets US pulse waveform
 PE = open([path2 file2]);
@@ -432,9 +443,9 @@ ax.LFfreq = linspace(0,param.daq.HFdaq.pulseRepRate_Hz,param.daq.HFdaq.NoBurstTr
 %Builds 4D Matrix***************~~~~~~~~~~~~~~~~**************
 [~, HF1] = full_signal([path file],param,2); %Gets the raw data
 if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
-X = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
+    X = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
 elseif handles.slow_box.Value == 1
-   X = w_slow_filt2(param, HF1,LF,handles.slow_box.Value);
+    X = w_slow_filt2(param, HF1,LF,handles.slow_box.Value);
 end
 if handles.match_box.Value == 1
 X = w_ae_filt2(param,X,US,1); %Filters in fast time; 0 is match, 1 uses cutoffs
@@ -449,23 +460,11 @@ waitbar(0,b,'Enveloping and converting to 4D matrix')
 HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
 for i = 1:param.velmex.XNStep
     for j = 1:param.velmex.YNStep
-       % HF((i-1)*sL+j,:,:) = HF1{i,j}; %converts cells to pseudo 4-D array
-         HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
-        %X2(i,j,:,:) = envelope(squeeze(real(X(i,j,:,:))));
-      % HF_bb(i,j,:,:) = X_bb{i,j};
+         %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
+          HF(i,j,:,:) = X{i,j}; %Converts cell array to double
     end
     waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
 end
-%%%%TESTING THIS OUT
-% for i = 1:param.velmex.XNStep
-%     for j = 1:param.velmex.YNStep
-%         for k = 1:size(HF,4)
-%             HF(i,j,:,k) = envelope(squeeze(HF(i,j,:,k)));
-%         end
-%     end
-%     waitbar(.5+i/param.velmex.XNStep/3,b,'Fast Time Envelope');
-% end
-
 
 %%%%%%%%
 if isempty(num2str(handles.depR.String))
@@ -568,13 +567,18 @@ if handles.save_fig.Value == 0
         figure(1);
     end
     for k = tInd
-        J = medfilt2((squeeze(Xfilt(xInd,yInd,zInd,k)))',[3 3]);
+        if handles.med_box.Value == 1
+        J = medfilt2((squeeze(Xfilt(xInd,yInd,zInd,k)))',[5 5]);
+        else
+            J = squeeze(Xfilt(xInd,yInd,zInd,k))';
+        end
       %  I = insertText(J,[0 200],['t = ' num2str(ax.stime(tInd))],'FontSize',14,...
            % 'BoxColor','green','TextColor','black'); 
        % I = rgb2gray(I);
         if handles.use_ext_fig.Value == 0
         imagesc(ax.x(xInd),ax.depth(zInd),J)
-        colormap('hot')
+        h = hotcoldDB;
+        colormap(h)
         else 
             imshow(J)
             colormap(gca,'hot')
@@ -834,10 +838,23 @@ function chop_Callback(hObject, eventdata, handles)
 % hObject    handle to chop (see GCBO)
 Xfilt = evalin('base','Xfilt');
 param = evalin('base','param');
+clear X_c
 xR = str2num(handles.xR.String);
+if length(xR) == 1
+    xR(2) = xR(1);
+end
 yR = str2num(handles.yR.String);
+if length(yR) == 1
+    yR(2) = yR(1);
+end
 zR = str2num(handles.zR.String);
+if length(zR) == 1
+    zR(2) = zR(1);
+end
 tR = str2num(handles.tR.String);
+if length(tR) == 1
+    tR(2) = tR(1);
+end
 aeR = str2num(handles.aeR.String);
 dims = size(Xfilt);
 [~,ax] = make_axes(param,dims,[1 2],1);
@@ -850,8 +867,14 @@ yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
 X = Xfilt(xInd,yInd,zInd,tInd);
+if length(tInd) == 1
+    X = permute(X,[1 2 3 4]);
+end
 %[~,ax] = make_axes(param,size(X));
 dims = size(X);
+if length(dims) < 4
+    dims = [dims(1) dims(2) dims(3) 1];
+end
 
 ax.depth = linspace(zR(1),zR(2),dims(3));
 ax.stime = linspace(tR(1),tR(2),dims(4));
@@ -1226,8 +1249,9 @@ else
     HF = evalin('base','X_c');
     ax = evalin('base','ax_c');
 end
+U = length(ax.depth);
 if isempty(num2str(handles.depR.String))
-    qq = [10 60];
+    qq = [ax.depth(floor(U./5)) ax.depth(floor(U.*0.9))];
 else
     qq = str2num(handles.depR.String);
 end
@@ -1312,6 +1336,7 @@ function LF_butt_Callback(hObject, eventdata, handles)
 param = evalin('base','param');
 LF = evalin('base','LF');
 LF = LF(:,str2double(handles.LF_chan.String));
+LF = LF/str2double(handles.lfgain.String)*1000;
 if handles.LF_FFT.Value == 1
     lf = fft(LF);
     x = linspace(0,param.daq.LFdaq.fs_Hz,length(lf));
@@ -1320,8 +1345,15 @@ if handles.LF_FFT.Value == 1
         plot(x,abs(lf))
     else
         axes(handles.axes3)
-        plot(x,abs(lf))         
+        plot(x,abs(lf))
     end
+    if ~isempty(handles.xlims3.String)
+        xlim(str2num(handles.xlims3.String));
+    end
+    if ~isempty(handles.ylims3.String)
+        ylim(str2num(handles.ylims3.String));
+    end
+    
 end
 x = linspace(0,param.daq.HFdaq.duration_ms,length(LF));
 if handles.use_ext_fig.Value == 1
@@ -1331,7 +1363,8 @@ else
     axes(handles.axes2)
     plot(x,abs(LF))
 end
-
+ylabel('mA');
+xlabel('ms');
 if ~isempty(handles.xlims.String)
     xlim(str2num(handles.xlims.String));
 end
@@ -1414,6 +1447,21 @@ C = handles.axes1.Children.CData; %Gets image data, Y is dim 1, X is dim 2
 xax = handles.axes1.Children.XData;
 yax = handles.axes1.Children.YData;
 %Get whether from from space varying or time varying plot
+if handles.plotbox1.Value == 1 || handles.plotbox1.Value == 4 || handles.plotbox1.Value == 6
+    yloc = find(yax >= y,1);
+    S = C(yloc,:);
+    tR = str2num(handles.tR.String);
+    if length(tR) <2
+        errordlg('Time input must be a range');
+        return
+    end
+    q.t = 1:dims(4);
+    tInd = q.t(find(ax.stime >= tR(1),1):find(ax.stime >= tR(2),1));
+    lfInd = q.lf(find(LF_axis >= tR(1),1):find(LF_axis >= tR(2),1));
+    Lae = LF(lfInd);
+    Sae2 = resample(S,length(Lae),length(S));
+end
+
 if handles.plotbox1.Value == 2 || handles.plotbox1.Value == 3 || handles.plotbox1.Value == 5
     tR = str2num(handles.tR.String);
     if length(tR) <2
@@ -1432,11 +1480,11 @@ if handles.plotbox1.Value == 2 || handles.plotbox1.Value == 3 || handles.plotbox
         sx = find(ax.x>=x,1);
         sz = find(ax.depth>=y,1);
         Sae = squeeze(Xfilt(sx,yR,sz,tInd));
-        Sae2 = resample(Sae,length(Lae),dims(4));  %This might need to be interp1
+        Sae2 = resample(Sae,length(Lae),length(Sae));  %This might need to be interp1
         %Sae2 = interp1(linspace(0,dims(4),dims(4)),Sae,linspace(0,dims(4),length(Lae)));
         
     end
-       if handles.plotbox1.Value == 2
+    if handles.plotbox1.Value == 2
         zR = str2num(handles.zR.String);
         if length(zR) > 1
             zR = zR(1);
@@ -1444,10 +1492,10 @@ if handles.plotbox1.Value == 2 || handles.plotbox1.Value == 3 || handles.plotbox
         sx = find(ax.x>=x,1);
         sy = find(ax.y>=y,1);
         Sae = squeeze(Xfilt(sx,sy,zR,tInd));
-        Sae2 = resample(Sae,length(Lae),dims(4));  
+        Sae2 = resample(Sae,length(Lae),length(S));
         
-       end
-       if handles.plotbox1.Value == 5
+    end
+    if handles.plotbox1.Value == 5
         xR = str2num(handles.xR.String);
         if length(xR) > 1
             xR = xR(1);
@@ -1455,46 +1503,67 @@ if handles.plotbox1.Value == 2 || handles.plotbox1.Value == 3 || handles.plotbox
         sx = find(ax.y>=x,1);
         sz = find(ax.depth>=y,1);
         Sae = squeeze(Xfilt(xR,sx,sz,tInd));
-        Sae2 = resample(Sae,length(Lae),dims(4));  
-        
+        Sae2 = resample(Sae,length(Lae),length(S));
     end
 end
 
-Lnorm = Lae-min(abs(Lae));
+Lnorm = Lae-min(Lae);
 Lnorm = Lnorm./max(Lnorm);
 Snorm = Sae2 - min(Sae2);
 Snorm = Snorm./max(Snorm);
 T_axis = linspace(tR(1),tR(2),length(Lae));
-R = corrcoef(abs(Sae2),abs(Lae));
+
+Sae2 = Sae2/str2double(handles.hfgain.String)*1000000;
+Lae = Lae/str2double(handles.lfgain.String)*1000;
+
+%R = corrcoef(abs(Sae2),abs(Lae));
+R = corrcoef(Sae2,Lae);
 R = R(2);
 
 if handles.use_ext_fig.Value == 1
     figure(6);
     hold off;
     plot(0)
-    scatter(abs(Lae),abs(Sae2));
+   % scatter(abs(Lae),abs(Sae2));
+    scatter(Lae,Sae2,13,'k','filled')
+    ylabel('\muV')
+    xlabel('mA')
     figure(66)
     hold on
-    plot(T_axis,abs(Lnorm),'k')
-plot(T_axis,Snorm,'r')
-title(['R^2 = ' num2str(R)]);
-hold off
+    plot(T_axis,Lnorm,'k')
+    plot(T_axis,Snorm,'r')
+    title(['R^2 = ' num2str(R)]);
+    hold off    
+    xlabel('ms')
 else
-axes(handles.axes2)
-hold off
-plot(0)
-scatter(abs(Lae),abs(Sae2));
-axes(handles.axes3)
-hold on
-plot(T_axis,abs(Lnorm),'k')
-plot(T_axis,Snorm,'r')
-title(['R^2 = ' num2str(R)]);
-hold off
+    axes(handles.axes2)
+    hold off
+    plot(0)
+   % scatter(abs(Lae),abs(Sae2));
+     scatter(Lae,Sae2,13,'k','filled')
+     ylabel('\muV')
+    xlabel('mA')
+    axes(handles.axes3)
+    hold on
+    plot(T_axis,Lnorm,'k')
+    plot(T_axis,Snorm,'r')
+    title(['R^2 = ' num2str(R)]);
+      xlabel('ms')
+    hold off
 end
 
-m = round(mean(Sae2./Lae)*1000,2);
-ave = round(mean(abs(Sae2))*1000,2);
-dev = round(std((Sae2))*1000,2);
+%m = round(mean(abs(Sae2)./abs(Lae)),2);
+m = round(mean(Sae2./Lae),2);
+m2 = (max(abs(Sae2))-min(abs(Sae2)))/(max(abs(Lae))-min(abs(Lae)));
+ave = round(mean(abs(Sae2)),2);
+dev = round(std((Sae2)),2);
+if ~isempty(handles.output5.String)
+    pres = str2num(handles.output5.String);
+else
+    pres = 1;   
+end
+%m3 = m/pres;
+m3 = m2/pres;
 
 set(handles.param1,'String','slope')
 set(handles.param2,'String','mean')
@@ -1502,6 +1571,11 @@ set(handles.param3,'String','std')
 set(handles.output1,'String',num2str(m));
 set(handles.output2,'String',num2str(ave));
 set(handles.output3,'String',num2str(dev));
+set(handles.output6,'String',num2str(m2));
+set(handles.param4,'String','truslp')
+set(handles.output4,'String',num2str(m3));
+set(handles.param6,'String','slope2')
+set(handles.param5,'String','prsr');
 
 
 p = 7;
@@ -1518,11 +1592,7 @@ yax = handles.axes1.Children.YData;
 
 [~,yloc] = find(yax>y,1);
 S = C(yloc,:);
-if max(S) <= 0
-ydb(1:length(S)) = max(S)-6;
-else 
-    ydb(1:length(S)) = max(S)/2;
-end
+
 
 if handles.use_ext_fig.Value == 1
     figure(5);
@@ -1538,13 +1608,36 @@ else
     end
 end
 
+if max(S) <= 0
+ydb(1:length(S)) = max(S)-6;
+ylabel('dB')
+else 
+     S = S/str2double(handles.hfgain.String)*1000000;
+    ydb(1:length(S)) = max(S)/2;
+    ylabel('\muV');
+end
+
 hold on
 plot(xax,S,'k')
 plot(xax,ydb,'r--')
+xlabel('mm');
 
-P = round(max(S)*1000,2);
+P = round(max(S),2);
+f1 = find(S>=ydb(1),1);
+f2 = find(S(f1:end) <= ydb(1),1) +f1;
+cut1 = round(xax(f1),3);
+cut2 = round(xax(f2),3);
+% S2 = fliplr(S);
+% cutt = (find(S2>=ydb,1)); %Finish this later
+% cut2 = round(xax(length(xax)-cutt));
+
+
 set(handles.param1,'String','peak')
 set(handles.output1,'String',num2str(P));
+set(handles.param2,'String','minX')
+set(handles.param3,'String','maxX')
+set(handles.output2,'String',num2str(cut1));
+set(handles.output3,'String',num2str(cut2));
 
 if ~isempty(handles.xlims.String)
     xlim(str2num(handles.xlims.String));
@@ -1553,6 +1646,60 @@ if ~isempty(handles.ylims.String)
     ylim(str2num(handles.ylims.String));
 end
 
+if handles.use_ext_fig.Value == 1
+    figure(55);
+    if handles.hold_box.Value == 0
+        hold off
+        plot(0)
+    end
+else
+    axes(handles.axes3);
+    if handles.hold_box.Value == 0
+        hold off
+        plot(0)
+    end
+end
+
+hold on
+
+xloc = find(xax>x,1);
+S = C(:,xloc);
+if max(S) <= 0
+    ydb(1:length(S)) = max(S)-6;
+    ylabel('dB')
+else
+    S = S/str2double(handles.hfgain.String)*1000000;
+    ydb(1:length(S)) = max(S)/2;
+    ylabel('\muV')
+end
+
+plot(yax,S,'k')
+plot(yax,ydb,'r--')
+xlabel('mm')
+
+
+f1 = find(S>=ydb(1),1);
+f2 = find(S(f1:end) <= ydb(1),1) +f1;
+cut1 = round(yax(f1),3);
+cut2 = round(yax(f2),3);
+
+% cut1 = round(yax(find(S>=ydb,1)),3);
+% S2 = fliplr(S);
+% cutt = (find(S2>=ydb,1)); %Finish this later
+% cut2 = round(yax(length(yax)-cutt));
+
+set(handles.param5,'String','minZ')
+set(handles.param6,'String','maxZ')
+set(handles.output5,'String',num2str(cut1));
+set(handles.output6,'String',num2str(cut2));
+
+
+if ~isempty(handles.xlims3.String)
+    xlim(str2num(handles.xlims3.String));
+end
+if ~isempty(handles.ylims3.String)
+    ylim(str2num(handles.ylims3.String));
+end
 
 
 % --- Executes on button press in hold_box.
@@ -1590,15 +1737,28 @@ function text6_CreateFcn(hObject, eventdata, handles)
 % --- Executes on button press in modify_button.
 function modify_button_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value == 0
-    Xfilt = evalin('base','Xfilt');
-    
-    X = circshift(Xfilt,str2double(handles.tshift.String),4);
-    assignin('base','Xfilt',X)
-else
-    Xfilt = evalin('base','X_c');
+    X = evalin('base','Xfilt');
     param = evalin('base','param');
-    ax = evalin('base','ax_c');
-    X = circshift(Xfilt,str2double(handles.tshift.String),4);
+    X = circshift(X,str2double(handles.tshift.String),4);
+    if str2double(handles.baseb.String) > 0
+        X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
+    end
+    if handles.invertbox.Value == 1
+        X = X*(-1);
+    end
+    assignin('base','Xfilt',X)
+    
+else
+    X = evalin('base','X_c');
+    param = evalin('base','param');
+    X = circshift(X,str2double(handles.tshift.String),4);
+    if str2double(handles.baseb.String) > 0
+        X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
+        %X = baseband_russ3(X,param.daq.HFdaq.fs_MHz,str2double(handles.baseb.String));
+    end
+    if handles.invertbox.Value == 1
+        X = X*(-1);
+    end 
     assignin('base','X_c',X)
 end
 
@@ -1692,449 +1852,6 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
     set(hObject,'BackgroundColor','white');
 end
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 % --- Executes on button press in IJ_butts.
 function IJ_butts_Callback(hObject, eventdata, handles)
 % hObject    handle to IJ_butts (see GCBO)
@@ -2164,3 +1881,939 @@ function overlay_Callback(hObject, eventdata, handles)
 % hObject    handle to overlay (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+
+function ylims3_Callback(hObject, eventdata, handles)
+% hObject    handle to ylims3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of ylims3 as text
+%        str2double(get(hObject,'String')) returns contents of ylims3 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function ylims3_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to ylims3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function xlims3_Callback(hObject, eventdata, handles)
+% hObject    handle to xlims3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of xlims3 as text
+%        str2double(get(hObject,'String')) returns contents of xlims3 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function xlims3_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to xlims3 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function ylims4_Callback(hObject, eventdata, handles)
+% hObject    handle to ylims4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of ylims4 as text
+%        str2double(get(hObject,'String')) returns contents of ylims4 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function ylims4_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to ylims4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function xlims4_Callback(hObject, eventdata, handles)
+% hObject    handle to xlims4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of xlims4 as text
+%        str2double(get(hObject,'String')) returns contents of xlims4 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function xlims4_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to xlims4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function output6_Callback(hObject, eventdata, handles)
+% hObject    handle to output6 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of output6 as text
+%        str2double(get(hObject,'String')) returns contents of output6 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function output6_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to output6 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function output5_Callback(hObject, eventdata, handles)
+% hObject    handle to output5 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of output5 as text
+%        str2double(get(hObject,'String')) returns contents of output5 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function output5_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to output5 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function output4_Callback(hObject, eventdata, handles)
+% hObject    handle to output4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of output4 as text
+%        str2double(get(hObject,'String')) returns contents of output4 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function output4_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to output4 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function baseb_Callback(hObject, eventdata, handles)
+% hObject    handle to baseb (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of baseb as text
+%        str2double(get(hObject,'String')) returns contents of baseb as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function baseb_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to baseb (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function invert_Callback(hObject, eventdata, handles)
+% hObject    handle to invert (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of invert as text
+%        str2double(get(hObject,'String')) returns contents of invert as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function invert_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to invert (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in noise_button.
+function noise_button_Callback(hObject, eventdata, handles)
+param = evalin('base','param');
+if handles.use_chop.Value == 1
+    Xfilt = evalin('base','X_c');
+    ax = evalin('base','ax_c');
+else
+    Xfilt = evalin('base','Xfilt');
+    ax = evalin('base','ax');
+end
+Xfilt = Xfilt.*1000000./str2double(handles.hfgain.String);
+dims = size(Xfilt);
+ave = mean(mean(mean(mean(abs(Xfilt)))));
+b = waitbar(0,'Calculating Noise');
+for i = 1:dims(2)
+    for j = 1:dims(3)
+        for k = dims(1)
+            dev1(i,j,k) = std(Xfilt(k,i,j,:));
+        end
+        waitbar((1-i/dims(2))+j/dims(3),b,'Calculating Noise')
+    end
+end
+delete(b)
+dev = mean(mean(mean(dev1)));
+if isempty(handles.output5.String)
+    pres = 1;
+else
+    pres = str2double(handles.output5.String);
+end
+slope = str2double(handles.output4.String);
+LF = evalin('base','LF');
+thresh = (2*dev+ave); %/pres
+detect = thresh/slope; %maybe multi by pres
+set(handles.param1,'String','mean')
+set(handles.param2,'String','std')
+set(handles.param3,'String','thresh')
+set(handles.output1,'String',num2str(ave));
+set(handles.output2,'String',num2str(dev));
+set(handles.output3,'String',num2str(thresh));
+set(handles.param4,'String','sense')
+set(handles.param5,'String','pres')
+set(handles.param6,'String','detect')
+set(handles.output6,'String',num2str(detect));
+
+
+% --- Executes on button press in onemhz.
+function onemhz_Callback(hObject, eventdata, handles)
+% hObject    handle to onemhz (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of onemhz
+
+
+
+function lfgain_Callback(hObject, eventdata, handles)
+% hObject    handle to lfgain (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of lfgain as text
+%        str2double(get(hObject,'String')) returns contents of lfgain as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function lfgain_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to lfgain (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function hfgain_Callback(hObject, eventdata, handles)
+% hObject    handle to hfgain (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of hfgain as text
+%        str2double(get(hObject,'String')) returns contents of hfgain as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function hfgain_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to hfgain (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in med_box.
+function med_box_Callback(hObject, eventdata, handles)
+% hObject    handle to med_box (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of med_box
+
+
+
+function reals_Callback(hObject, eventdata, handles)
+% hObject    handle to reals (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of reals as text
+%        str2double(get(hObject,'String')) returns contents of reals as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function reals_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to reals (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in invertbox.
+function invertbox_Callback(hObject, eventdata, handles)
+% hObject    handle to invertbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of invertbox
+
+
+% --- Executes on button press in realbox.
+function realbox_Callback(hObject, eventdata, handles)
+% hObject    handle to realbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of realbox
+
+
+% --- Executes on button press in pushbutton24.
+function pushbutton24_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton24 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in create_pe.
+function create_pe_Callback(hObject, eventdata, handles)
+% hObject    handle to create_pe (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+
+if handles.onemhz.Value == 1
+[file, path] = uigetfile(fullfile(pwd,'*_info.dat')); %Gets file location
+param = read_ucsdi_info([path file]); %Gets scan parameters
+cd(path);
+
+ax.HFfreq = linspace(0,param.daq.HFdaq.fs_MHz,param.daq.HFdaq.pts); %Creates fast frequency axis
+ax.LFfreq = linspace(0,param.daq.HFdaq.pulseRepRate_Hz,param.daq.HFdaq.NoBurstTriggers); %creates slow frequency axis
+
+[~, HF1] = full_signal([path file],param,1); %Gets the raw data
+
+X = w_ae_filt2(param,HF1,1,0,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs  
+
+
+%%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
+b = waitbar(0,'Matrix Conversion');
+waitbar(0,b,'Enveloping and converting to 4D matrix')
+HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
+for i = 1:param.velmex.XNStep
+    for j = 1:param.velmex.YNStep
+         %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
+          HF(i,j,:,:) = X{i,j}; %Converts cell array to double
+    end
+    waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
+end
+delete(b)
+PEdata = HF(:,:,:,1:2);
+[~, ax] = make_axes(param,size(HF));
+ax.pe = linspace(0,1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz/2,size(PEdata,3));
+if handles.keep.Value == 1
+    assignin('base','PEdata',PEdata);
+    assignin('base','fpath',[path file]);
+    assignin('base','param',param);
+    assignin('base','ax',ax);
+    set(handles.fname,'String',[path file]);
+end
+if handles.save_4d.Value == 1
+    clearvars -except file path param ax PEdata
+    f = file(1:end-4);
+    f2 = [f '_4d_PE.mat'];
+    fprintf('Saving 4D file...')
+    save(f2);
+    fprintf('Done\n')
+end
+
+else
+    [f, p]  = uigetfile(fullfile(pwd,'*_PEParm.mat'));
+load([p f]);
+cd(p)
+    [PEbsqFile, p] = uigetfile(fullfile(pwd,'*.bsq'));
+    fid = fopen(PEbsqFile,'rb');
+if fid > 0
+    
+    n = fread(fid,1,'int32');
+    dsize = fread(fid,[1,n],'int32');
+    nOffset = (n+1)*4;
+    fclose(fid);
+    
+    PEImage = multibandread(PEbsqFile,[dsize(1:2),prod(dsize(3:end))],...
+        'single',nOffset,'bsq','ieee-le',{'Band','Direct',bScanParm.nScanPt});
+   
+   
+    
+x = 3;
+end
+end
+
+
+% --- Executes on button press in loadpe.
+function loadpe_Callback(hObject, eventdata, handles)
+[f,  p] = uigetfile(fullfile(pwd,'*4d_PE.mat'));
+cd(p)
+fprintf('Loading 4D Dataset...')
+load([p f]);
+%[~, ax] = make_axes(param,size(Xfilt),[1 2],1);
+set(handles.fname,'String',file);
+fprintf('Done\n')
+assignin('base','PEdata',PEdata);
+assignin('base','param',param);
+assignin('base','ax',ax);
+%assignin('base','PEparam',PE);
+%set(handles.LF_chan,'String',num2str(size(LF,2)));
+set(handles.tms,'String',num2str([ax.stime(1) ax.stime(end)]));
+set(handles.tsamp,'String',num2str([1 length(ax.stime)]));
+set(handles.xmm,'String',num2str([ax.x(1) ax.x(end)]));
+set(handles.xsamp,'String',num2str([1 length(ax.x)]));
+set(handles.ymm,'String',num2str([ax.y(1) ax.y(end)]));
+set(handles.ysamp,'String',num2str([1 length(ax.y)]));
+set(handles.zmm,'String',num2str([ax.pe(1) round(ax.pe(end))]));
+set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
+
+if handles.reset_axes.Value == 1    
+set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
+set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
+set(handles.zR,'String', num2str([ax.pe(1) floor(ax.pe(end))]));
+set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+
+end
+
+
+% --- Executes on button press in usepe.
+function usepe_Callback(hObject, eventdata, handles)
+X = evalin('base','PEdata');
+assignin('base','Xfilt',X);
+
+
+% --- Executes on button press in realize.
+function realize_Callback(hObject, eventdata, handles)
+if handles.use_chop.Value == 0
+    X = evalin('base','Xfilt');
+    param = evalin('base','param');   
+    X = real(X);
+    %Xcom = imag(X);
+    % assignin('base','X_complex',Xcom)
+    assignin('base','Xfilt',X)
+else
+    X = evalin('base','Xfilt');
+    param = evalin('base','param');
+    X = real(X);
+    %Xcom = imag(X);
+    %assignin('base','X_complex',Xcom)
+    assignin('base','X_c',X)
+end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -63,6 +63,25 @@ if mode == 0
     h = padarray(wq,size(HF{1},1)-100,'post').*hd';
     H = fft(h,size(HF{1},1));
     
+        
+elseif mode == 1
+    if FsUS > FsAE
+        RefPulse       = resample(us,FsAE,FsUS);
+   
+    else
+        RefPulse = resample(us,FsUS,FsAE);
+    end
+    
+    RefPulse = RefPulse/(sum(abs(RefPulse)));
+    H = fft(RefPulse);
+    H = interp1(linspace(0,FsAE,length(RefPulse)),H',linspace(0,FsAE,Lae));
+    a = find(freqae > 0.4,1);
+    s = length(H);
+    H2(1:(a-1)) = 0;
+    H2(a:s-(a-1)) = 1;
+    H2(s-(a-1):s) = 0;
+    H = H.*H2;
+end 
     
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
@@ -74,6 +93,9 @@ if mode == 0
     
    % fprintf('Filtering 4D data\n')
     b = waitbar(0,'Filtering 4D data');
+    if size(H,2) > size(H,1)
+        H = H';
+    end
     
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
@@ -104,7 +126,7 @@ if mode == 0
     
     
     %%%%% CONVOLUTION FILTERING %%%%%
-else
+if mode == 2
     
     if FsUS~=FsAE
         RefPulse       = resample(us,FsAE,FsUS);

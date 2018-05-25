@@ -4,7 +4,7 @@ function [xdemod2, X_bb1, t, f_ax, X_bb2, X_bb3] = baseband(X,fc,fs)
 %fs is sampling frequency
 %x_bb is basebanded time signal
 %X_bb is basebanded freq signal
-t = linspace(0,size(X,1)/fs,size(X,1));
+%t = linspace(0,size(X,1)/fs,size(X,1));
 
 %t = (1:length(X)).'/fs;
 %x_bb = X*sqrt(2).*exp(-1i*2*pi*fc*t);% Trying complex demod
@@ -34,10 +34,19 @@ f_ax = fs/2*linspace(0,1,NFFT/2);
 % f_ax = f;
 
 %% For t > BB
-xmod = sqrt(2).*exp(1i*2*pi*fc*t);
-xdemod2 = X.*xmod';
-Xmod = fft(xmod);
-X_bb1 = fft(xdemod2);
+dims = size(X);
+t = (1:dims(3)) /fs;
+for i = 1:dims(1)
+    for j = 1:dims(2)
+        for k = 1:dims(4)
+            xdemod2(i,j,:,k) = squeeze(X(i,j,:,k)).*sqrt(2).*exp(1i*2*pi*fc*t)';
+        end
+    end
+end
+
+%xdemod2 = X.*xmod';
+% Xmod = fft(xmod);
+% X_bb1 = fft(xdemod2);
 
 %% for BB > k> LPF > t using sinusoidal demod
 % xmod = cos(2*pi*t*fc);

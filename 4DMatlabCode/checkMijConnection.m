@@ -19,4 +19,12 @@ function location = checkMijConnection()
         Miji(false);
         fprintf('ImageJ Connected\n');
     end
+    
+    %Closes all windows without saving
+    while(ij.WindowManager.getCurrentImage() ~= [])
+        IMG = ij.WindowManager.getCurrentImage();
+        IMG.changes = false; 
+        IMG.close();
+    end
+    
 end

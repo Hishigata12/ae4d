@@ -70,24 +70,24 @@ if mode == 0
     H = fft(h);
     Hs = H(1:end/2);
     
-elseif mode == 1
-    if Fs > Fs_us
-        RefPulse       = resample(LF,Fs_us,Fs);
-   
-    elseif Fs < Fs_us
-        RefPulse = resample(LF,Fs,Fs_us);
-    end
-    
-    RefPulse = RefPulse/(sum(abs(RefPulse)));
-    H = fft(RefPulse);
-    a = find(f_us > 50,1);
-    s = length(RefPulse);
-    H2(1:(a-1)) = 0;
-    H2(a:s-(a-1)) = 1;
-    H2(s-(a-1):s) = 0;
-    H = H.*H2';
-end
-    
+% elseif mode == 1
+%     if Fs > Fs_us
+%         RefPulse       = resample(LF,Fs_us,Fs);
+%    
+%     elseif Fs < Fs_us
+%         RefPulse = resample(LF,Fs,Fs_us);
+%     end
+%     
+%     RefPulse = RefPulse/(sum(abs(RefPulse)));
+%     H = fft(RefPulse);
+%     a = find(f_us > 50,1);
+%     s = length(RefPulse);
+%     H2(1:(a-1)) = 0;
+%     H2(a:s-(a-1)) = 1;
+%     H2(s-(a-1):s) = 0;
+%     H = H.*H2';
+% end
+%     
         
         
     for i = 1:HF_xy(1)
@@ -130,7 +130,7 @@ end
     end
     delete(b)
     
-if mode == 2
+elseif mode == 1
     
     %%%%%CONVOLUTION FILTERING %%%%%%%%%%%%%
     
@@ -139,6 +139,7 @@ if mode == 2
     end
     
     RefPulse = RefPulse/(sum(abs(RefPulse)));
+  %  RefPulse = flipud(conj(RefPulse));
     
 %    fprintf('Filtering 4D data\n')
     b = waitbar(0,'Filtering 4D data');
@@ -166,5 +167,5 @@ end
 %     figure;plot(real(y{13,1}(i,:)))
 % end
 
-x = 2;
+
 

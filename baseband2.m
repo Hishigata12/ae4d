@@ -38,8 +38,12 @@ dims = size(X);
 t = (1:dims(3)) /fs;
 for i = 1:dims(1)
     for j = 1:dims(2)
-        for k = 1:dims(4)
-            xdemod2(i,j,:,k) = squeeze(X(i,j,:,k)).*sqrt(2).*exp(1i*2*pi*fc*t)';
+        if length(dims) == 4
+            for k = 1:dims(4)
+                xdemod2(i,j,:,k) = squeeze(X(i,j,:,k)).*sqrt(2).*exp(-1i*2*pi*fc*t)';
+            end
+        else
+            xdemod2(i,j,:) = squeeze(X(i,j,:)).*sqrt(2).*exp(-1i*2*pi*fc*t)';
         end
     end
 end

@@ -64,24 +64,25 @@ if mode == 0
     H = fft(h,size(HF{1},1));
     
         
-elseif mode == 1
-    if FsUS > FsAE
-        RefPulse       = resample(us,FsAE,FsUS);
-   
-    else
-        RefPulse = resample(us,FsUS,FsAE);
-    end
-    
-    RefPulse = RefPulse/(sum(abs(RefPulse)));
-    H = fft(RefPulse);
-    H = interp1(linspace(0,FsAE,length(RefPulse)),H',linspace(0,FsAE,Lae));
-    a = find(freqae > 0.4,1);
-    s = length(H);
-    H2(1:(a-1)) = 0;
-    H2(a:s-(a-1)) = 1;
-    H2(s-(a-1):s) = 0;
-    H = H.*H2;
-end 
+% elseif mode == 1
+%     if FsUS > FsAE
+%         RefPulse       = resample(us,FsAE,FsUS);
+%    
+%     else
+%         RefPulse = resample(us,FsUS,FsAE);
+%     end
+%     
+%     RefPulse = RefPulse/(sum(abs(RefPulse)));
+%     RefPulse = flipud(conj(RefPulse));
+%     H = fft(RefPulse);
+%     H = interp1(linspace(0,FsAE,length(RefPulse)),H',linspace(0,FsAE,Lae));
+%     a = find(freqae > 0.4,1);
+%     s = length(H);
+%     H2(1:(a-1)) = 0;
+%     H2(a:s-(a-1)) = 1;
+%     H2(s-(a-1):s) = 0;
+%     H = H.*H2;
+% end 
     
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
@@ -126,12 +127,15 @@ end
     
     
     %%%%% CONVOLUTION FILTERING %%%%%
-if mode == 2
+elseif mode == 1
     
     if FsUS~=FsAE
         RefPulse       = resample(us,FsAE,FsUS);
     end
     RefPulse = RefPulse/(sum(abs(RefPulse)));
+    RefPulse = flipud(conj(RefPulse));
+    hwin = hamming(length(RefPulse));
+    RefPulse = hwin.*RefPulse;
     
     %fprintf('Filtering 4D data\n')
     b = waitbar(0,'Filtering 4D data');

@@ -42,6 +42,7 @@ ypr = Y - midpoint -1;
 ct = cos(Theta);
 st = sin(Theta);
 
+
 for i = 1:m
     proj = IM2(:,i); % gives filtered line of projection data at given theta
     taxis = (1:size(IM2,1)) - midpoint;

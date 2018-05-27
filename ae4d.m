@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 25-May-2018 11:12:27
+% Last Modified by GUIDE v2.5 27-May-2018 11:34:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -495,7 +495,7 @@ if handles.save_4d.Value == 1
     f = file(1:end-4);
     f2 = [f '_4d_data.mat'];
     fprintf('Saving 4D file...')
-    save(f2);
+    eval([ 'save ' f2 ' -v7.3']);
     fprintf('Done\n')
 end
 
@@ -542,63 +542,137 @@ else
     ax = evalin('base','ax_c');
 end
 xR = str2num(handles.xR.String);
+if length(xR) == 1
+    xR = [xR xR];
+end
 yR = str2num(handles.yR.String);
 if length(yR) == 1
     yR = [yR yR];
 end
 zR = str2num(handles.zR.String);
+if length(zR) == 1
+    zR = [zR zR];
+end
 tR = str2num(handles.tR.String);
+if length(tR) == 1
+    tR = [tR tR];
+end
 aeR = str2num(handles.aeR.String);
 dims = size(Xfilt);
 %[~,ax] = make_axes(param,dims,[1 2],1);
 q.x = 1:dims(1);
 q.y = 1:dims(2);
 q.z = 1:dims(3);
-q.t = 1:dims(4);
+if length(dims) == 4
+    q.t = 1:dims(4);
+else
+    q.t = 1;
+end
 xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
 
-if handles.save_fig.Value == 0
-    if handles.use_ext_fig.Value == 0
+if handles.use_ext_fig.Value == 0
     axes(handles.axes2)
-    else 
-        figure(1);
+else
+    figure(1);
+end
+if handles.plotbox2.Value == 1
+    if handles.save_fig.Value == 0
+        for k = tInd %Mod loop
+            if handles.med_box.Value == 1
+                J = medfilt2((squeeze(Xfilt(xInd,yInd,zInd,k)))',[5 5]);
+            else
+                J = squeeze(Xfilt(xInd,yInd,zInd,k))';
+            end
+
+            if handles.use_ext_fig.Value == 0
+                imagesc(ax.x(xInd),ax.depth(zInd),J) % mod plots
+                h = hotcoldDB;
+                colormap(h)
+            else
+                imshow(J)
+                colormap(h)
+            end
+            if ~isempty(aeR)
+                caxis(aeR)
+            end
+            title(['t = ' num2str(ax.stime(k))]);
+            % text(15,15,['t = ' num2str(ax.stime(k))]);
+            handles.axes2.XLabel.String = 'Lateral (mm)'; %Mod Axes
+            handles.axes2.YLabel.String = 'Depth (mm)';
+            drawnow
+        end
+    elseif handles.save_fig.Value == 1
+        vidwrite(Xfilt,ax.depth,ax.x,[zInd(1) zInd(end)],[xInd(1) xInd(end)],[tInd(1) tInd(end)],aeR)
     end
-    for k = tInd
-        if handles.med_box.Value == 1
-        J = medfilt2((squeeze(Xfilt(xInd,yInd,zInd,k)))',[5 5]);
-        else
-            J = squeeze(Xfilt(xInd,yInd,zInd,k))';
+    
+elseif handles.plotbox2.Value == 2
+    if handles.save_fig.Value == 0
+        for k = tInd %Mod loop
+            if handles.med_box.Value == 1
+                J = medfilt2((squeeze(Xfilt(xInd,yInd,zInd,k)))',[5 5]);
+            else
+                J = squeeze(Xfilt(xInd,yInd,zInd,k))';
+            end
+      
+            if handles.use_ext_fig.Value == 0
+                imagesc(ax.y(yInd),ax.depth(zInd),J) % mod plots
+                h = hotcoldDB;
+                colormap(h)
+            else
+                imshow(J)
+                colormap(h)
+            end
+            if ~isempty(aeR)
+                caxis(aeR)
+            end
+            title(['t = ' num2str(ax.stime(k))]);
+            % text(15,15,['t = ' num2str(ax.stime(k))]);
+            handles.axes2.XLabel.String = 'Elevational (mm)'; %Mod Axes
+            handles.axes2.YLabel.String = 'Depth (mm)';
+            drawnow
         end
-      %  I = insertText(J,[0 200],['t = ' num2str(ax.stime(tInd))],'FontSize',14,...
-           % 'BoxColor','green','TextColor','black'); 
-       % I = rgb2gray(I);
-        if handles.use_ext_fig.Value == 0
-        imagesc(ax.x(xInd),ax.depth(zInd),J)
-        h = hotcoldDB;
-        colormap(h)
-        else 
-            imshow(J)
-            colormap(gca,'hot')
+        
+        
+    elseif handles.save_fig.Value == 1
+        vidwrite(Xfilt,ax.depth,ax.y,[zInd(1) zInd(end)],[yInd(1) yInd(end)],[tInd(1) tInd(end)],aeR)
+    end
+    
+elseif handles.plotbox2.Value == 3
+    if handles.save_fig.Value == 0
+        for k = zInd %Mod loop
+            if handles.med_box.Value == 1
+                J = medfilt2((squeeze(Xfilt(xInd,yInd,k,tInd)))',[5 5]);
+            else
+                J = squeeze(Xfilt(xInd,yInd,k,tInd))';
+            end
+            
+            if handles.use_ext_fig.Value == 0
+                imagesc(ax.x(xInd),ax.y(yInd),J) % mod plots
+                h = hotcoldDB;
+                colormap(h)
+            else
+                imshow(J)
+                colormap(h)
+            end
+            if ~isempty(aeR)
+                caxis(aeR)
+            end
+            title(['z = ' num2str(ax.depth(k))]);
+            % text(15,15,['t = ' num2str(ax.stime(k))]);
+            handles.axes2.XLabel.String = 'Lateral (mm)'; %Mod Axes
+            handles.axes2.YLabel.String = 'Elevational (mm)';
+            drawnow
         end
-        if ~isempty(aeR)
-        caxis(aeR)
-        end
-        title(['t = ' num2str(ax.stime(k))]);
-        text(15,15,['t = ' num2str(ax.stime(k))]);
-        handles.axes2.XLabel.String = 'Lateral (mm)';
-        handles.axes2.YLabel.String = 'Depth (mm)';
-        drawnow
+        
+        
+    elseif handles.save_fig.Value == 1
+        vidwrite(Xfilt,ax.y,ax.x,[yInd(1) yInd(end)],[xInd(1) xInd(end)],[zInd(1) zInd(end)],aeR)
     end
 end
 
-
-
-if handles.save_fig.Value == 1
-    vidwrite(Xfilt,ax.depth,ax.x,[zInd(1) zInd(end)],[xInd(1) xInd(end)],[tInd(1) tInd(end)],aeR)
-end
 
 
 % --- Executes on button press in save_fig.
@@ -1358,10 +1432,10 @@ end
 x = linspace(0,param.daq.HFdaq.duration_ms,length(LF));
 if handles.use_ext_fig.Value == 1
     figure(3)
-    plot(x,abs(LF))
+    plot(x,LF)
 else
     axes(handles.axes2)
-    plot(x,abs(LF))
+    plot(x,LF)
 end
 ylabel('mA');
 xlabel('ms');
@@ -1741,7 +1815,24 @@ if handles.use_chop.Value == 0
     param = evalin('base','param');
     X = circshift(X,str2double(handles.tshift.String),4);
     if str2double(handles.baseb.String) > 0
+        if handles.bbdb.Value == 1
+            X = 20*log10(mean(mean(mean(mean(X))))/X);
+        end
         X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
+     
+        if handles.signed_env.Value == 1
+            S = real(sign(X));
+            dims = size(X);
+            b = waitbar(0);
+            for i = 1:dims(1)
+                for j = 1:dims(2)                
+                    X(i,j,:,:) = squeeze(S(i,j,:,:)).*envelope(squeeze(real(X(i,j,:,:))));          
+                end
+                waitbar(i/dims(1),b,'Basebanding');
+            end
+            delete(b)
+         %   X = S.*envelope(real(X));
+        end
     end
     if handles.invertbox.Value == 1
         X = X*(-1);
@@ -1749,12 +1840,31 @@ if handles.use_chop.Value == 0
     assignin('base','Xfilt',X)
     
 else
-    X = evalin('base','X_c');
+    Xfilt = evalin('base','X_c');
     param = evalin('base','param');
+    X = Xfilt;
     X = circshift(X,str2double(handles.tshift.String),4);
     if str2double(handles.baseb.String) > 0
-        X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
-        %X = baseband_russ3(X,param.daq.HFdaq.fs_MHz,str2double(handles.baseb.String));
+      %  X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
+       
+        X = baseband_russ3(X,param.daq.HFdaq.fs_MHz,str2double(handles.baseb.String));
+        if handles.signed_env.Value == 1
+            S = sign(real(X));
+            dims = size(Xfilt);
+            b = waitbar(0);
+            for i = 1:dims(1)
+                for j = 1:dims(2)   
+                    Xfilt(i,j,:,:) = envelope(real(squeeze(Xfilt(i,j,:,:))));
+                   % X(i,j,:,:) = squeeze(S(i,j,:,:)).*envelope(squeeze(real(X(i,j,:,:))));      
+                end
+                waitbar(i/dims(1),b,'Basebanding');
+            end
+            if handles.bbdb.Value == 1
+                Xfilt = 20*log10(Xfilt./max(max(max(max(Xfilt)))));
+            end
+            X = S.*abs(Xfilt);
+            delete(b)
+        end
     end
     if handles.invertbox.Value == 1
         X = X*(-1);
@@ -2367,7 +2477,7 @@ if handles.use_chop.Value == 0
     % assignin('base','X_complex',Xcom)
     assignin('base','Xfilt',X)
 else
-    X = evalin('base','Xfilt');
+    X = evalin('base','X_c');
     param = evalin('base','param');
     X = real(X);
     %Xcom = imag(X);
@@ -2376,444 +2486,127 @@ else
 end
 
 
+% --- Executes on button press in signed_env.
+function signed_env_Callback(hObject, eventdata, handles)
+% hObject    handle to signed_env (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of signed_env
+
+
+% --- Executes on button press in figfolder.
+function figfolder_Callback(hObject, eventdata, handles)
+path = uigetdir;
+set(handles.savefolder,'String',path);
+
+% --- Executes on button press in savefig.
+function savefig_Callback(hObject, eventdata, handles)
+fname = handles.savefigname.String;
+if ~isempty(handles.fignum.String)
+    num = str2double(handles.fignum.String);
+    if fname(end-2:end) == 'png'
+        fname = [fname ' -transparent'];
+        set(figure(num),'Color','none');
+    else
+    end
+    if ~isempty(handles.savefolder.String)
+        pname = handles.savefolder.String;
+        sname = [pname '\' fname];
+    else
+        sname = fname;
+    end
+    
+    figure(num)
+    eval([ 'export_fig ' sname])
+else
+    if ~isempty(handles.savefolder.String)
+        pname = handles.savefolder.String;
+        sname = [pname '\' fname];
+    else
+        sname = fname;
+    end
+    eval([ 'export_fig ' sname])
+    
+    
+end
+    
+       
+
+
+
+function savefolder_Callback(hObject, eventdata, handles)
+% hObject    handle to savefolder (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of savefolder as text
+%        str2double(get(hObject,'String')) returns contents of savefolder as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function savefolder_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to savefolder (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function savefigname_Callback(hObject, eventdata, handles)
+% hObject    handle to savefigname (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of savefigname as text
+%        str2double(get(hObject,'String')) returns contents of savefigname as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function savefigname_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to savefigname (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function fignum_Callback(hObject, eventdata, handles)
+% hObject    handle to fignum (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of fignum as text
+%        str2double(get(hObject,'String')) returns contents of fignum as a double
 
 
+% --- Executes during object creation, after setting all properties.
+function fignum_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to fignum (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
 
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
 
 
+% --- Executes on button press in bbdb.
+function bbdb_Callback(hObject, eventdata, handles)
+% hObject    handle to bbdb (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+% Hint: get(hObject,'Value') returns toggle state of bbdb

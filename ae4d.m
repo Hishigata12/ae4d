@@ -1599,7 +1599,7 @@ if handles.use_ext_fig.Value == 1
     hold off;
     plot(0)
    % scatter(abs(Lae),abs(Sae2));
-    scatter(Lae,Sae2,13,'k','filled')
+    scatter(Lae,Sae2,13,'r','filled')
     ylabel('\muV')
     xlabel('mA')
     figure(66)
@@ -2507,7 +2507,8 @@ if ~isempty(handles.fignum.String)
     num = str2double(handles.fignum.String);
     if fname(end-2:end) == 'png'
         fname = [fname ' -transparent'];
-        set(figure(num),'Color','none');
+        figure(num)
+        set(gca,'Color','none');
     else
     end
     if ~isempty(handles.savefolder.String)

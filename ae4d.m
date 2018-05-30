@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 27-May-2018 11:34:01
+% Last Modified by GUIDE v2.5 30-May-2018 13:07:04
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -339,7 +339,7 @@ else
     end
 end
 
-assignin('base','ax',ax);
+%assignin('base','ax',ax);
 % if handles.save_fig.Value == 1
 %     saveas('figure.png',handles.axes1)
 % end
@@ -458,8 +458,9 @@ end
 b = waitbar(0,'Matrix Conversion');
 waitbar(0,b,'Enveloping and converting to 4D matrix')
 HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
-for i = 1:param.velmex.XNStep
-    for j = 1:param.velmex.YNStep
+s = size(X);
+for i = 1:s(1)
+    for j = 1:s(2)
          %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
           HF(i,j,:,:) = X{i,j}; %Converts cell array to double
     end
@@ -491,11 +492,17 @@ if handles.keep.Value == 1
     set(handles.fname,'String',[path file]);
 end
 if handles.save_4d.Value == 1
-    clearvars -except Xfilt file path param ax LF PE
+
     f = file(1:end-4);
     f2 = [f '_4d_data.mat'];
     fprintf('Saving 4D file...')
-    eval([ 'save ' f2 ' -v7.3']);
+    if handles.large_box.Value == 1
+            clearvars -except Xfilt file path param ax LF PE f2
+        eval([ 'save ' f2 ' -v7.3']);
+    else 
+            clearvars -except Xfilt file path param ax LF PE f2
+        save(f2); 
+    end
     fprintf('Done\n')
 end
 
@@ -912,6 +919,7 @@ function chop_Callback(hObject, eventdata, handles)
 % hObject    handle to chop (see GCBO)
 Xfilt = evalin('base','Xfilt');
 param = evalin('base','param');
+ax = evalin('base','ax');
 clear X_c
 xR = str2num(handles.xR.String);
 if length(xR) == 1
@@ -931,7 +939,7 @@ if length(tR) == 1
 end
 aeR = str2num(handles.aeR.String);
 dims = size(Xfilt);
-[~,ax] = make_axes(param,dims,[1 2],1);
+%[~,ax] = make_axes(param,dims,[1 2],1);
 q.x = 1:dims(1);
 q.y = 1:dims(2);
 q.z = 1:dims(3);
@@ -1809,7 +1817,7 @@ function text6_CreateFcn(hObject, eventdata, handles)
 
 
 % --- Executes on button press in modify_button.
-function modify_button_Callback(hObject, eventdata, handles)
+	
 if handles.use_chop.Value == 0
     X = evalin('base','Xfilt');
     param = evalin('base','param');
@@ -1988,9 +1996,241 @@ function PE_4dbox_Callback(hObject, eventdata, handles)
 
 % --- Executes on button press in overlay.
 function overlay_Callback(hObject, eventdata, handles)
-% hObject    handle to overlay (see GCBO)
-% eventdata  reserved - to be defined in a future version of MATLAB
-% handles    structure with handles and user data (see GUIDATA)
+if handles.use_chop.Value == 1
+    Xfilt = evalin('base','X_c');
+    ax = evalin('base','ax_c');
+else
+    Xfilt = evalin('base','Xfilt');
+    ax = evalin('base','ax');
+end
+pex = evalin('base','pex');
+param = evalin('base','param');
+PEData = evalin('base','PEdata');
+a = str2double(handles.alph.String);
+ax.pe = pex.depth;
+
+xR = str2num(handles.xR.String);
+if length(xR) == 1
+    xR = [xR xR];
+end
+yR = str2num(handles.yR.String);
+if length(yR) == 1
+    yR = [yR yR];
+end
+zR = str2num(handles.zR.String);
+if length(zR) == 1
+    zR = [zR zR];
+end
+tR = str2num(handles.tR.String);
+if length(tR) == 1
+    tR = [tR tR];
+end
+aeR = str2num(handles.aeR.String);
+peR = str2num(handles.peR.String);
+dims = size(Xfilt);
+%[~,ax] = make_axes(param,dims,[1 2],1);
+q.x = 1:dims(1);
+q.y = 1:dims(2);
+q.z = 1:dims(3);
+q.pe = 1:size(PEData,3);
+
+xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
+yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
+zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
+peInd = q.pe(find(ax.pe >= zR(1)):find(ax.pe >= zR(2)));
+%peInd = zInd*2;
+
+if length(size(Xfilt)) == 3
+    Y = squeeze(Xfilt(xInd,yInd,zInd));
+else
+q.t = 1:dims(4);
+tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+Y = squeeze(Xfilt(xInd,yInd,zInd,tInd));
+end
+Y = circshift(Y,str2double(handles.dshift.String),2);
+
+if length(size(PEData)) == 3
+     P = squeeze(PEData(xInd,yInd,peInd));
+else
+
+P = squeeze(PEData(xInd,yInd,peInd,tInd));
+end
+
+
+
+if size(Y) ~= size(P)
+    errordlg('PE and AE datasets must be same size')
+    return
+end
+
+if length(size(Y)) > 2
+    errordlg('Too many dimensions; check ranges')
+    return
+end
+if handles.med_box.Value == 1
+    Y = medfilt2(Y,[3 3]);
+end
+
+  [x y] = meshgrid(1:size(Y,2),1:size(Y,1));
+   [xq yq] = meshgrid(linspace(1,size(Y,2),size(P,2)),linspace(1,size(Y,1),size(P,1)));
+   Y2 = interp2(x,y,Y,xq,yq);
+   G = imfuse(Y2',P');
+
+if handles.use_ext_fig.Value == 0
+    axes(handles.axes1) % Plots AE
+    if handles.plotbox1.Value == 1
+        imagesc(ax.stime(tInd),ax.x(xInd),(Y));
+        colormap('hot')
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        handles.axes1.XLabel.String = 'Time (ms)';
+        handles.axes1.YLabel.String = 'Lateral (mm)';
+    end
+    if handles.plotbox1.Value == 2
+        imagesc(ax.x(xInd),ax.y(yInd),(Y'))
+        colormap('hot')
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        handles.axes1.XLabel.String = 'Lateral (mm)';
+        handles.axes1.YLabel.String = 'Elevational (mm)';
+    end
+    if handles.plotbox1.Value == 3
+        imagesc(ax.x(xInd),ax.depth(zInd),(Y'))
+        colormap('hot')
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        handles.axes1.XLabel.String = 'Lateral (mm)';
+        handles.axes1.YLabel.String = 'Depth (mm)';
+    end
+    if handles.plotbox1.Value == 4
+        imagesc(ax.stime(tInd),ax.y(yInd),(Y))
+        colormap('hot')
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        handles.axes1.XLabel.String = 'Time (ms)';
+        handles.axes1.YLabel.String = 'Elevational (mm)';
+    end
+    if handles.plotbox1.Value == 5
+        imagesc(ax.y(yInd),ax.depth(zInd),(Y'))
+        colormap('hot')
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        handles.axes1.XLabel.String = 'Elevational (mm)';
+        handles.axes1.YLabel.String = 'Depth (mm)';
+    end
+    if handles.plotbox1.Value == 6
+        imagesc(ax.stime(tInd),ax.depth(zInd),Y)
+        colormap('hot')
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        handles.axes1.XLabel.String = 'Time (ms)';
+        handles.axes1.YLabel.String = 'Depth (mm)';
+    end
+    axes(handles.axes3) %Plots Pulse Echo
+    if handles.plotbox1.Value == 1
+        imagesc(ax.stime(tInd),ax.x(xInd),(P));
+        colormap(gca,'gray')
+        if ~isempty(peR)
+            caxis(peR)
+        end
+        handles.axes3.XLabel.String = 'Time (ms)';
+        handles.axes3.YLabel.String = 'Lateral (mm)';
+    end
+    if handles.plotbox1.Value == 2
+        imagesc(ax.x(xInd),ax.y(yInd),(P'))
+        colormap(gca,'gray')
+        if ~isempty(peR)
+            caxis(peR)
+        end
+        handles.axes3.XLabel.String = 'Lateral (mm)';
+        handles.axes3.YLabel.String = 'Elevational (mm)';
+    end
+    if handles.plotbox1.Value == 3
+        imagesc(ax.x(xInd),ax.pe(peInd),(P'))
+        colormap(gca,'gray')
+        if ~isempty(peR)
+            caxis(peR)
+        end
+        handles.axes3.XLabel.String = 'Lateral (mm)';
+        handles.axes3.YLabel.String = 'Depth (mm)';
+    end
+    if handles.plotbox1.Value == 4
+        imagesc(ax.stime(tInd),ax.y(yInd),(P))
+        colormap(gca,'gray')
+        if ~isempty(peR)
+            caxis(peR)
+        end
+        handles.axes3.XLabel.String = 'Time (ms)';
+        handles.axes3.YLabel.String = 'Elevational (mm)';
+    end
+    if handles.plotbox1.Value == 5
+        imagesc(ax.y(yInd),ax.pe(peInd),(P'))
+        colormap(gca,'gray')
+        if ~isempty(peR)
+            caxis(peR)
+        end
+        handles.axes3.XLabel.String = 'Elevational (mm)';
+        handles.axes3.YLabel.String = 'Depth (mm)';
+    end
+    if handles.plotbox1.Value == 6
+        imagesc(ax.stime(tInd),ax.pe(peInd),P)
+        colormap(gca,'gray')
+        if ~isempty(peR)
+            caxis(peR)
+        end
+        handles.axes3.XLabel.String = 'Time (ms)';
+        handles.axes3.YLabel.String = 'Depth (mm)';
+    end
+    
+
+   axes(handles.axes4)
+   imagesc(G);
+   
+%    hold off 
+%    plot(0)
+% 
+%    yim = image(Y');
+%    pim = image(P');
+%  
+%    imagesc(P')
+%       set(handles.axes4.Children,'AlphaData',0.5);
+%     hold on
+%    imagesc(Y');
+%    set(handles.axes4.Children,'AlphaData',0.5);
+%   % set(handles.axes4.Children,'AlphaData',0.5);
+   h=5;
+    
+    
+    
+    
+    
+    
+else
+    figure(2)
+    imagesc(G)
+    %colormap(gca,'hot')
+    if ~isempty(aeR)
+        caxis(aeR)
+    end
+end
+
+
+
+
+% 
+% axes(handles.axes2)
+% imagesc(squeeze(X))
+% axes(handles.axes3)
+% imagesc(squeeze(PEData))
+
+
+
 
 
 
@@ -2363,69 +2603,70 @@ function create_pe_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 
 if handles.onemhz.Value == 1
-[file, path] = uigetfile(fullfile(pwd,'*_info.dat')); %Gets file location
-param = read_ucsdi_info([path file]); %Gets scan parameters
-cd(path);
-
-ax.HFfreq = linspace(0,param.daq.HFdaq.fs_MHz,param.daq.HFdaq.pts); %Creates fast frequency axis
-ax.LFfreq = linspace(0,param.daq.HFdaq.pulseRepRate_Hz,param.daq.HFdaq.NoBurstTriggers); %creates slow frequency axis
-
-[~, HF1] = full_signal([path file],param,1); %Gets the raw data
-
-X = w_ae_filt2(param,HF1,1,0,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs  
-
-
-%%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
-b = waitbar(0,'Matrix Conversion');
-waitbar(0,b,'Enveloping and converting to 4D matrix')
-HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
-for i = 1:param.velmex.XNStep
-    for j = 1:param.velmex.YNStep
-         %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
-          HF(i,j,:,:) = X{i,j}; %Converts cell array to double
+    [file, path] = uigetfile(fullfile(pwd,'*_info.dat')); %Gets file location
+    param = read_ucsdi_info([path file]); %Gets scan parameters
+    cd(path);
+    
+    ax.HFfreq = linspace(0,param.daq.HFdaq.fs_MHz,param.daq.HFdaq.pts); %Creates fast frequency axis
+    ax.LFfreq = linspace(0,param.daq.HFdaq.pulseRepRate_Hz,param.daq.HFdaq.NoBurstTriggers); %creates slow frequency axis
+    
+    [~, HF1] = full_signal([path file],param,1); %Gets the raw data
+    
+    X = w_ae_filt2(param,HF1,1,0,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
+    
+    
+    %%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
+    b = waitbar(0,'Matrix Conversion');
+    waitbar(0,b,'Enveloping and converting to 4D matrix')
+    HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
+    for i = 1:param.velmex.XNStep
+        for j = 1:param.velmex.YNStep
+            %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
+            HF(i,j,:,:) = X{i,j}; %Converts cell array to double
+        end
+        waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
     end
-    waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
-end
-delete(b)
-PEdata = HF(:,:,:,1:2);
-[~, ax] = make_axes(param,size(HF));
-ax.pe = linspace(0,1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz/2,size(PEdata,3));
-if handles.keep.Value == 1
-    assignin('base','PEdata',PEdata);
-    assignin('base','fpath',[path file]);
-    assignin('base','param',param);
-    assignin('base','ax',ax);
-    set(handles.fname,'String',[path file]);
-end
-if handles.save_4d.Value == 1
-    clearvars -except file path param ax PEdata
-    f = file(1:end-4);
-    f2 = [f '_4d_PE.mat'];
-    fprintf('Saving 4D file...')
-    save(f2);
-    fprintf('Done\n')
-end
-
+    delete(b)
+   % PEdata = HF(:,:,:,1:2);
+   PEdata = HF;
+    [~, pex] = make_axes(param,size(HF));
+    pex.depth = linspace(0,1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz/2,size(PEdata,3));
+    if handles.keep.Value == 1
+        assignin('base','PEdata',PEdata);
+        assignin('base','fpath',[path file]);
+        assignin('base','param',param);
+        assignin('base','pex',ax);
+        set(handles.fname,'String',[path file]);
+    end
+    if handles.save_4d.Value == 1
+        clearvars -except file path param pex PEdata
+        f = file(1:end-4);
+        f2 = [f '_4d_PE.mat'];
+        fprintf('Saving 4D file...')
+        save(f2);
+        fprintf('Done\n')
+    end
+    
 else
     [f, p]  = uigetfile(fullfile(pwd,'*_PEParm.mat'));
-load([p f]);
-cd(p)
+    load([p f]);
+    cd(p)
     [PEbsqFile, p] = uigetfile(fullfile(pwd,'*.bsq'));
     fid = fopen(PEbsqFile,'rb');
-if fid > 0
-    
-    n = fread(fid,1,'int32');
-    dsize = fread(fid,[1,n],'int32');
-    nOffset = (n+1)*4;
-    fclose(fid);
-    
-    PEImage = multibandread(PEbsqFile,[dsize(1:2),prod(dsize(3:end))],...
-        'single',nOffset,'bsq','ieee-le',{'Band','Direct',bScanParm.nScanPt});
-   
-   
-    
-x = 3;
-end
+    if fid > 0
+        
+        n = fread(fid,1,'int32');
+        dsize = fread(fid,[1,n],'int32');
+        nOffset = (n+1)*4;
+        fclose(fid);
+        
+        PEImage = multibandread(PEbsqFile,[dsize(1:2),prod(dsize(3:end))],...
+            'single',nOffset,'bsq','ieee-le',{'Band','Direct',bScanParm.nScanPt});
+        
+        
+        
+        x = 3;
+    end
 end
 
 
@@ -2440,7 +2681,9 @@ set(handles.fname,'String',file);
 fprintf('Done\n')
 assignin('base','PEdata',PEdata);
 assignin('base','param',param);
-assignin('base','ax',ax);
+ax = pex;
+assignin('base','pex',ax);
+
 %assignin('base','PEparam',PE);
 %set(handles.LF_chan,'String',num2str(size(LF,2)));
 set(handles.tms,'String',num2str([ax.stime(1) ax.stime(end)]));
@@ -2449,13 +2692,13 @@ set(handles.xmm,'String',num2str([ax.x(1) ax.x(end)]));
 set(handles.xsamp,'String',num2str([1 length(ax.x)]));
 set(handles.ymm,'String',num2str([ax.y(1) ax.y(end)]));
 set(handles.ysamp,'String',num2str([1 length(ax.y)]));
-set(handles.zmm,'String',num2str([ax.pe(1) round(ax.pe(end))]));
+set(handles.zmm,'String',num2str([ax.depth(1) round(ax.depth(end))]));
 set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
 
 if handles.reset_axes.Value == 1    
 set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
 set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
-set(handles.zR,'String', num2str([ax.pe(1) floor(ax.pe(end))]));
+set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
 set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
 
 end
@@ -2464,8 +2707,9 @@ end
 % --- Executes on button press in usepe.
 function usepe_Callback(hObject, eventdata, handles)
 X = evalin('base','PEdata');
+ax = evalin('base','pex');
 assignin('base','Xfilt',X);
-
+assignin('base','ax',ax);
 
 % --- Executes on button press in realize.
 function realize_Callback(hObject, eventdata, handles)
@@ -2611,3 +2855,94 @@ function bbdb_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of bbdb
+
+
+% --- Executes on button press in large_box.
+function large_box_Callback(hObject, eventdata, handles)
+% hObject    handle to large_box (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of large_box
+
+
+% --- Executes on button press in tope.
+function tope_Callback(hObject, eventdata, handles)
+if handles.use_chop.Value == 1
+    X = evalin('base','X_c');
+    ax = evalin('base','ax_c');
+else 
+    X = evalin('base','Xfilt');
+    ax = evalin('base','ax');
+end
+assignin('base','PEdata',X);
+assignin('base','pex',ax);
+
+
+
+function alph_Callback(hObject, eventdata, handles)
+% hObject    handle to alph (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of alph as text
+%        str2double(get(hObject,'String')) returns contents of alph as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function alph_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to alph (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function dshift_Callback(hObject, eventdata, handles)
+% hObject    handle to dshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of dshift as text
+%        str2double(get(hObject,'String')) returns contents of dshift as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function dshift_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to dshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function peR_Callback(hObject, eventdata, handles)
+% hObject    handle to peR (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of peR as text
+%        str2double(get(hObject,'String')) returns contents of peR as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function peR_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to peR (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

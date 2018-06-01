@@ -7,24 +7,10 @@ function X = filts3D(HF,ave,in,param)
  b = waitbar(0);
  %dims = [param.velmex.XNStep param.velmex.YNStep param.daq.HFdaq.pts param.daq.HFdaq.NoBurstTriggers];
  dims = size(HF);
-if ave(1) == 1
-    for i = 2:4
-        if mod(ave(i),2) ~= 1
-            errordlg('Need window size for each dimension to be odd')
-            return
-        end
-    end
-    Sx = zeros(dims);
-    % H = ones(ave(2),ave(3))/(ave(2)*ave(3));
-  
-    for i = 1:dims(4)
-        Sx(:,:,:,i) = imboxfilt3(HF(:,:,:,i),ave(2:end));
-        waitbar(i/dims(4),b,'Smoothing Signal');
-    end
-    X = Sx;
-else
-    X = HF;
+if length(dims) ==3
+    dims(4) = 1;
 end
+
 
 if in(1) == 1
     %     x = linspace(1,size(HF,1),size(HF,1));
@@ -32,7 +18,7 @@ if in(1) == 1
     %     x2 = linspace(0,size(HF,1),size(HF,1)*in(2));
     %     z2 = linspace(0,size(HF,3),size(HF,3)*in(3));
     for i = 1:3
-        if size(X,i) == 1
+        if size(HF,i) == 1
             P(i) = 1;
         else P(i) = 0;
         end
@@ -63,12 +49,34 @@ if in(1) == 1
 %       b1 = round(dims(3)/10);
 %     b2 = round(dims(3)*0.9);
 %     X = real(20*log10(real(X)./max(max(max(real(X(:,:,b1:b2,:)))))));
-    delete(b);
 else
 %     b1 = round(dims(3)/10);
 %     b2 = round(dims(3)*0.9);
 %     X = real(20*log10(real(X)./max(max(max(real(X(:,:,b1:b2,:)))))));
-   delete(b);
+end
+if ave(1) == 1
+    dims = size(X);
+    for i = 2:4
+        if mod(ave(i),2) ~= 1
+            errordlg('Need window size for each dimension to be odd')
+            return
+        end
+    end
+    Sx = zeros(dims);
+    if length(dims) < 4
+        dims(4) = 1;
+    end
+    % H = ones(ave(2),ave(3))/(ave(2)*ave(3));
+  
+    for i = 1:dims(4)
+        Sx(:,:,:,i) = imboxfilt3(X(:,:,:,i),ave(2:end));
+        waitbar(i/dims(4),b,'Smoothing Signal');
+    end
+    X = Sx;
+    delete(b)
+else
+   % X = HF;
+    delete(b)
 end
         
         

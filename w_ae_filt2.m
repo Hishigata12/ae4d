@@ -17,9 +17,6 @@ if Lus > Lae
     Lus = Lae;
 end
 
-
-
-
 frequs = linspace(0,FsUS,Lus);
 freqae = linspace(0,FsAE,Lae);
 max_fUS = length(frequs)/2;
@@ -144,35 +141,33 @@ elseif mode == 1
     Sz = HF_zt(1)+length(RefPulse)-1;
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
-            y{i,j} = zeros(Sz,HF_zt(2));
+            y2{i,j} = zeros(Sz,HF_zt(2));
+            y{i,j} = zeros(HF_zt(1),HF_zt(2));
         end
     end
     
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
             for k = 1:HF_zt(2)
-                y{i,j}(:,k) = conv(HF{i,j}(:,k),RefPulse);
+                y2{i,j}(:,k) = conv(HF{i,j}(:,k),RefPulse);
             end
         end
         waitbar(i/HF_xy(1),b,'Fast Time Filtering')
     end
+    
+     for i = 1:HF_xy(1)
+        for j = 1:HF_xy(2)
+            for k = 1:HF_zt(2)
+                y{i,j}(:,k) = interp1(linspace(0,HF_zt(1),size(y2{1},1)),y2{i,j}(:,k),linspace(0,HF_zt(1),HF_zt(1)));
+            end
+        end
+        waitbar(i/HF_xy(1),b,'Compressing Depth Axis');
+     end
+%y = y2;
     delete(b)
 end
-% M = 1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz;
-% Mx = linspace(0,M,param.daq.HFdaq.pts);
-% MxL = find(Mx < 50);
-% MxH = find(Mx > 35);
-% MxT = intersect(MxL,MxH);
 
-
-% for i = 80:85
-% test = real(y(:,1,MxT,i));
-% test = squeeze(test);
-% figure; imagesc(test')
-% end
-
-
-%vidwrite(real(y),MxT(1),MxT(end),1,size(y,1),20,120)
+% Need to resample y to original length - use decimate?
 
 
 x = 2;

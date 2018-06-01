@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 30-May-2018 13:07:04
+% Last Modified by GUIDE v2.5 31-May-2018 14:39:52
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -896,7 +896,11 @@ yR = [ax.y(1) ax.y(end)];
 zR = [ax.depth(1) ax.depth(end)];
 tR = [ax.stime(1) ax.stime(end)];
 ax.depth = linspace(zR(1),zR(2),dims(3));
-ax.stime = linspace(tR(1),tR(2),dims(4));
+if length(dims) > 3
+    ax.stime = linspace(tR(1),tR(2),dims(4));
+else 
+    ax.stime = 1;
+end
 if mean(abs(xR)) > 1
     ax.x = linspace(xR(1),xR(2),dims(1));
 else
@@ -1631,6 +1635,7 @@ else
     plot(T_axis,Snorm,'r')
     title(['R^2 = ' num2str(R)]);
       xlabel('ms')
+      xlim(tR)
     hold off
 end
 
@@ -1778,6 +1783,8 @@ set(handles.output6,'String',num2str(cut2));
 
 if ~isempty(handles.xlims3.String)
     xlim(str2num(handles.xlims3.String));
+else
+    xlim(str2num(handles.zR.String));
 end
 if ~isempty(handles.ylims3.String)
     ylim(str2num(handles.ylims3.String));
@@ -1817,7 +1824,7 @@ function text6_CreateFcn(hObject, eventdata, handles)
 
 
 % --- Executes on button press in modify_button.
-	
+function modify_button_Callback(jObject, eventdata, handles)	
 if handles.use_chop.Value == 0
     X = evalin('base','Xfilt');
     param = evalin('base','param');
@@ -2945,4 +2952,143 @@ function peR_CreateFcn(hObject, eventdata, handles)
 %       See ISPC and COMPUTER.
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in plot4.
+function plot4_Callback(hObject, eventdata, handles)
+param = evalin('base','param');
+if handles.use_chop.Value == 1
+    Xfilt = evalin('base','X_c');
+    ax = evalin('base','ax_c');
+else
+    Xfilt = evalin('base','Xfilt');
+    ax = evalin('base','ax');
+end
+
+
+xR = str2num(handles.xR.String);
+if length(xR) == 1
+    xR = [xR xR xR];
+end
+yR = str2num(handles.yR.String);
+if length(yR) == 1
+    yR = [yR yR yR];
+end
+zR = str2num(handles.zR.String);
+if length(zR) == 1
+    zR = [zR zR zR];
+end
+tR = str2num(handles.tR.String);
+if length(tR) == 1
+    tR = [tR tR tR];
+end
+aeR = str2num(handles.aeR.String);
+dims = size(Xfilt);
+%[~,ax] = make_axes(param,dims,[1 2],1);
+q.x = 1:dims(1);
+q.y = 1:dims(2);
+q.z = 1:dims(3);
+q.t = 1:dims(4);
+xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
+yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
+zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
+tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+if length(xR) < 3 || length(yR) < 3 || length(zR) <3 || length(tR) <3
+    errordlg('All 4 dimensions need 3 values ([range1, range2, point])')
+    return
+end
+px = q.x(find(ax.x >=xR(3),1));
+py = q.y(find(ax.y >=yR(3),1));
+pz = q.z(find(ax.depth >=zR(3),1));
+pt = q.t(find(ax.stime >=tR(3),1));
+
+Yxy = squeeze(Xfilt(xInd,yInd,pz,pt));
+Yxz = squeeze(Xfilt(xInd,py,zInd,pt));
+Yyz = squeeze(Xfilt(px,yInd,zInd,pt));
+Yzt = squeeze(Xfilt(px,py,zInd,tInd));
+
+
+if length(size(Yxy)) > 2
+    errordlg('Too many dimensions; check ranges')
+    return
+end
+if handles.med_box.Value == 1
+    Yxy = medfilt2(Yxt,[3 3]);
+    Yxz = medfilt2(Yxz,[3 3]);
+    Yyz = medfilt2(Yyz,[3 3]);
+    Yzt = medfilt2(Yzt,[3 3]);
+end
+if handles.use_ext_fig.Value == 0
+    axes(handles.axes2)
+        imagesc(ax.x(xInd),ax.y(yInd),(Yxy'))
+        colormap(gca,'hot')
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        handles.axes2.XLabel.String = 'Lateral (mm)';
+        handles.axes2.YLabel.String = 'Elevational (mm)';
+
+axes(handles.axes1)
+        imagesc(ax.x(xInd),ax.depth(zInd),(Yxz'))
+        colormap(gca,'hot')
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        handles.axes1.XLabel.String = 'Lateral (mm)';
+        handles.axes1.YLabel.String = 'Depth (mm)';
+
+axes(handles.axes3)
+        imagesc(ax.y(yInd),ax.depth(zInd),(Yyz))
+        colormap(gca,'hot')
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        handles.axes3.XLabel.String = 'Elevational (mm)';
+        handles.axes3.YLabel.String = 'Depth (mm)';
+
+  axes(handles.axes4)
+        imagesc(ax.stime(tInd),ax.depth(zInd),Yzt)
+        colormap(gca,'hot')
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        handles.axes4.XLabel.String = 'Time (ms)';
+        handles.axes4.YLabel.String = 'Depth (mm)';
+
+else
+    figure(51)
+    imshow(Yxz')
+    colormap(gca,'hot')
+    if ~isempty(aeR)
+        caxis(aeR)
+    end
+   xlabel('Lateral (mm)');
+   ylabel('Depth (mm)');
+        figure(52)
+    imshow(Yyz)
+    colormap(gca,'hot')
+    if ~isempty(aeR)
+        caxis(aeR)
+    end
+       xlabel('Elevational (mm)');
+        ylabel('Depth (mm)');
+        figure(53)
+    imshow(Yxy')
+    colormap(gca,'hot')
+    if ~isempty(aeR)
+        caxis(aeR)
+    end
+         xlabel('Lateral (mm)');
+        ylabel('Elevational (mm)');
+        figure(54)
+    imshow(Yzt)
+    colormap(gca,'hot')
+    if ~isempty(aeR)
+        caxis(aeR)
+    end
+    xlim([tInd(1) tInd(end)])
+    ylim([zInd(1) zInd(end)])
+      xlabel('Time (ms)');
+         ylabel('Depth (mm)');
 end

@@ -1849,10 +1849,12 @@ end
 X = Xfilt;
 X = circshift(X,str2double(handles.tshift.String),4);
 X = circshift(X,str2double(handles.dshift.String),3);
+wc1 = str2double(handles.fast_cut1.String);
+wc2 = str2double(handles.fast_cut2.String);
 if length(str2num(handles.baseb.String)) == 1
     if str2num(handles.baseb.String(1)) > 0
         
-        X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
+        X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz,wc1,wc2);
         
         if handles.signed_env.Value == 1
             S = sign(imag(X));
@@ -1889,9 +1891,9 @@ elseif length(str2num(handles.baseb.String)) == 3
     cfreq = str2num(handles.baseb.String);
     rfreq = cfreq(1):cfreq(3):cfreq(2);
 
-    for i  = 1:length(rfreq)
+    for n  = 1:length(rfreq)
             R = Xfilt;
-        X = baseband2(R,rfreq(i),param.daq.HFdaq.fs_MHz);
+        X = baseband2(R,rfreq(n),param.daq.HFdaq.fs_MHz,wc1,wc2);
         
         if handles.signed_env.Value == 1
             S = sign(imag(X));
@@ -1954,14 +1956,14 @@ elseif length(str2num(handles.baseb.String)) == 3
         end
         delete(b)
         axes(handles.axes4)
-        imagesc(xInd,zInd,real(Y'))
+        imagesc(ax.x(xInd),ax.depth(zInd),real(Y'))
         if ~isempty(aeR)
             caxis(aeR);
         end
         colormap(h)
         
-     %   title(['wc = ' num2str(rfreq(i))])
-        %text(40,40,['wc = ' num2str(cfreq(1)+rfreq(i))]);
+        title(['wc = ' num2str(rfreq(n))])
+        text(mean(ax.x(xInd)),ax.depth(zInd(12)),['wc = ' num2str(rfreq(n))],'Color','white');
     end
 end
 

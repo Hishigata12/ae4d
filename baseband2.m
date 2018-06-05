@@ -1,4 +1,4 @@
-function [xdemod3, X_bb1, t, f_ax, X_bb2, X_bb3] = baseband(X,fc,fs)
+function [xdemod3, X_bb1, t, f_ax, X_bb2, X_bb3] = baseband(X,fc,fs,wc1,wc2)
 %X is frequency domain signal (after filtering)
 %fc is center frequency
 %fs is sampling frequency
@@ -70,7 +70,17 @@ end
 
 
 x2 = 2*x(:,:,1:end/2,:);
-x2(:,:,1:2,:) = 0;
+f_axis = linspace(0,fs,size(x2,3));
+wlow = find(f_axis > wc1,1)-1;
+whigh = find(f_axis >= wc2,1);
+hamlen = whigh-wlow;
+Hwin = hamming(hamlen);
+Hwin = padarray(Hwin,wlow-1,0,'pre');
+Hwin = padarray(Hwin,size(x2,3)-whigh+1,0,'post');
+
+%x2(:,:,1:2,:) = 0;
+
+
 
 % for i = 1:dims(1)
 %     for j = 1:dims(2)
@@ -99,6 +109,7 @@ end
 for i = 1:dims(1)
     for j = 1:dims(2)
         for k = 1:dims(4)
+            x2(i,j,:,k) = Hwin.*squeeze(x2(i,j,:,k));
             X2(i,j,:,k) = ifft(x2(i,j,:,k));
         end
     end

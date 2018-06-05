@@ -1,4 +1,4 @@
-function [xdemod2, X_bb1, t, f_ax, X_bb2, X_bb3] = baseband(X,fc,fs)
+function [xdemod3, X_bb1, t, f_ax, X_bb2, X_bb3] = baseband(X,fc,fs)
 %X is frequency domain signal (after filtering)
 %fc is center frequency
 %fs is sampling frequency
@@ -33,20 +33,125 @@ f_ax = fs/2*linspace(0,1,NFFT/2);
 % x_bb = ifft(X_bb1);
 % f_ax = f;
 
-%% For t > BB
+%Gets analytic signal from Hilbert Transform xa = x+jxh
+m = 1j;
 dims = size(X);
+t = (1:dims(3)) /fs;
+if length(dims) < 4
+    dims(4) = 1;
+end
+
+% h = 1./(pi.*t);
+b = waitbar(0,'Basebanding');
+for i = 1:dims(1)
+    for j = 1:dims(2)
+        for k = 1:dims(4)     
+%             H(i,j,:,k) = conv(squeeze(X(i,j,:,k)),h');
+            x(i,j,:,k) = fft(X(i,j,:,k));
+        end
+    end
+    waitbar(i/dims(1)/4,b,'Computing FFT')
+end
+% S = -m*sign(x);
+% xh = x+S;
+% x1 = x + xh;
+
+% xhilb = hilbert(X);
+% xa1 = X + m*xhilb;
+% for i = 1:dims(1)
+%     for j = 1:dims(2)
+%         for k = 1:dims(4)
+%             xdemod(i,j,:,k) = squeeze(xa1(i,j,:,k)).*exp(-m*2*pi*t'*fc);
+%         end
+%     end
+% end
+
+
+
+
+x2 = 2*x(:,:,1:end/2,:);
+x2(:,:,1:2,:) = 0;
+
+% for i = 1:dims(1)
+%     for j = 1:dims(2)
+%         for k = 1:dims(4)     
+%             x3(i,j,:,k) = fft(H(i,j,:,k));
+%         end
+%     end
+% end
+
+
+% a = squeeze(x1(15,1,:,21));
+% a2 = squeeze(x2(15,1,:,21));
+% a3 = squeeze(x3(15,1,:,21));
+f_ax = fs/2*linspace(0,1,dims(3)/2);
+% figure; plot(abs(a))
+%figure; plot(f_ax,abs(a2));
+% figure; plot(abs(a3))
+
+
+dims = size(x2);
+if length(dims) < 4
+    dims(4) = 1;
+end
+
+
+for i = 1:dims(1)
+    for j = 1:dims(2)
+        for k = 1:dims(4)
+            X2(i,j,:,k) = ifft(x2(i,j,:,k));
+        end
+    end
+     waitbar(.25 + i/dims(1)/4,b,'Filtering')
+end
 t = (1:dims(3)) /fs;
 for i = 1:dims(1)
     for j = 1:dims(2)
-        if length(dims) == 4
-            for k = 1:dims(4)
-                xdemod2(i,j,:,k) = squeeze(X(i,j,:,k)).*sqrt(2).*exp(-1i*2*pi*fc*t)';
-            end
-        else
-            xdemod2(i,j,:) = squeeze(X(i,j,:)).*sqrt(2).*exp(-1i*2*pi*fc*t)';
+        for k = 1:dims(4)
+            xdemod2(i,j,:,k) = squeeze(X2(i,j,:,k)).*exp(-m*2*pi*fc*t');
+             %xdemod2(i,j,:,k) = squeeze(X(i,j,:,k)).*exp(-m*2*pi*fc*t');
         end
     end
+       waitbar(.5 + i/dims(1)/4,b,'Demodulating')
 end
+for i = 1:dims(1)
+    for j = 1:dims(2)
+        for k = 1:dims(4)
+            xdemod3(i,j,:,k) = interp1(linspace(0,1,dims(3)),squeeze(xdemod2(i,j,:,k)),linspace(0,1,size(X,3)));
+        end
+    end
+    waitbar(.75 + i/dims(1)/4,b,'Interpolating')
+end
+
+%figure; imagesc(real(squeeze(xdemod3(:,1,:,21))));
+% figure; imagesc(real(squeeze(xdemod(:,1,:,21))));
+% 
+% for i = 1:dims(1)
+%     for j = 1:dims(2)
+%         for k = 1:dims(4)
+%             Xdemod2(i,j,:,k) = fft(squeeze(xdemod3(i,j,:,k)));
+%             Xdemod(i,j,:,k) = fft(squeeze(xdemod(i,j,:,k)));
+%         end
+%     end
+% end
+
+%figure; plot(abs(squeeze(Xdemod2(15,1,:,21))));
+% figure; plot(abs(squeeze(Xdemod(15,1,:,21))));
+
+%% For t ==> BB
+% dims = size(X);
+% t = (1:dims(3)) /fs;
+% for i = 1:dims(1)
+%     for j = 1:dims(2)
+%         if length(dims) == 4
+%             for k = 1:dims(4)
+%                 xdemod2(i,j,:,k) = squeeze(X(i,j,:,k)).*sqrt(2).*exp(-1i*2*pi*fc*t)';
+%             end
+%         else
+%             xdemod2(i,j,:) = squeeze(X(i,j,:)).*sqrt(2).*exp(-1i*2*pi*fc*t)';
+%         end
+%     end
+% end
 
 %xdemod2 = X.*xmod';
 % Xmod = fft(xmod);

@@ -50,11 +50,13 @@ if in(1) == 1
 %     b2 = round(dims(3)*0.9);
 %     X = real(20*log10(real(X)./max(max(max(real(X(:,:,b1:b2,:)))))));
 else
+    X = HF;
 %     b1 = round(dims(3)/10);
 %     b2 = round(dims(3)*0.9);
 %     X = real(20*log10(real(X)./max(max(max(real(X(:,:,b1:b2,:)))))));
 end
 if ave(1) == 1
+    X = real(X);
     dims = size(X);
     for i = 2:4
         if mod(ave(i),2) ~= 1

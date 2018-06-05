@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 31-May-2018 14:39:52
+% Last Modified by GUIDE v2.5 04-Jun-2018 17:26:27
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -274,11 +274,18 @@ end
 if handles.med_box.Value == 1
     Y = medfilt2(Y,[3 3]);
 end
+
+if handles.hotcold.Value == 1
+    h = hotcoldDB;
+else
+    h = 'hot';
+end
+
 if handles.use_ext_fig.Value == 0
     axes(handles.axes1)
     if handles.plotbox1.Value == 1
         imagesc(ax.stime(tInd),ax.x(xInd),(Y));
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -287,7 +294,7 @@ if handles.use_ext_fig.Value == 0
     end
     if handles.plotbox1.Value == 2
         imagesc(ax.x(xInd),ax.y(yInd),(Y'))
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -296,7 +303,7 @@ if handles.use_ext_fig.Value == 0
     end
     if handles.plotbox1.Value == 3
         imagesc(ax.x(xInd),ax.depth(zInd),(Y'))
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -305,7 +312,7 @@ if handles.use_ext_fig.Value == 0
     end
     if handles.plotbox1.Value == 4
         imagesc(ax.stime(tInd),ax.y(yInd),(Y))
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -314,7 +321,7 @@ if handles.use_ext_fig.Value == 0
     end
     if handles.plotbox1.Value == 5
         imagesc(ax.y(yInd),ax.depth(zInd),(Y'))
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -323,7 +330,7 @@ if handles.use_ext_fig.Value == 0
     end
     if handles.plotbox1.Value == 6
         imagesc(ax.stime(tInd),ax.depth(zInd),Y)
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -333,7 +340,7 @@ if handles.use_ext_fig.Value == 0
 else
     figure(2)
     imshow(Y')
-    colormap(gca,'hot')
+    colormap(gca,h)
     if ~isempty(aeR)
         caxis(aeR)
     end
@@ -585,6 +592,11 @@ if handles.use_ext_fig.Value == 0
 else
     figure(1);
 end
+if handles.hotcold.Value == 1
+    h = hotcoldDB;
+else
+    h = 'hot';
+end
 if handles.plotbox2.Value == 1
     if handles.save_fig.Value == 0
         for k = tInd %Mod loop
@@ -596,7 +608,7 @@ if handles.plotbox2.Value == 1
 
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.x(xInd),ax.depth(zInd),J) % mod plots
-                h = hotcoldDB;
+              
                 colormap(h)
             else
                 imshow(J)
@@ -1829,29 +1841,32 @@ if handles.use_chop.Value == 0
     X = evalin('base','Xfilt');
     param = evalin('base','param');
     X = circshift(X,str2double(handles.tshift.String),4);
+    X = circshift(X,str2double(handles.dshift.String),3);
     if str2double(handles.baseb.String) > 0
-        if handles.bbdb.Value == 1
-            X = 20*log10(mean(mean(mean(mean(X))))/X);
-        end
+        
         X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
-     
+        
         if handles.signed_env.Value == 1
             S = real(sign(X));
             dims = size(X);
             b = waitbar(0);
             for i = 1:dims(1)
-                for j = 1:dims(2)                
-                    X(i,j,:,:) = squeeze(S(i,j,:,:)).*envelope(squeeze(real(X(i,j,:,:))));          
+                for j = 1:dims(2)
+                    X(i,j,:,:) = squeeze(S(i,j,:,:)).*envelope(squeeze(real(X(i,j,:,:))));
                 end
                 waitbar(i/dims(1),b,'Basebanding');
             end
-            delete(b)
-         %   X = S.*envelope(real(X));
+            if handles.bbdb.Value == 1
+                X = 20*log10(mean(mean(mean(mean(X))))/X);
+            end
+            X = S.*abs(Xfilt);
+            %   X = S.*envelope(real(X));
         end
     end
     if handles.invertbox.Value == 1
         X = X*(-1);
     end
+    delete(b)
     assignin('base','Xfilt',X)
     
 else
@@ -1859,12 +1874,15 @@ else
     param = evalin('base','param');
     X = Xfilt;
     X = circshift(X,str2double(handles.tshift.String),4);
+    X = circshift(X,str2double(handles.dshift.String),3);
     if str2double(handles.baseb.String) > 0
-      %  X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
+         X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
        
-        X = baseband_russ3(X,param.daq.HFdaq.fs_MHz,str2double(handles.baseb.String));
+        %X = baseband_russ3(Xfilt,param.daq.HFdaq.fs_MHz,str2double(handles.baseb.String));
+        % p = squeeze(X(:,1,:,22));
+       %  figure; plot(real(ifft(p)))
         if handles.signed_env.Value == 1
-            S = sign(real(X));
+            S = sign(imag(X));
             dims = size(Xfilt);
             b = waitbar(0);
             for i = 1:dims(1)
@@ -1872,12 +1890,13 @@ else
                     Xfilt(i,j,:,:) = envelope(real(squeeze(Xfilt(i,j,:,:))));
                    % X(i,j,:,:) = squeeze(S(i,j,:,:)).*envelope(squeeze(real(X(i,j,:,:))));      
                 end
-                waitbar(i/dims(1),b,'Basebanding');
+                waitbar(i/dims(1),b,'Finalzing');
             end
             if handles.bbdb.Value == 1
                 Xfilt = 20*log10(Xfilt./max(max(max(max(Xfilt)))));
             end
-            X = S.*abs(Xfilt);
+           X = S.*abs(Xfilt);
+        %  X = Xfilt;
             delete(b)
         end
     end
@@ -2047,6 +2066,12 @@ zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 peInd = q.pe(find(ax.pe >= zR(1)):find(ax.pe >= zR(2)));
 %peInd = zInd*2;
 
+if handles.hotcold.Value == 1
+    h = hotcoldDB;
+else 
+    h = 'hot';
+end
+
 if length(size(Xfilt)) == 3
     Y = squeeze(Xfilt(xInd,yInd,zInd));
 else
@@ -2078,16 +2103,16 @@ if handles.med_box.Value == 1
     Y = medfilt2(Y,[3 3]);
 end
 
-  [x y] = meshgrid(1:size(Y,2),1:size(Y,1));
-   [xq yq] = meshgrid(linspace(1,size(Y,2),size(P,2)),linspace(1,size(Y,1),size(P,1)));
+  [x, y] = meshgrid(1:size(Y,2),1:size(Y,1));
+   [xq, yq] = meshgrid(linspace(1,size(Y,2),size(P,2)),linspace(1,size(Y,1),size(P,1)));
    Y2 = interp2(x,y,Y,xq,yq);
-   G = imfuse(Y2',P');
-
+   G = imfuse(Y2',P','ColorChannels',[1 0 2]);
+H = im2double(G);
 if handles.use_ext_fig.Value == 0
     axes(handles.axes1) % Plots AE
     if handles.plotbox1.Value == 1
         imagesc(ax.stime(tInd),ax.x(xInd),(Y));
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -2096,7 +2121,7 @@ if handles.use_ext_fig.Value == 0
     end
     if handles.plotbox1.Value == 2
         imagesc(ax.x(xInd),ax.y(yInd),(Y'))
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -2105,7 +2130,7 @@ if handles.use_ext_fig.Value == 0
     end
     if handles.plotbox1.Value == 3
         imagesc(ax.x(xInd),ax.depth(zInd),(Y'))
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -2114,7 +2139,7 @@ if handles.use_ext_fig.Value == 0
     end
     if handles.plotbox1.Value == 4
         imagesc(ax.stime(tInd),ax.y(yInd),(Y))
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -2123,7 +2148,7 @@ if handles.use_ext_fig.Value == 0
     end
     if handles.plotbox1.Value == 5
         imagesc(ax.y(yInd),ax.depth(zInd),(Y'))
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -2132,7 +2157,7 @@ if handles.use_ext_fig.Value == 0
     end
     if handles.plotbox1.Value == 6
         imagesc(ax.stime(tInd),ax.depth(zInd),Y)
-        colormap('hot')
+        colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -2197,7 +2222,31 @@ if handles.use_ext_fig.Value == 0
     
 
    axes(handles.axes4)
+  % H = 20*log10(H./max(max(max((H)))));
+   gmax1 = max(max(G(:,:,1)));
+   gmax2 = max(max(G(:,:,3)));
+   for i = 1:size(G,1)
+       for j = 1:size(G,2)
+           
+           if G(i,j,1) < gmax1*.5
+               G(i,j,1) = 0;
+           else
+               G(i,j,1) = G(i,j,1);
+           end
+           if G(i,j,3) < gmax2*.5
+               G(i,j,3) = 0;
+           else
+               G(i,j,3) = G(i,j,3);
+           end
+           
+       end
+   end
+                   
    imagesc(G);
+   caxis(gca,[0.5 1])
+%    if ~isempty(aeR)
+%        caxis(aeR)
+%    end
    
 %    hold off 
 %    plot(0)
@@ -2211,7 +2260,7 @@ if handles.use_ext_fig.Value == 0
 %    imagesc(Y');
 %    set(handles.axes4.Children,'AlphaData',0.5);
 %   % set(handles.axes4.Children,'AlphaData',0.5);
-   h=5;
+       h=5;
     
     
     
@@ -3008,6 +3057,11 @@ Yxz = squeeze(Xfilt(xInd,py,zInd,pt));
 Yyz = squeeze(Xfilt(px,yInd,zInd,pt));
 Yzt = squeeze(Xfilt(px,py,zInd,tInd));
 
+if handles.hotcold.Value == 1
+    h = hotcoldDB;
+else 
+    h = 'hot';
+end
 
 if length(size(Yxy)) > 2
     errordlg('Too many dimensions; check ranges')
@@ -3022,7 +3076,7 @@ end
 if handles.use_ext_fig.Value == 0
     axes(handles.axes2)
         imagesc(ax.x(xInd),ax.y(yInd),(Yxy'))
-        colormap(gca,'hot')
+        colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -3031,7 +3085,7 @@ if handles.use_ext_fig.Value == 0
 
 axes(handles.axes1)
         imagesc(ax.x(xInd),ax.depth(zInd),(Yxz'))
-        colormap(gca,'hot')
+        colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -3040,7 +3094,7 @@ axes(handles.axes1)
 
 axes(handles.axes3)
         imagesc(ax.y(yInd),ax.depth(zInd),(Yyz))
-        colormap(gca,'hot')
+        colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -3049,7 +3103,7 @@ axes(handles.axes3)
 
   axes(handles.axes4)
         imagesc(ax.stime(tInd),ax.depth(zInd),Yzt)
-        colormap(gca,'hot')
+        colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)
         end
@@ -3059,7 +3113,7 @@ axes(handles.axes3)
 else
     figure(51)
     imshow(Yxz')
-    colormap(gca,'hot')
+    colormap(gca,h)
     if ~isempty(aeR)
         caxis(aeR)
     end
@@ -3067,7 +3121,7 @@ else
    ylabel('Depth (mm)');
         figure(52)
     imshow(Yyz)
-    colormap(gca,'hot')
+    colormap(gca,h)
     if ~isempty(aeR)
         caxis(aeR)
     end
@@ -3075,7 +3129,7 @@ else
         ylabel('Depth (mm)');
         figure(53)
     imshow(Yxy')
-    colormap(gca,'hot')
+    colormap(gca,h)
     if ~isempty(aeR)
         caxis(aeR)
     end
@@ -3083,7 +3137,7 @@ else
         ylabel('Elevational (mm)');
         figure(54)
     imshow(Yzt)
-    colormap(gca,'hot')
+    colormap(gca,h)
     if ~isempty(aeR)
         caxis(aeR)
     end
@@ -3092,3 +3146,12 @@ else
       xlabel('Time (ms)');
          ylabel('Depth (mm)');
 end
+
+
+% --- Executes on button press in hotcold.
+function hotcold_Callback(hObject, eventdata, handles)
+% hObject    handle to hotcold (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of hotcold

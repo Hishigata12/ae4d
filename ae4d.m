@@ -1836,75 +1836,176 @@ function text6_CreateFcn(hObject, eventdata, handles)
 
 
 % --- Executes on button press in modify_button.
-function modify_button_Callback(jObject, eventdata, handles)	
+function modify_button_Callback(jObject, eventdata, handles)
 if handles.use_chop.Value == 0
-    X = evalin('base','Xfilt');
+    Xfilt = evalin('base','Xfilt');
     param = evalin('base','param');
-    X = circshift(X,str2double(handles.tshift.String),4);
-    X = circshift(X,str2double(handles.dshift.String),3);
-    if str2double(handles.baseb.String) > 0
-        
-        X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
-        
-        if handles.signed_env.Value == 1
-            S = real(sign(X));
-            dims = size(X);
-            b = waitbar(0);
-            for i = 1:dims(1)
-                for j = 1:dims(2)
-                    X(i,j,:,:) = squeeze(S(i,j,:,:)).*envelope(squeeze(real(X(i,j,:,:))));
-                end
-                waitbar(i/dims(1),b,'Basebanding');
-            end
-            if handles.bbdb.Value == 1
-                X = 20*log10(mean(mean(mean(mean(X))))/X);
-            end
-            X = S.*abs(Xfilt);
-            %   X = S.*envelope(real(X));
-        end
-    end
-    if handles.invertbox.Value == 1
-        X = X*(-1);
-    end
-    delete(b)
-    assignin('base','Xfilt',X)
-    
+    ax = evalin('base','ax');
 else
     Xfilt = evalin('base','X_c');
     param = evalin('base','param');
-    X = Xfilt;
-    X = circshift(X,str2double(handles.tshift.String),4);
-    X = circshift(X,str2double(handles.dshift.String),3);
-    if str2double(handles.baseb.String) > 0
-         X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
-       
-        %X = baseband_russ3(Xfilt,param.daq.HFdaq.fs_MHz,str2double(handles.baseb.String));
-        % p = squeeze(X(:,1,:,22));
-       %  figure; plot(real(ifft(p)))
+    ax = evalin('base','ax_c');
+end
+X = Xfilt;
+X = circshift(X,str2double(handles.tshift.String),4);
+X = circshift(X,str2double(handles.dshift.String),3);
+if length(str2num(handles.baseb.String)) == 1
+    if str2num(handles.baseb.String(1)) > 0
+        
+        X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
+        
         if handles.signed_env.Value == 1
             S = sign(imag(X));
             dims = size(Xfilt);
             b = waitbar(0);
             for i = 1:dims(1)
-                for j = 1:dims(2)   
-                    Xfilt(i,j,:,:) = envelope(real(squeeze(Xfilt(i,j,:,:))));
-                   % X(i,j,:,:) = squeeze(S(i,j,:,:)).*envelope(squeeze(real(X(i,j,:,:))));      
+                for j = 1:dims(2)
+                    Xfilt(i,j,:,:) = envelope(squeeze(real(Xfilt(i,j,:,:))));
                 end
-                waitbar(i/dims(1),b,'Finalzing');
+                waitbar(i/dims(1),b,'Basebanding');
             end
             if handles.bbdb.Value == 1
                 Xfilt = 20*log10(Xfilt./max(max(max(max(Xfilt)))));
             end
-           X = S.*abs(Xfilt);
-        %  X = Xfilt;
-            delete(b)
+            X = S.*abs(Xfilt);
+            %   X = S.*envelope(real(X));
         end
     end
+    
     if handles.invertbox.Value == 1
         X = X*(-1);
-    end 
+    end
+    delete(b)
+            
+if handles.use_chop.Value == 0
+    assignin('base','Xfilt',X)
+else
     assignin('base','X_c',X)
 end
+    
+elseif length(str2num(handles.baseb.String)) == 3
+    axes(handles.axes4)
+    h = hotcoldDB;
+    cfreq = str2num(handles.baseb.String);
+    rfreq = cfreq(1):cfreq(3):cfreq(2);
+
+    for i  = 1:length(rfreq)
+            R = Xfilt;
+        X = baseband2(R,rfreq(i),param.daq.HFdaq.fs_MHz);
+        
+        if handles.signed_env.Value == 1
+            S = sign(imag(X));
+            dims = size(R);
+            b = waitbar(0);
+            for i = 1:dims(1)
+                for j = 1:dims(2)
+                    R(i,j,:,:) = envelope(squeeze(real(R(i,j,:,:))));
+                end
+                waitbar(i/dims(1),b,'Basebanding');
+            end
+            if handles.bbdb.Value == 1
+                R = 20*log10(R./max(max(max(max(R)))));
+            end
+            X = S.*abs(R);
+            %   X = S.*envelope(real(X));
+        end
+        
+        xR = str2num(handles.xR.String);
+        if length(xR) == 1
+            xR = [xR xR];
+        end
+        yR = str2num(handles.yR.String);
+        if length(yR) == 1
+            yR = [yR yR];
+        end
+        zR = str2num(handles.zR.String);
+        if length(zR) == 1
+            zR = [zR zR];
+        end
+        tR = str2num(handles.tR.String);
+        if length(tR) == 1
+            tR = [tR tR];
+        end
+        aeR = str2num(handles.aeR.String);
+        dims = size(X);
+        %[~,ax] = make_axes(param,dims,[1 2],1);
+        q.x = 1:dims(1);
+        q.y = 1:dims(2);
+        q.z = 1:dims(3);
+        
+        xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
+        yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
+        zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
+        
+        if length(size(X)) == 3
+            Y = squeeze(X(xInd,yInd,zInd));
+        else
+            q.t = 1:dims(4);
+            tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+            Y = squeeze(X(xInd,yInd,zInd,tInd));
+        end
+        
+        if length(size(Y)) > 2
+            errordlg('Too many dimensions; check ranges')
+            return
+        end
+        if handles.med_box.Value == 1
+            Y = medfilt2(Y,[3 3]);
+        end
+        delete(b)
+        axes(handles.axes4)
+        imagesc(xInd,zInd,real(Y'))
+        if ~isempty(aeR)
+            caxis(aeR);
+        end
+        colormap(h)
+        
+     %   title(['wc = ' num2str(rfreq(i))])
+        %text(40,40,['wc = ' num2str(cfreq(1)+rfreq(i))]);
+    end
+end
+
+
+    
+    
+
+        %
+        % else
+%     Xfilt = evalin('base','X_c');
+%     param = evalin('base','param');
+%     X = Xfilt;
+%     X = circshift(X,str2double(handles.tshift.String),4);
+%     X = circshift(X,str2double(handles.dshift.String),3);
+%     if str2double(handles.baseb.String) > 0
+%          X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
+%        
+%         %X = baseband_russ3(Xfilt,param.daq.HFdaq.fs_MHz,str2double(handles.baseb.String));
+%         % p = squeeze(X(:,1,:,22));
+%        %  figure; plot(real(ifft(p)))
+%         if handles.signed_env.Value == 1
+%             S = sign(imag(X));
+%             dims = size(Xfilt);
+%             b = waitbar(0);
+%             for i = 1:dims(1)
+%                 for j = 1:dims(2)   
+%                     Xfilt(i,j,:,:) = envelope(real(squeeze(Xfilt(i,j,:,:))));
+%                    % X(i,j,:,:) = squeeze(S(i,j,:,:)).*envelope(squeeze(real(X(i,j,:,:))));      
+%                 end
+%                 waitbar(i/dims(1),b,'Finalzing');
+%             end
+%             if handles.bbdb.Value == 1
+%                 Xfilt = 20*log10(Xfilt./max(max(max(max(Xfilt)))));
+%             end
+%            X = S.*abs(Xfilt);
+%         %  X = Xfilt;
+%             delete(b)
+%         end
+%     end
+%     if handles.invertbox.Value == 1
+%         X = X*(-1);
+%     end 
+%     assignin('base','X_c',X)
+% end
 
 
 
@@ -2719,6 +2820,20 @@ else
         PEImage = multibandread(PEbsqFile,[dsize(1:2),prod(dsize(3:end))],...
             'single',nOffset,'bsq','ieee-le',{'Band','Direct',bScanParm.nScanPt});
         
+        dims = size(PEImage);
+        tmax = pi/4;
+        theta = linspace(-tmax,tmax,31);
+        C = ceil(dims(2)/2);
+        r = linspace(0,abs(round(PData.Origin(1))),500);
+        for i = 1:length(r)
+            X(i,:) = r(i).*sin(theta);
+            Y(i,:) = r(i).*cos(theta);
+        end
+        W = mesh(X,Y);
+        s = size(X);
+%         for i = 1:s(2)
+%             for j = 1:s(1)
+%                 data(i,j) = 
         
         
         x = 3;

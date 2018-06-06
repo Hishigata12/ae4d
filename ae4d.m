@@ -1277,6 +1277,11 @@ if length(size(HF)) == 3
     dims = size(R); %gets no dimensions of reconstructed data
     ax.depth = linspace(0,ax.depth(end),dims(3));
     ax.x = linspace(ax.x(1),ax.x(end),dims(1));
+    low_x = find(ax.x >= -10,1);
+    high_x = find(ax.x >= 10,1);
+    R = R(low_x:high_x,:,:,:);
+    ax.x = linspace(ax.x(low_x),ax.x(high_x),size(R,1));
+    
 else
     q.t = 1:size(HF,4);
     q.y = 1:size(HF,2);
@@ -1291,7 +1296,7 @@ else
             waitbar((j-1)/yInd + i/yInd(end),b,'Computing inverse radon transform');
         end
     end
-end
+
 
 R = permute(R,[2 3 1 4]);
 delete(b);
@@ -1299,6 +1304,7 @@ dims = size(R); %gets no dimensions of reconstructed data
 ax.depth = linspace(0,ax.depth(end),dims(3));
 ax.x = linspace(ax.x(1),ax.x(end),dims(1));
 ax.y = linspace(ax.y(1),ax.y(end),dims(2));
+end
     
 
 if handles.use_chop.Value == 1
@@ -1851,8 +1857,9 @@ X = circshift(X,str2double(handles.tshift.String),4);
 X = circshift(X,str2double(handles.dshift.String),3);
 wc1 = str2double(handles.fast_cut1.String);
 wc2 = str2double(handles.fast_cut2.String);
+bb = str2num(handles.baseb.String);
 if length(str2num(handles.baseb.String)) == 1
-    if str2num(handles.baseb.String(1)) > 0
+    if bb(1) > 0
         
         X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz,wc1,wc2);
         
@@ -2778,8 +2785,17 @@ if handles.onemhz.Value == 1
     b = waitbar(0,'Matrix Conversion');
     waitbar(0,b,'Enveloping and converting to 4D matrix')
     HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
-    for i = 1:param.velmex.XNStep
-        for j = 1:param.velmex.YNStep
+    
+    if param.velmex.SlowAxis == 'X'
+        LatStep = param.velmex.YNStep;
+        EleStep = param.velmex.XNStep;
+    else
+        LatStep = param.velmex.XNStep;
+        EleStep = param.velmex.YNStep;
+    end
+    
+    for i = 1:LatStep
+        for j = 1:EleStep
             %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
             HF(i,j,:,:) = X{i,j}; %Converts cell array to double
         end

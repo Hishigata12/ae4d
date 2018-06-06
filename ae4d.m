@@ -250,6 +250,9 @@ if length(tR) == 1
 end
 aeR = str2num(handles.aeR.String);
 dims = size(Xfilt);
+if length(dims) < 3
+    dims(3) = 1;
+end
 %[~,ax] = make_axes(param,dims,[1 2],1);
 q.x = 1:dims(1);
 q.y = 1:dims(2);
@@ -259,7 +262,7 @@ xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 
-if length(size(Xfilt)) == 3
+if length(size(Xfilt)) < 4
     Y = squeeze(Xfilt(xInd,yInd,zInd));
 else
 q.t = 1:dims(4);
@@ -474,6 +477,17 @@ for i = 1:s(1)
     waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
 end
 
+if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+    %    if param.velmex.SlowAxis == 'X'
+    for i = 1:size(HF,1)
+        if mod(i,2) == 0
+            HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+        end
+    end
+    %   end
+end
+
+
 %%%%%%%%
 if isempty(num2str(handles.depR.String))
     qq = [10 round(1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz-10)];
@@ -638,7 +652,7 @@ elseif handles.plotbox2.Value == 2
       
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.y(yInd),ax.depth(zInd),J) % mod plots
-                h = hotcoldDB;
+             %   h = hotcoldDB;
                 colormap(h)
             else
                 imshow(J)
@@ -670,7 +684,7 @@ elseif handles.plotbox2.Value == 3
             
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.x(xInd),ax.y(yInd),J) % mod plots
-                h = hotcoldDB;
+           %     h = hotcoldDB;
                 colormap(h)
             else
                 imshow(J)
@@ -942,16 +956,16 @@ if length(xR) == 1
     xR(2) = xR(1);
 end
 yR = str2num(handles.yR.String);
+zR = str2num(handles.zR.String);
+tR = str2num(handles.tR.String);
 if length(yR) == 1
     yR(2) = yR(1);
 end
-zR = str2num(handles.zR.String);
-if length(zR) == 1
-    zR(2) = zR(1);
-end
-tR = str2num(handles.tR.String);
 if length(tR) == 1
     tR(2) = tR(1);
+end
+if length(zR) == 1
+    zR(2) = zR(1);
 end
 aeR = str2num(handles.aeR.String);
 dims = size(Xfilt);
@@ -971,8 +985,13 @@ end
 %[~,ax] = make_axes(param,size(X));
 dims = size(X);
 if length(dims) < 4
+    if length(tInd) == 1 && length(zInd) == 1
+        dims = [dims(1) dims(2) 1 1];
+    else
     dims = [dims(1) dims(2) dims(3) 1];
+    end
 end
+
 
 ax.depth = linspace(zR(1),zR(2),dims(3));
 ax.stime = linspace(tR(1),tR(2),dims(4));
@@ -2799,9 +2818,22 @@ if handles.onemhz.Value == 1
             %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
             HF(i,j,:,:) = X{i,j}; %Converts cell array to double
         end
-        waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
+        waitbar(i/LatStep,b,'Converting to 4D matrix');
     end
     delete(b)
+    
+    if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+    %    if param.velmex.SlowAxis == 'X'
+            for i = 1:size(HF,1)
+                if mod(i,2) == 0
+                    HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+                end
+            end
+     %   end
+    end
+        
+    
+    
    % PEdata = HF(:,:,:,1:2);
    PEdata = HF;
     [~, pex] = make_axes(param,size(HF));

@@ -3,7 +3,7 @@ function varargout = ae4d(varargin)
 %      AE4D, by itself, creates a new AE4D or raises the existing
 %      singleton*.
 %
-%      H = AE4D returns the handle to a new AE4D or the handle to
+%     open  H = AE4D returns the handle to a new AE4D or the handle to
 %      the existing singleton*.
 %
 %      AE4D('CALLBACK',hObject,eventData,handles,...) calls the local
@@ -478,13 +478,19 @@ for i = 1:s(1)
 end
 
 if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
-    %    if param.velmex.SlowAxis == 'X'
-    for i = 1:size(HF,1)
-        if mod(i,2) == 0
-            HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+    if param.velmex.SlowAxis == 'X'
+        for i = 1:size(HF,1)
+            if mod(i,2) == 0
+                HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+            end
         end
+    else
+        for i = 1:size(HF,2)
+            if mod(i,2) == 0
+                HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+            end
+        end        
     end
-    %   end
 end
 
 
@@ -1785,7 +1791,8 @@ else
 end
 
 hold on
-
+clear S
+clear ydb
 xloc = find(xax>x,1);
 S = C(:,xloc);
 if max(S) <= 0
@@ -2822,16 +2829,32 @@ if handles.onemhz.Value == 1
     end
     delete(b)
     
-    if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
-    %    if param.velmex.SlowAxis == 'X'
-            for i = 1:size(HF,1)
-                if mod(i,2) == 0
-                    HF(i,:,:,:) = fliplr(HF(i,:,:,:));
-                end
+%     if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+%     %    if param.velmex.SlowAxis == 'X'
+%             for i = 1:size(HF,1)
+%                 if mod(i,2) == 0
+%                     HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+%                 end
+%             end
+%      %   end
+%     end
+
+if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+    if param.velmex.SlowAxis == 'X'
+        for i = 1:size(HF,1)
+            if mod(i,2) == 0
+                HF(i,:,:,:) = fliplr(HF(i,:,:,:));
             end
-     %   end
+        end
+    else
+        for i = 1:size(HF,2)
+            if mod(i,2) == 0
+                HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+            end
+        end
     end
-        
+end
+
     
     
    % PEdata = HF(:,:,:,1:2);
@@ -2884,7 +2907,14 @@ else
 %         for i = 1:s(2)
 %             for j = 1:s(1)
 %                 data(i,j) = 
-        
+        if handles.save_4d.Value == 1
+             clearvars -except PEbsqFile bScanParm PEImage PData Trans TW TX
+                 f = PEbsqFile(1:end-4);
+        file02 = [f '_4d_PE.mat'];
+        fprintf('Saving 4D file...')
+        save(file02);
+        fprintf('Done\n')
+        end
         
         x = 3;
     end
@@ -2898,6 +2928,7 @@ cd(p)
 fprintf('Loading 4D Dataset...')
 load([p f]);
 %[~, ax] = make_axes(param,size(Xfilt),[1 2],1);
+if handles.onemhz.Value == 1
 set(handles.fname,'String',file);
 fprintf('Done\n')
 assignin('base','PEdata',PEdata);
@@ -2921,7 +2952,17 @@ set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
 set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
 set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
 set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+end
 
+else
+    set(handles.fname,'String',file02);
+fprintf('Done\n')
+assignin('base','PEdata',PEImage);
+assignin('base','bScanParm',bScanParm);
+assignin('base','Trans',Trans)
+assignin('base','PData',PData)
+assignin('base','TW',TW)
+assignin('base','TX',TX)
 end
 
 

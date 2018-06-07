@@ -1,14 +1,60 @@
-function SendToImageJ() 
-    %Assigns the 4D set to the chopped set
-    mainSet = evalin('base','X_c');
+function SendToImageJ(handles) 
     
-    %Checks if it is pulse echo or AE
-    if 1==1 %for PA only
-        dBRng    = [-12,0];
+    %Reducing the 4D image based on range
+    param = evalin('base','param');
+    
+    %Checks if the data set is PE or AE
+    if handles.PE_4dbox.Value == 1
         colorMap = 'MagnitudeColorMap';  
     else
-%         colorMap = 'grayscale';  
+        colorMap = 'grayscale';  
     end
+    %Gets the dBRng for the data
+    dBRng = str2num(handles.aeR.String);
+    
+    if handles.use_chop.Value == 1
+        Xfilt = evalin('base','X_c');
+        ax = evalin('base','ax_c');
+    else
+        Xfilt = evalin('base','Xfilt');
+        ax = evalin('base','ax');
+    end
+
+
+    xR = str2num(handles.xR.String);
+    if length(xR) == 1
+        xR = [xR xR];
+    end
+    yR = str2num(handles.yR.String);
+    if length(yR) == 1
+        yR = [yR yR];
+    end
+    zR = str2num(handles.zR.String);
+    if length(zR) == 1
+        zR = [zR zR];
+    end
+    tR = str2num(handles.tR.String);
+    if length(tR) == 1
+        tR = [tR tR];
+    end
+    dims = size(Xfilt);
+    if length(dims) < 3
+        dims(3) = 1;
+    end
+    %[~,ax] = make_axes(param,dims,[1 2],1);
+    q.x = 1:dims(1);
+    q.y = 1:dims(2);
+    q.z = 1:dims(3);
+
+    xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
+    yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
+    zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
+
+    q.t = 1:dims(4);
+    tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+    
+    %Selects the data in the specified range
+    mainSet = Xfilt(xInd,yInd,zInd,tInd);
 
     %Checks connection of Mij
     location = checkMijConnection;
@@ -48,7 +94,7 @@ function SendToImageJ()
     end
 
     %Checks if the 4D data wants to be saved into a tif
-    if 1==0
+    if handles.save_fig.Value == 1
         fprintf(fileID,'saveTrue\n');
     else
         fprintf(fileID,'saveFalse\n');
@@ -60,9 +106,9 @@ function SendToImageJ()
     %Simply gets the end points
     %This needs to give the correct values on the 4DCreation.ijm or 
     %4DCreationPEOverlay.ijm, needs to give the pixel width,pixel height,voxel depth
-    fprintf(fileID, strcat(num2str(abs(-5-5)/sizeData(1)),'\n'));
-    fprintf(fileID, strcat(num2str(abs(-5-5)/sizeData(2)),'\n'));
-    fprintf(fileID, strcat(num2str(abs(68-80)/sizeData(3)),'\n'));
+    fprintf(fileID, strcat(num2str(abs(xR(1)-xR(2))/sizeData(1)),'\n'));
+    fprintf(fileID, strcat(num2str(abs(yR(1)-yR(2))/sizeData(2)),'\n'));
+    fprintf(fileID, strcat(num2str(abs(zR(1)-zR(2))/sizeData(3)),'\n'));
     
     %Calls the macro that turns the 3D data that was sent to ImageJ into a 4D
     %data set and puts that 4D image in the 3D viewer

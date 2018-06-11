@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 04-Jun-2018 17:26:27
+% Last Modified by GUIDE v2.5 10-Jun-2018 21:16:15
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -451,11 +451,16 @@ ax.LFfreq = linspace(0,param.daq.HFdaq.pulseRepRate_Hz,param.daq.HFdaq.NoBurstTr
 
 %**************************************************************************
 %Builds 4D Matrix***************~~~~~~~~~~~~~~~~**************
-[~, HF1] = full_signal([path file],param,2); %Gets the raw data
+if isempty(handles.hfchans.String)
+    a = 2;
+else
+    a = st2double(handles.hfchans.String);
+end
+[~, HF1] = full_signal([path file],param,a); %Gets the raw data
 if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
-    X = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
+    [X, LF] = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
 elseif handles.slow_box.Value == 1
-    X = w_slow_filt2(param, HF1,LF,handles.slow_box.Value);
+    [X, LF] = w_slow_filt2(param, HF1,LF,handles.slow_box.Value);
 end
 if handles.match_box.Value == 1
 X = w_ae_filt2(param,X,US,1); %Filters in fast time; 0 is match, 1 uses cutoffs
@@ -1648,6 +1653,9 @@ Lae = Lae/str2double(handles.lfgain.String)*1000;
 %R = corrcoef(abs(Sae2),abs(Lae));
 R = corrcoef(Sae2,Lae);
 R = R(2);
+fit  = polyfit(Lae,Sae2',1);
+taxis = linspace(min(Lae),max(Lae),length(Lae));
+yfit = fit(1)*taxis+fit(2);
 
 if handles.use_ext_fig.Value == 1
     figure(6);
@@ -1655,6 +1663,9 @@ if handles.use_ext_fig.Value == 1
     plot(0)
    % scatter(abs(Lae),abs(Sae2));
     scatter(Lae,Sae2,13,'r','filled')
+    hold on
+    plot(taxis,yfit,'Color','k','LineWidth',2.5)
+    hold off
     ylabel('\muV')
     xlabel('mA')
     figure(66)
@@ -1669,7 +1680,10 @@ else
     hold off
     plot(0)
    % scatter(abs(Lae),abs(Sae2));
-     scatter(Lae,Sae2,13,'k','filled')
+     scatter(Lae,Sae2,13,'r','filled')
+     hold on
+    plot(taxis,yfit,'Color','k','LineWidth',2.5)
+    hold off
      ylabel('\muV')
     xlabel('mA')
     axes(handles.axes3)
@@ -1905,13 +1919,14 @@ if length(str2num(handles.baseb.String)) == 1
             X = S.*abs(Xfilt);
             %   X = S.*envelope(real(X));
         end
+         delete(b)
     end
     
     if handles.invertbox.Value == 1
         X = X*(-1);
     end
-    delete(b)
-            
+   
+    
 if handles.use_chop.Value == 0
     assignin('base','Xfilt',X)
 else
@@ -2156,8 +2171,8 @@ function PE_4dbox_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of PE_4dbox
 
-% --- Executes on button press in overlay.
-function overlay_Callback(hObject, eventdata, handles)
+% --- Executes on button press in overlay4d.
+function overlay4d_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value == 1
     Xfilt = evalin('base','X_c');
     ax = evalin('base','ax_c');
@@ -3361,3 +3376,121 @@ function hotcold_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of hotcold
+
+
+
+function hfchans_Callback(hObject, eventdata, handles)
+% hObject    handle to hfchans (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of hfchans as text
+%        str2double(get(hObject,'String')) returns contents of hfchans as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function hfchans_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to hfchans (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in MergeHF.
+function MergeHF_Callback(hObject, eventdata, handles)
+n = str2double(handles.numhf.String);
+ for i = 1:n
+[file, path] = uigetfile(fullfile(pwd,'*4d_data.mat'));
+b = waitbar(0,'Loading');
+load([path file]);
+%assignin('base',['X' num2str(i)],Xfilt)
+X{i} = Xfilt;
+waitbar(i/n,b,'Merging 4d datasets')
+ end
+delete(b)
+assignin('base','Xmerged',X);
+assignin('base','fpath',[path file]);
+assignin('base','param',param);
+assignin('base','ax',ax);
+assignin('base','LF',LF);
+%assignin('base','PEparam',PE);
+set(handles.LF_chan,'String',num2str(size(LF,2)));
+set(handles.tms,'String',num2str([ax.stime(1) ax.stime(end)]));
+set(handles.tsamp,'String',num2str([1 length(ax.stime)]));
+set(handles.xmm,'String',num2str([ax.x(1) ax.x(end)]));
+set(handles.xsamp,'String',num2str([1 length(ax.x)]));
+set(handles.ymm,'String',num2str([ax.y(1) ax.y(end)]));
+set(handles.ysamp,'String',num2str([1 length(ax.y)]));
+set(handles.zmm,'String',num2str([ax.depth(1) round(ax.depth(end))]));
+set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
+
+if handles.reset_axes.Value == 1    
+set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
+set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
+set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
+set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+
+end
+
+
+
+
+function numhf_Callback(hObject, eventdata, handles)
+% hObject    handle to numhf (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of numhf as text
+%        str2double(get(hObject,'String')) returns contents of numhf as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function numhf_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to numhf (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function channel_Callback(hObject, eventdata, handles)
+% hObject    handle to channel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of channel as text
+%        str2double(get(hObject,'String')) returns contents of channel as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function channel_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to channel (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in usechan.
+function usechan_Callback(hObject, eventdata, handles)
+m = str2double(handles.channel.String);
+Xmerged = evalin('base','Xmerged');
+if m > length(Xmerged)
+    errordlg('Your selected value exceeds the number of channels');
+end
+X = Xmerged{m};
+assignin('base','Xfilt',X)

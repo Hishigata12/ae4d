@@ -32,7 +32,7 @@ if in(1) == 1
                 waitbar(i/dims(4),b,'Interpolating')
             end
             X = Ix;
-            delete(b);
+            
     end
     if p > 0
         in = in([1 2 4]);

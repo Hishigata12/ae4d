@@ -1,3 +1,5 @@
+% input var a denotes which HF channel to take.
+
 function [HF, HF1] = full_signal(loc,param,a)
 k = param.velmex.XNStep*param.velmex.YNStep;
 if param.velmex.FastAxis == 'X'
@@ -17,6 +19,9 @@ for i = 1:fL
     waitbar(i/(fL),b,'Creating 4D array');
     fprintf('.');
 end
+
+  
+
 if length(size(HF1{1})) > 2
     if exist('a','var')
         for i = 1:size(HF1,1)

@@ -4,7 +4,7 @@
 %n is the point along fast time point that contains the noise spectrum in the
 %current direction
 
-function y = w_slow_filt2(param,HF,LF,mode,c)
+function [y lf] = w_slow_filt2(param,HF,LF,mode,c)
 %~~~~Create Filter~~~~%
 
 %mode = 0;
@@ -113,6 +113,31 @@ if mode == 0
     end
     
     
+    
+    LF2 = fft(LF);
+    LFHam = hamming(length(LF));
+    lf_axis = linspace(0,Fs,L);
+    Fc1 = find(lf_axis >= c(1),1);
+    Fc2 = find(lf_axis >= c(2),1);
+    for i=1:L
+        if (i >= Fc1 && i <= Fc2) || (i >= L-Fc2 && i <= L-Fc1)
+            LF_Filter(i) = 1;
+        else
+            LF_Filter(i) = 0;
+        end
+    end
+    LFtime = ifft(LF_Filter);
+   % LFH = interp1(linspace(1,10,L_us),H,linspace(1,10,L));
+   LFt2 = circshift(LFtime,round(L/2));
+   LFH1 = LFt2.*LFHam'; 
+   LFH2 = fft(LFH1);
+    for i = 1:size(LF,2)
+        LF3(:,i) = LF2(:,i).*LFH2';
+        lf(:,i) = real(ifft(LF3(:,i)));
+    end
+    lf = circshift(lf,round(L/2));
+%     LF3 = LF2.*LFH';
+%     lf = real(ifft(LF3));
 %    fprintf('Converting to space domain\n');
     
     %Xf = flip(X2,4);

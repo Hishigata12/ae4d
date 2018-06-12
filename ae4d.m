@@ -2156,6 +2156,11 @@ function IJ_butts_Callback(hObject, eventdata, handles)
 % hObject    handle to IJ_butts (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+SendToImageJ;
+
+
+function overlay4d_Callback(hObject, eventdata, handles)
+Overlay4D;
 
 
 % --- Executes on button press in AE_4dbox.

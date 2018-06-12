@@ -1,10 +1,10 @@
-function SendToImageJ(handles) 
+function SendToImageJ(handles,overlay) 
     
     %Reducing the 4D image based on range
     param = evalin('base','param');
     
     %Checks if the data set is PE or AE
-    if handles.PE_4dbox.Value == 1
+    if handles.PE_4dbox.Value == 0
         colorMap = 'MagnitudeColorMap';  
     else
         colorMap = 'grayscale';  
@@ -112,7 +112,7 @@ function SendToImageJ(handles)
     
     %Calls the macro that turns the 3D data that was sent to ImageJ into a 4D
     %data set and puts that 4D image in the 3D viewer
-    if 1==0
+    if overlay==1
         macro_path=strcat(location,'\Macro\4DCreationPEOverlay.ijm');
         IJObject = ij.IJ();
         IJObject.runMacroFile(macro_path);     

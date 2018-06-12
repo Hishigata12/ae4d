@@ -1,5 +1,5 @@
 function Overlay4D(handles)
-
-    SendToImageJ(handles);
+    
+    SendToImageJ(handles,1);
     
 end

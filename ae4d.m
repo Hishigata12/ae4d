@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 10-Jun-2018 21:16:15
+% Last Modified by GUIDE v2.5 11-Jun-2018 20:33:45
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -280,7 +280,9 @@ end
 
 if handles.hotcold.Value == 1
     h = hotcoldDB;
-else
+elseif handles.graybox.Value == 1
+    h = 'gray';
+else 
     h = 'hot';
 end
 
@@ -619,6 +621,8 @@ else
 end
 if handles.hotcold.Value == 1
     h = hotcoldDB;
+elseif handles.graybox.Value == 1
+    h = 'gray';
 else
     h = 'hot';
 end
@@ -649,7 +653,7 @@ if handles.plotbox2.Value == 1
             drawnow
         end
     elseif handles.save_fig.Value == 1
-        vidwrite(Xfilt,ax.depth,ax.x,[zInd(1) zInd(end)],[xInd(1) xInd(end)],[tInd(1) tInd(end)],aeR)
+            vidwrite(param,ax,Xfilt,handles)
     end
     
 elseif handles.plotbox2.Value == 2
@@ -681,7 +685,7 @@ elseif handles.plotbox2.Value == 2
         
         
     elseif handles.save_fig.Value == 1
-        vidwrite(Xfilt,ax.depth,ax.y,[zInd(1) zInd(end)],[yInd(1) yInd(end)],[tInd(1) tInd(end)],aeR)
+        vidwrite(param,ax,Xfilt,handles)
     end
     
 elseif handles.plotbox2.Value == 3
@@ -713,7 +717,7 @@ elseif handles.plotbox2.Value == 3
         
         
     elseif handles.save_fig.Value == 1
-        vidwrite(Xfilt,ax.y,ax.x,[yInd(1) yInd(end)],[xInd(1) xInd(end)],[zInd(1) zInd(end)],aeR)
+        vidwrite(param,ax,Xfilt,handles)
     end
 end
 
@@ -2172,7 +2176,7 @@ function PE_4dbox_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of PE_4dbox
 
 % --- Executes on button press in overlay4d.
-function overlay4d_Callback(hObject, eventdata, handles)
+function overlay_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value == 1
     Xfilt = evalin('base','X_c');
     ax = evalin('base','ax_c');
@@ -2219,7 +2223,9 @@ peInd = q.pe(find(ax.pe >= zR(1)):find(ax.pe >= zR(2)));
 
 if handles.hotcold.Value == 1
     h = hotcoldDB;
-else 
+elseif handles.graybox.Value == 1
+    h = 'gray';
+else
     h = 'hot';
 end
 
@@ -3226,7 +3232,7 @@ end
 
 
 % --- Executes on button press in plot4.
-function plot4_Callback(hObject, eventdata, handles)
+function plot4_Callback(hObject, eventdata, handles) 
 param = evalin('base','param');
 if handles.use_chop.Value == 1
     Xfilt = evalin('base','X_c');
@@ -3280,7 +3286,9 @@ Yzt = squeeze(Xfilt(px,py,zInd,tInd));
 
 if handles.hotcold.Value == 1
     h = hotcoldDB;
-else 
+elseif handles.graybox.Value == 1
+    h = 'gray';
+else
     h = 'hot';
 end
 
@@ -3404,9 +3412,10 @@ end
 % --- Executes on button press in MergeHF.
 function MergeHF_Callback(hObject, eventdata, handles)
 n = str2double(handles.numhf.String);
+b = waitbar(0,'Loading');
  for i = 1:n
 [file, path] = uigetfile(fullfile(pwd,'*4d_data.mat'));
-b = waitbar(0,'Loading');
+
 load([path file]);
 %assignin('base',['X' num2str(i)],Xfilt)
 X{i} = Xfilt;
@@ -3494,3 +3503,123 @@ if m > length(Xmerged)
 end
 X = Xmerged{m};
 assignin('base','Xfilt',X)
+
+
+
+function framerate_Callback(hObject, eventdata, handles)
+% hObject    handle to framerate (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of framerate as text
+%        str2double(get(hObject,'String')) returns contents of framerate as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function framerate_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to framerate (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in graybox.
+function graybox_Callback(hObject, eventdata, handles)
+% hObject    handle to graybox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of graybox
+
+
+% --- Executes on button press in lfmovie.
+function lfmovie_Callback(hObject, eventdata, handles) %Low Frequency Movie
+% hObject    handle to lfmovie (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+param = evalin('base','param');
+LF = evalin('base','LF');
+LF = LF(:,str2double(handles.LF_chan.String));
+LF = LF/str2double(handles.lfgain.String)*1000;
+tR = str2num(handles.tR.String);
+if length(tR) == 1
+    LF_butt_Callback(hObject, eventdata, handles)
+else
+    q.t = 1:param.daq.LFdaq.pts;
+    ax.lf = linspace(0,param.daq.duration_ms,param.daq.LFdaq.pts);
+    tInd = q.t(find(ax.lf >= tR(1),1):find(ax.lf >= tR(2),1));
+    b1 = min(LF); b2 = max(LF);
+    b = param.daq.LFdaq.pts/param.daq.HFdaq.NoBurstTriggers;
+    
+    
+    if handles.LF_FFT.Value == 1
+        lf = fft(LF);
+        x = linspace(0,param.daq.LFdaq.fs_Hz,length(lf));
+        if handles.use_ext_fig.Value == 1
+            figure(33)
+            plot(x,abs(lf))
+        else
+            axes(handles.axes3)
+            plot(x,abs(lf))
+        end
+        if ~isempty(handles.xlims3.String)
+            xlim(str2num(handles.xlims3.String));
+        end
+        if ~isempty(handles.ylims3.String)
+            ylim(str2num(handles.ylims3.String));
+        end
+        
+    end
+    x = linspace(0,param.daq.HFdaq.duration_ms,length(LF));
+    if handles.save_fig.Value == 1
+        v = VideoWriter('LFdata.avi');
+        v.FrameRate = str2double(handles.framerate.String);
+        open(v)
+    end
+    for i = tInd(1):b:tInd(end)
+        if handles.use_ext_fig.Value == 1
+            figure(3)
+            if ~isempty(handles.xlims.String)
+                xlim(str2num(handles.xlims.String));
+            end
+            if ~isempty(handles.ylims.String)
+                ylim(str2num(handles.ylims.String));
+            end
+            plot(x,LF,'k')
+            hold on
+            plot(x(i),LF(i),'ro','MarkerFaceColor','r')
+            hold off
+            set(gca,'Color','none')
+            if handles.save_fig.Value == 1
+                frame = getframe;
+                writeVideo(v,frame);
+            else
+                drawnow
+            end
+        else
+            axes(handles.axes2)
+            if ~isempty(handles.xlims.String)
+                xlim(str2num(handles.xlims.String));
+            end
+            if ~isempty(handles.ylims.String)
+                ylim(str2num(handles.ylims.String));
+            end
+            plot(x,LF,'k')
+            hold on
+            plot(x(i),LF(i),'ro','MarkerFaceColor','r')
+            hold off
+            drawnow;
+        end
+        ylabel('mA');
+        xlabel('ms');
+        
+    end
+    if handles.save_fig.Value == 1
+        close(v)
+    end
+end

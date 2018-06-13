@@ -1,0 +1,9 @@
+MagnitudeColorMap
+-9
+0
+AE
+saveFalse
+C:\Users\Swag\Documents\ae4d_.tif
+1.0667
+0.37037
+0.036765

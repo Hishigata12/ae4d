@@ -3,8 +3,7 @@ function location = checkMijConnection()
     %Gets the location of the file by locating the location of this file
     %and back up two locations
     str = (which('checkMijConnection.m'));
-    temp = strsplit(str,'\');
-    location = strjoin(temp(1:size(temp,2)-2),'\');
+    temp = strsplit(str,'\');    location = strjoin(temp(1:size(temp,2)-2),'\');
     %Checks if ImageJ is connected to MATLAB and connects if not
     if not(any(~cellfun('isempty',strfind(javaclasspath('-dynamic'),'ij.jar'))))
         fprintf('Connecting ImageJ...\n');
@@ -26,5 +25,5 @@ function location = checkMijConnection()
         IMG.changes = false; 
         IMG.close();
     end
-    
+    MIJ.start();
 end

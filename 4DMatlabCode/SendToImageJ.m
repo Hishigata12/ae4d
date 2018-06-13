@@ -9,8 +9,6 @@ function SendToImageJ(handles,overlay)
     else
         colorMap = 'grayscale';  
     end
-    %Gets the dBRng for the data
-    dBRng = str2num(handles.aeR.String);
     
     if handles.use_chop.Value == 1
         Xfilt = evalin('base','X_c');
@@ -56,6 +54,15 @@ function SendToImageJ(handles,overlay)
     %Selects the data in the specified range
     mainSet = Xfilt(xInd,yInd,zInd,tInd);
 
+    
+    %Gets the dBRng for the data
+    if(isfield(handles.aeR,'String') || isempty(handles.aeR.String))  
+        dBRng = [min(min(min(min(mainSet)))) max(max(max(max(mainSet))))];
+    else
+       dBRng = str2num(handles.aeR.String);     
+    end
+
+    
     %Checks connection of Mij
     location = checkMijConnection;
     
@@ -113,11 +120,11 @@ function SendToImageJ(handles,overlay)
     %Calls the macro that turns the 3D data that was sent to ImageJ into a 4D
     %data set and puts that 4D image in the 3D viewer
     if overlay==1
-        macro_path=strcat(location,'\Macro\4DCreationPEOverlay.ijm');
+        macro_path=strcat(location,'\Fiji.app\macros\4DCreationPEOverlay.ijm');
         IJObject = ij.IJ();
         IJObject.runMacroFile(macro_path);     
     else
-    	macro_path=strcat(location,'\Macro\4DCreation.ijm');
+    	macro_path=strcat(location,'\Fiji.app\macros\4DCreation.ijm');
         IJObject = ij.IJ();
         IJObject.runMacroFile(macro_path); 
     end

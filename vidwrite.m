@@ -38,6 +38,15 @@ xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+  xP = str2double(handles.xP.String);
+    yP = str2double(handles.yP.String);
+    zP = str2double(handles.zP.String);
+    tP = str2double(handles.tP.String);
+    xpoint = find(ax.x >= xP,1);
+    ypoint = find(ax.y >= yP,1);
+    zpoint = find(ax.depth >= zP,1);
+    tpoint = find(ax.stime >= tP,1);
+
 
 Xfilt = squeeze(Xfilt(xInd,yInd,zInd,tInd));
 
@@ -45,15 +54,24 @@ if handles.plotbox2.Value == 1
     n = length(tInd);
     p = 't';
      Ind = tInd;
+     Xfilt = squeeze(Xfilt(xInd,ypoint,zInd,tInd));
 elseif handles.plotbox2.Value == 2
     n = length(tInd);
     p = 't';
      Ind = tInd;
+     Xfilt = squeeze(Xfilt(xpoint,yInd,zInd,tInd));
 elseif handles.plotbox2.Value == 3
     n = length(zInd);
     p = 'z';
     Ind = zInd;
+    Xfilt = squeeze(Xfilt(xInd,yInd,zInd,tpoint));
+elseif handles.plotbox2.Value == 4
+      n = length(tInd);
+    p = 't';
+     Ind = tInd;
+     Xfilt = squeeze(Xfilt(xInd,yInd,zpoint,tInd));
 end
+
 
 if handles.hotcold.Value == 1
     h = hotcoldDB;
@@ -67,7 +85,7 @@ for i = 1:n
     if handles.use_ext_fig.Value == 1
         imshow(squeeze(Xfilt(:,:,i))')
     else
-    imagesc(ax.x(xInd),ax.depth(zInd),squeeze(Xfilt(:,:,i))')
+    imagesc(squeeze(Xfilt(:,:,i))')
     end
     title([p ' = ' num2str(Ind(i))])   
     colormap(h);

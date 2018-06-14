@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 11-Jun-2018 20:33:45
+% Last Modified by GUIDE v2.5 13-Jun-2018 17:43:01
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -58,7 +58,11 @@ set(handles.xR,'String','0 0');
 set(handles.yR,'String','0 0');
 set(handles.zR,'String','0 0');
 set(handles.tR,'String','0 0');
-set(handles.aeR, 'String','-9 0');
+set(handles.xP,'String','0');
+set(handles.yP,'String','0');
+set(handles.zP,'String','0');
+set(handles.tP,'String','5.5');
+%set(handles.aeR, 'String','-9 0');
 
 % Update handles structure
 guidata(hObject, handles);
@@ -231,22 +235,34 @@ else
     ax = evalin('base','ax');
 end
 
+xP = str2double(handles.xP.String);
+yP = str2double(handles.yP.String);
+zP = str2double(handles.zP.String);
+tP = str2double(handles.tP.String);
 
-xR = str2num(handles.xR.String);
+    xR = str2num(handles.xR.String);
 if length(xR) == 1
-    xR = [xR xR];
+    xR = [xR xR xR];
+else
+    xR = [xR(1) xR(2) xP];
 end
 yR = str2num(handles.yR.String);
 if length(yR) == 1
-    yR = [yR yR];
+    yR = [yR yR yR];
+else
+    yR = [yR(1) yR(2) yP];
 end
 zR = str2num(handles.zR.String);
 if length(zR) == 1
-    zR = [zR zR];
+    zR = [zR zR zR];
+else
+     zR = [zR(1) zR(2) zP];
 end
 tR = str2num(handles.tR.String);
 if length(tR) == 1
-    tR = [tR tR];
+    tR = [tR tR tR];
+else
+     tR = [tR(1) tR(2) tP];
 end
 aeR = str2num(handles.aeR.String);
 dims = size(Xfilt);
@@ -257,6 +273,37 @@ end
 q.x = 1:dims(1);
 q.y = 1:dims(2);
 q.z = 1:dims(3);
+
+if handles.plotbox1.Value == 1
+    zR(:) = zR(3);
+    yR(:) = yR(3);
+end
+
+if handles.plotbox1.Value == 2
+    tR(:) = tR(3);
+    zR(:) = zR(3);
+end
+
+if handles.plotbox1.Value == 3
+    tR(:) = tR(3);
+    yR(:) = yR(3);
+end
+
+if handles.plotbox1.Value == 4
+    xR(:) = xR(3);
+    zR(:) = zR(3);
+end
+
+if handles.plotbox1.Value == 5
+    tR(:) = tR(3);
+    xR(:) = xR(3);
+end
+
+if handles.plotbox1.Value == 6
+    xR(:) = xR(3);
+    yR(:) = yR(3);
+end
+
 
 xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
@@ -298,7 +345,7 @@ if handles.use_ext_fig.Value == 0
         handles.axes1.YLabel.String = 'Lateral (mm)';
     end
     if handles.plotbox1.Value == 2
-        imagesc(ax.x(xInd),ax.y(yInd),(Y'))
+        imagesc(ax.x(xInd),ax.y(yInd),(Y'),'ButtonDownFcn',{@Plot4OnClickXY,handles})
         colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
@@ -307,7 +354,7 @@ if handles.use_ext_fig.Value == 0
         handles.axes1.YLabel.String = 'Elevational (mm)';
     end
     if handles.plotbox1.Value == 3
-        imagesc(ax.x(xInd),ax.depth(zInd),(Y'))
+        imagesc(ax.x(xInd),ax.depth(zInd),(Y'),'ButtonDownFcn',{@Plot4OnClickXZ,handles})
         colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
@@ -325,7 +372,7 @@ if handles.use_ext_fig.Value == 0
         handles.axes1.YLabel.String = 'Elevational (mm)';
     end
     if handles.plotbox1.Value == 5
-        imagesc(ax.y(yInd),ax.depth(zInd),(Y'))
+        imagesc(ax.y(yInd),ax.depth(zInd),(Y'),'ButtonDownFcn',{@Plot4OnClickYZ,handles})
         colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
@@ -334,7 +381,7 @@ if handles.use_ext_fig.Value == 0
         handles.axes1.YLabel.String = 'Depth (mm)';
     end
     if handles.plotbox1.Value == 6
-        imagesc(ax.stime(tInd),ax.depth(zInd),Y)
+        imagesc(ax.stime(tInd),ax.depth(zInd),Y,'ButtonDownFcn',{@Plot4OnClickTZ,handles})
         colormap(h)
         if ~isempty(aeR)
             caxis(aeR)
@@ -582,6 +629,13 @@ else
     param = evalin('base','param');
     ax = evalin('base','ax_c');
 end
+
+if handles.showlf.Value == 1
+    LF = evalin('base','LF');
+    LF = LF(:,str2double(handles.LF_chan.String));
+    lf_ax = linspace(0,30,length(LF));
+end
+
 xR = str2num(handles.xR.String);
 if length(xR) == 1
     xR = [xR xR];
@@ -614,6 +668,23 @@ yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
 
+    xP = str2double(handles.xP.String);
+    yP = str2double(handles.yP.String);
+    zP = str2double(handles.zP.String);
+    tP = str2double(handles.tP.String);
+    xpoint = find(ax.x >= xP,1);
+    ypoint = find(ax.y >= yP,1);
+    zpoint = find(ax.depth >= zP,1);
+    tpoint = find(ax.stime >= tP,1);
+
+
+
+if handles.showlf.Value == 1
+    lfInd = find(lf_ax >= tR(1)):find(lf_ax >= tR(2));
+    lfdif = length(lfInd)/length(tInd);
+end
+
+
 if handles.use_ext_fig.Value == 0
     axes(handles.axes2)
 else
@@ -626,19 +697,27 @@ elseif handles.graybox.Value == 1
 else
     h = 'hot';
 end
-if handles.plotbox2.Value == 1
+if handles.plotbox2.Value == 1 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = tInd %Mod loop
             if handles.med_box.Value == 1
-                J = medfilt2((squeeze(Xfilt(xInd,yInd,zInd,k)))',[5 5]);
+                J = medfilt2((squeeze(Xfilt(xInd,ypoint,zInd,k)))',[5 5]);
             else
-                J = squeeze(Xfilt(xInd,yInd,zInd,k))';
+                J = squeeze(Xfilt(xInd,ypoint,zInd,k))';
             end
 
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.x(xInd),ax.depth(zInd),J) % mod plots
-              
                 colormap(h)
+                if handles.showlf.Value == 1
+                    
+                    plot(handles.axes4,lf_ax(lfInd),LF(lfInd),'k')
+                    hold(handles.axes4,'on')
+                    plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
+                    hold(handles.axes4,'off')
+                    
+                end
+             
             else
                 imshow(J)
                 colormap(h)
@@ -656,19 +735,28 @@ if handles.plotbox2.Value == 1
             vidwrite(param,ax,Xfilt,handles)
     end
     
-elseif handles.plotbox2.Value == 2
+elseif handles.plotbox2.Value == 2 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = tInd %Mod loop
             if handles.med_box.Value == 1
-                J = medfilt2((squeeze(Xfilt(xInd,yInd,zInd,k)))',[5 5]);
+                J = medfilt2((squeeze(Xfilt(xpoint,yInd,zInd,k)))',[5 5]);
             else
-                J = squeeze(Xfilt(xInd,yInd,zInd,k))';
+                J = squeeze(Xfilt(xpoint,yInd,zInd,k))';
             end
       
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.y(yInd),ax.depth(zInd),J) % mod plots
              %   h = hotcoldDB;
                 colormap(h)
+                 if handles.showlf.Value == 1
+                    
+                    plot(handles.axes4,lf_ax(lfInd),LF(lfInd),'k')
+                    hold(handles.axes4,'on')
+                    plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
+                    hold(handles.axes4,'off')
+                    
+                end
+             
             else
                 imshow(J)
                 colormap(h)
@@ -687,14 +775,56 @@ elseif handles.plotbox2.Value == 2
     elseif handles.save_fig.Value == 1
         vidwrite(param,ax,Xfilt,handles)
     end
+   
+elseif handles.plotbox2.Value == 4 && handles.all_movie.Value == 0
+    if handles.save_fig.Value == 0
+        for k = tInd %Mod loop
+            if handles.med_box.Value == 1
+                J = medfilt2((squeeze(Xfilt(xInd,yInd,zpoint,k)))',[5 5]);
+            else
+                J = squeeze(Xfilt(xInd,yInd,zpoint,k))';
+            end
+      
+            if handles.use_ext_fig.Value == 0
+                imagesc(ax.x(xInd),ax.y(yInd),J) % mod plots
+             %   h = hotcoldDB;
+                colormap(h)
+                 if handles.showlf.Value == 1
+                    
+                    plot(handles.axes4,lf_ax(lfInd),LF(lfInd),'k')
+                    hold(handles.axes4,'on')
+                    plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
+                    hold(handles.axes4,'off')
+                    
+                end
+             
+            else
+                imshow(J)
+                colormap(h)
+            end
+            if ~isempty(aeR)
+                caxis(aeR)
+            end
+            title(['t = ' num2str(ax.stime(k))]);
+            % text(15,15,['t = ' num2str(ax.stime(k))]);
+            handles.axes2.XLabel.String = 'Lateral (mm)'; %Mod Axes
+            handles.axes2.YLabel.String = 'Elevational (mm)';
+            drawnow
+        end
+        
+        
+    elseif handles.save_fig.Value == 1
+        vidwrite(param,ax,Xfilt,handles)
+    end
+        
     
-elseif handles.plotbox2.Value == 3
+elseif handles.plotbox2.Value == 3 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = zInd %Mod loop
             if handles.med_box.Value == 1
-                J = medfilt2((squeeze(Xfilt(xInd,yInd,k,tInd)))',[5 5]);
+                J = medfilt2((squeeze(Xfilt(xInd,yInd,k,tpoint)))',[5 5]);
             else
-                J = squeeze(Xfilt(xInd,yInd,k,tInd))';
+                J = squeeze(Xfilt(xInd,yInd,k,tpoint))';
             end
             
             if handles.use_ext_fig.Value == 0
@@ -720,7 +850,53 @@ elseif handles.plotbox2.Value == 3
         vidwrite(param,ax,Xfilt,handles)
     end
 end
+if handles.all_movie.Value == 1
 
+    for k = tInd
+        J1 = squeeze(Xfilt(xInd,ypoint,zInd,k))';
+        J2 = squeeze(Xfilt(xpoint,yInd,zInd,k))';
+        J3 = squeeze(Xfilt(xInd,yInd,zpoint,k))';
+        
+        axes(handles.axes1)
+        imagesc(ax.x(xInd),ax.depth(zInd),J1) % mod plots
+        colormap(h)
+          if ~isempty(aeR)
+                caxis(aeR)
+            end
+   
+        axes(handles.axes3)
+        imagesc(ax.y(yInd),ax.depth(zInd),J2)
+        colormap(h)
+          if ~isempty(aeR)
+                caxis(aeR)
+            end
+     
+        axes(handles.axes2)
+        imagesc(ax.x(xInd),ax.y(yInd),J3)
+        colormap(h)
+          if ~isempty(aeR)
+                caxis(aeR)
+            end
+        drawnow
+%                     handles.axes1.XLabel.String = 'Lateral (mm)'; %Mod Axes
+%             handles.axes1.YLabel.String = 'Depth (mm)';
+%                         handles.axes3.XLabel.String = 'Elevational (mm)'; %Mod Axes
+%             handles.axes3.YLabel.String = 'Depth (mm)';
+%                         handles.axes2.XLabel.String = 'Lateral (mm)'; %Mod Axes
+%             handles.axes2.YLabel.String = 'Elevational (mm)';
+        
+        
+        if handles.showlf.Value == 1
+            
+            plot(handles.axes4,lf_ax(lfInd),LF(lfInd),'k')
+            hold(handles.axes4,'on')
+            plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
+            hold(handles.axes4,'off')
+            
+        end
+    end
+end
+             
 
 
 % --- Executes on button press in save_fig.
@@ -2156,11 +2332,11 @@ function IJ_butts_Callback(hObject, eventdata, handles)
 % hObject    handle to IJ_butts (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-SendToImageJ;
+SendToImageJ(handles,handles.overlay4d.Value);
 
 
 function overlay4d_Callback(hObject, eventdata, handles)
-Overlay4D;
+Overlay4D(handles);
 
 
 % --- Executes on button press in AE_4dbox.
@@ -2180,7 +2356,7 @@ function PE_4dbox_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of PE_4dbox
 
-% --- Executes on button press in overlay4d.
+% --- Executes on button press in overlay.
 function overlay_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value == 1
     Xfilt = evalin('base','X_c');
@@ -3247,24 +3423,43 @@ else
     ax = evalin('base','ax');
 end
 
+set(handles.axes1,'ButtonDownFcn',@Plot4OnClickXZ)
+
+%plot(handles.axes3,ax.x,'ButtonDownFcn',@Plot4OnClickXZ)
+xP = str2double(handles.xP.String);
+yP = str2double(handles.yP.String);
+zP = str2double(handles.zP.String);
+tP = str2double(handles.tP.String);
 
 xR = str2num(handles.xR.String);
 if length(xR) == 1
     xR = [xR xR xR];
+else
+    xR = [xR(1) xR(2) xP];
 end
 yR = str2num(handles.yR.String);
 if length(yR) == 1
     yR = [yR yR yR];
+else
+    yR = [yR(1) yR(2) yP];
 end
 zR = str2num(handles.zR.String);
 if length(zR) == 1
     zR = [zR zR zR];
+else
+     zR = [zR(1) zR(2) zP];
 end
 tR = str2num(handles.tR.String);
 if length(tR) == 1
     tR = [tR tR tR];
+else 
+    tR = [tR(1) tR(2) tP];
 end
 aeR = str2num(handles.aeR.String);
+
+%ax.current = [xR(3) yR(3) zR(3) tR(3)];
+
+
 dims = size(Xfilt);
 %[~,ax] = make_axes(param,dims,[1 2],1);
 q.x = 1:dims(1);
@@ -3309,7 +3504,7 @@ if handles.med_box.Value == 1
 end
 if handles.use_ext_fig.Value == 0
     axes(handles.axes2)
-        imagesc(ax.x(xInd),ax.y(yInd),(Yxy'))
+        imagesc(ax.x(xInd),ax.y(yInd),(Yxy'),'ButtonDownFcn',{@Plot4OnClickXY,handles})
         colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)
@@ -3318,7 +3513,7 @@ if handles.use_ext_fig.Value == 0
         handles.axes2.YLabel.String = 'Elevational (mm)';
 
 axes(handles.axes1)
-        imagesc(ax.x(xInd),ax.depth(zInd),(Yxz'))
+        imagesc(ax.x(xInd),ax.depth(zInd),(Yxz'),'ButtonDownFcn',{@Plot4OnClickXZ,handles})
         colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)
@@ -3327,7 +3522,7 @@ axes(handles.axes1)
         handles.axes1.YLabel.String = 'Depth (mm)';
 
 axes(handles.axes3)
-        imagesc(ax.y(yInd),ax.depth(zInd),(Yyz))
+        imagesc(ax.y(yInd),ax.depth(zInd),(Yyz'),'ButtonDownFcn',{@Plot4OnClickYZ,handles})
         colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)
@@ -3336,7 +3531,7 @@ axes(handles.axes3)
         handles.axes3.YLabel.String = 'Depth (mm)';
 
   axes(handles.axes4)
-        imagesc(ax.stime(tInd),ax.depth(zInd),Yzt)
+        imagesc(ax.stime(tInd),ax.depth(zInd),Yzt,'ButtonDownFcn',{@Plot4OnClickTZ,handles})
         colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)
@@ -3586,7 +3781,7 @@ else
         v.FrameRate = str2double(handles.framerate.String);
         open(v)
     end
-    for i = tInd(1):b:tInd(end)
+    for i = round(tInd(1):b:tInd(end))
         if handles.use_ext_fig.Value == 1
             figure(3)
             if ~isempty(handles.xlims.String)
@@ -3628,3 +3823,157 @@ else
         close(v)
     end
 end
+
+
+% --- Executes on button press in pushbutton36.
+function pushbutton36_Callback(hObject, eventdata, handles)
+if handles.use_chop.Value == 1
+    X = evalin('base','X_c');
+    Xmerged = evalin('base','Xmerged');
+    Xmerged{str2double(handles.channel.String)} = X;
+    assignin('base','Xmerged',Xmerged);
+else
+    X = evalin('base','Xflilt');
+    Xmerged = evalin('base','Xmerged');
+    Xmerged{str2double(handles.channel.String)} = X;
+    assignin('base','Xmerged',Xmerged);
+end
+
+
+% --- Executes on button press in showlf.
+function showlf_Callback(hObject, eventdata, handles)
+% hObject    handle to showlf (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of showlf
+
+function Plot4OnClickXZ(hObject,eventdata,handles)
+pt = get(gca,'currentpoint');
+
+
+set(handles.xP,'String',pt(1,1))
+set(handles.zP,'String',pt(1,2))
+
+plot4_Callback(hObject, eventdata, handles);
+
+function Plot4OnClickYZ(hObject,eventdata,handles)
+pt = get(gca,'currentpoint');
+set(handles.yP,'String',pt(1,1))
+set(handles.zP,'String',pt(1,2))
+plot4_Callback(hObject, eventdata, handles);
+
+
+function Plot4OnClickXY(hObject,eventdata,handles)
+pt = get(gca,'currentpoint');
+set(handles.xP,'String',pt(1,1))
+set(handles.yP,'String',pt(1,2))
+plot4_Callback(hObject, eventdata, handles);
+
+
+function Plot4OnClickTZ(hObject,eventdata,handles)
+pt = get(gca,'currentpoint');
+set(handles.tP,'String',pt(1,1))
+set(handles.zP,'String',pt(1,2))
+plot4_Callback(hObject, eventdata, handles);
+
+
+
+function xP_Callback(hObject, eventdata, handles)
+% hObject    handle to xP (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of xP as text
+%        str2double(get(hObject,'String')) returns contents of xP as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function xP_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to xP (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function yP_Callback(hObject, eventdata, handles)
+% hObject    handle to yP (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of yP as text
+%        str2double(get(hObject,'String')) returns contents of yP as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function yP_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to yP (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function zP_Callback(hObject, eventdata, handles)
+% hObject    handle to zP (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of zP as text
+%        str2double(get(hObject,'String')) returns contents of zP as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function zP_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to zP (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function tP_Callback(hObject, eventdata, handles)
+% hObject    handle to tP (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of tP as text
+%        str2double(get(hObject,'String')) returns contents of tP as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function tP_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to tP (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in all_movie.
+function all_movie_Callback(hObject, eventdata, handles)
+% hObject    handle to all_movie (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of all_movie

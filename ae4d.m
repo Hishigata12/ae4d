@@ -461,7 +461,7 @@ set(handles.xmm,'String',num2str([ax.x(1) ax.x(end)]));
 set(handles.xsamp,'String',num2str([1 length(ax.x)]));
 set(handles.ymm,'String',num2str([ax.y(1) ax.y(end)]));
 set(handles.ysamp,'String',num2str([1 length(ax.y)]));
-set(handles.zmm,'String',num2str([ax.depth(1) round(ax.depth(end))]));
+set(handles.zmm,'String',num2str([round(ax.depth(1)) round(ax.depth(end))]));
 set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
 
 if handles.reset_axes.Value == 1    
@@ -1204,8 +1204,11 @@ if mean(abs(yR)) > 1
 else
     ax.y = 1;
 end
-
+if handles.active_xfilt.String == 'PE' 
+    set(handles.active_pe,'String',num2str(size(X)))
+else
 set(handles.active_ae,'String',num2str(size(X)))
+end
 assignin('base','ax_c',ax);
 assignin('base','X_c',X);
 
@@ -3143,6 +3146,7 @@ set(handles.fname,'String',file);
 fprintf('Done\n')
 assignin('base','PEdata',PEdata);
 assignin('base','param',param);
+pex.depth = pex.depth - 2.6;
 ax = pex;
 assignin('base','pex',ax);
 set(handles.active_pe,'String',num2str(size(PEdata)))
@@ -3154,7 +3158,7 @@ set(handles.xmm,'String',num2str([ax.x(1) ax.x(end)]));
 set(handles.xsamp,'String',num2str([1 length(ax.x)]));
 set(handles.ymm,'String',num2str([ax.y(1) ax.y(end)]));
 set(handles.ysamp,'String',num2str([1 length(ax.y)]));
-set(handles.zmm,'String',num2str([ax.depth(1) round(ax.depth(end))]));
+set(handles.zmm,'String',num2str([round(ax.depth(1)) round(ax.depth(end))]));
 set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
 
 if handles.reset_axes.Value == 1    
@@ -3437,7 +3441,7 @@ else
     ax = evalin('base','ax');
 end
 
-set(handles.axes1,'ButtonDownFcn',@Plot4OnClickXZ)
+%set(handles.axes1,'ButtonDownFcn',@Plot4OnClickXZ)
 
 %plot(handles.axes3,ax.x,'ButtonDownFcn',@Plot4OnClickXZ)
 xP = str2double(handles.xP.String);

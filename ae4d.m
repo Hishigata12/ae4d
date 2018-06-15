@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 13-Jun-2018 17:43:01
+% Last Modified by GUIDE v2.5 14-Jun-2018 16:59:33
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -321,9 +321,9 @@ if length(size(Y)) > 2
     errordlg('Too many dimensions; check ranges')
     return
 end
-if handles.med_box.Value == 1
-    Y = medfilt2(Y,[3 3]);
-end
+% if handles.med_box.Value == 1
+%     Y = medfilt2(Y,[3 3]);
+% end
 
 if handles.hotcold.Value == 1
     h = hotcoldDB;
@@ -453,6 +453,7 @@ assignin('base','param',param);
 assignin('base','ax',ax);
 assignin('base','LF',LF);
 %assignin('base','PEparam',PE);
+set(handles.active_ae,'String',num2str(size(Xfilt)));
 set(handles.LF_chan,'String',num2str(size(LF,2)));
 set(handles.tms,'String',num2str([ax.stime(1) ax.stime(end)]));
 set(handles.tsamp,'String',num2str([1 length(ax.stime)]));
@@ -503,7 +504,7 @@ ax.LFfreq = linspace(0,param.daq.HFdaq.pulseRepRate_Hz,param.daq.HFdaq.NoBurstTr
 if isempty(handles.hfchans.String)
     a = 2;
 else
-    a = st2double(handles.hfchans.String);
+    a = str2double(handles.hfchans.String);
 end
 [~, HF1] = full_signal([path file],param,a); %Gets the raw data
 if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
@@ -575,7 +576,12 @@ end
 if handles.save_4d.Value == 1
 
     f = file(1:end-4);
+    if ~isempty(handles.hfchans.String)
+        hchan = str2double(handles.hfchans.String);
+        f2 = [f '_chan_' hchan '_4d_data.mat'];
+    else
     f2 = [f '_4d_data.mat'];
+    end
     fprintf('Saving 4D file...')
     if handles.large_box.Value == 1
             clearvars -except Xfilt file path param ax LF PE f2
@@ -700,11 +706,11 @@ end
 if handles.plotbox2.Value == 1 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = tInd %Mod loop
-            if handles.med_box.Value == 1
-                J = medfilt2((squeeze(Xfilt(xInd,ypoint,zInd,k)))',[5 5]);
-            else
+%             if handles.med_box.Value == 1
+%                 J = medfilt2((squeeze(Xfilt(xInd,ypoint,zInd,k)))',[5 5]);
+%             else
                 J = squeeze(Xfilt(xInd,ypoint,zInd,k))';
-            end
+%             end
 
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.x(xInd),ax.depth(zInd),J) % mod plots
@@ -738,11 +744,11 @@ if handles.plotbox2.Value == 1 && handles.all_movie.Value == 0
 elseif handles.plotbox2.Value == 2 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = tInd %Mod loop
-            if handles.med_box.Value == 1
-                J = medfilt2((squeeze(Xfilt(xpoint,yInd,zInd,k)))',[5 5]);
-            else
+%             if handles.med_box.Value == 1
+%                 J = medfilt2((squeeze(Xfilt(xpoint,yInd,zInd,k)))',[5 5]);
+%             else
                 J = squeeze(Xfilt(xpoint,yInd,zInd,k))';
-            end
+%             end
       
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.y(yInd),ax.depth(zInd),J) % mod plots
@@ -779,11 +785,11 @@ elseif handles.plotbox2.Value == 2 && handles.all_movie.Value == 0
 elseif handles.plotbox2.Value == 4 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = tInd %Mod loop
-            if handles.med_box.Value == 1
-                J = medfilt2((squeeze(Xfilt(xInd,yInd,zpoint,k)))',[5 5]);
-            else
+%             if handles.med_box.Value == 1
+%                 J = medfilt2((squeeze(Xfilt(xInd,yInd,zpoint,k)))',[5 5]);
+%             else
                 J = squeeze(Xfilt(xInd,yInd,zpoint,k))';
-            end
+%             end
       
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.x(xInd),ax.y(yInd),J) % mod plots
@@ -821,11 +827,11 @@ elseif handles.plotbox2.Value == 4 && handles.all_movie.Value == 0
 elseif handles.plotbox2.Value == 3 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = zInd %Mod loop
-            if handles.med_box.Value == 1
-                J = medfilt2((squeeze(Xfilt(xInd,yInd,k,tpoint)))',[5 5]);
-            else
+%             if handles.med_box.Value == 1
+%                 J = medfilt2((squeeze(Xfilt(xInd,yInd,k,tpoint)))',[5 5]);
+%             else
                 J = squeeze(Xfilt(xInd,yInd,k,tpoint))';
-            end
+%             end
             
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.x(xInd),ax.y(yInd),J) % mod plots
@@ -1095,7 +1101,8 @@ param = evalin('base','param');
 Xfilt = evalin('base','Xfilt');
 m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
 n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String)];
-Xfilt = filts3D(Xfilt,m,n,param);
+o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
+Xfilt = filts3D(Xfilt,m,n,o,param);
 [~,ax] = make_axes(param,size(Xfilt));
 assignin('base','ax',ax);
 assignin('base','Xfilt',Xfilt)
@@ -1105,7 +1112,8 @@ Xfilt = evalin('base','X_c');
 ax = evalin('base','ax_c');
 m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
 n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String)];
-Xfilt = filts3D(Xfilt,m,n,param);
+o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
+Xfilt = filts3D(Xfilt,m,n,o,param);
 
 dims = size(Xfilt);
 xR = [ax.x(1) ax.x(end)];
@@ -1197,7 +1205,7 @@ else
     ax.y = 1;
 end
 
-
+set(handles.active_ae,'String',num2str(size(X)))
 assignin('base','ax_c',ax);
 assignin('base','X_c',X);
 
@@ -2179,9 +2187,9 @@ elseif length(str2num(handles.baseb.String)) == 3
             errordlg('Too many dimensions; check ranges')
             return
         end
-        if handles.med_box.Value == 1
-            Y = medfilt2(Y,[3 3]);
-        end
+%         if handles.med_box.Value == 1
+%             Y = medfilt2(Y,[3 3]);
+%         end
         delete(b)
         axes(handles.axes4)
         imagesc(ax.x(xInd),ax.depth(zInd),real(Y'))
@@ -2437,9 +2445,9 @@ if length(size(Y)) > 2
     errordlg('Too many dimensions; check ranges')
     return
 end
-if handles.med_box.Value == 1
-    Y = medfilt2(Y,[3 3]);
-end
+% if handles.med_box.Value == 1
+%     Y = medfilt2(Y,[3 3]);
+% end
 
   [x, y] = meshgrid(1:size(Y,2),1:size(Y,1));
    [xq, yq] = meshgrid(linspace(1,size(Y,2),size(P,2)),linspace(1,size(Y,1),size(P,1)));
@@ -3137,7 +3145,7 @@ assignin('base','PEdata',PEdata);
 assignin('base','param',param);
 ax = pex;
 assignin('base','pex',ax);
-
+set(handles.active_pe,'String',num2str(size(PEdata)))
 %assignin('base','PEparam',PE);
 %set(handles.LF_chan,'String',num2str(size(LF,2)));
 set(handles.tms,'String',num2str([ax.stime(1) ax.stime(end)]));
@@ -3174,6 +3182,11 @@ X = evalin('base','PEdata');
 ax = evalin('base','pex');
 assignin('base','Xfilt',X);
 assignin('base','ax',ax);
+set(handles.active_xfilt,'String','PE')
+if ~isempty(handles.hfchans.String)
+    set(handles.active_chan,'String',handles.hfchan.String);
+end
+
 
 % --- Executes on button press in realize.
 function realize_Callback(hObject, eventdata, handles)
@@ -3341,6 +3354,7 @@ else
 end
 assignin('base','PEdata',X);
 assignin('base','pex',ax);
+set(handles.active_pe,'String',num2str(size(X)))
 
 
 
@@ -3496,12 +3510,12 @@ if length(size(Yxy)) > 2
     errordlg('Too many dimensions; check ranges')
     return
 end
-if handles.med_box.Value == 1
-    Yxy = medfilt2(Yxt,[3 3]);
-    Yxz = medfilt2(Yxz,[3 3]);
-    Yyz = medfilt2(Yyz,[3 3]);
-    Yzt = medfilt2(Yzt,[3 3]);
-end
+% if handles.med_box.Value == 1
+%     Yxy = medfilt2(Yxt,[3 3]);
+%     Yxz = medfilt2(Yxz,[3 3]);
+%     Yyz = medfilt2(Yyz,[3 3]);
+%     Yzt = medfilt2(Yzt,[3 3]);
+% end
 if handles.use_ext_fig.Value == 0
     axes(handles.axes2)
         imagesc(ax.x(xInd),ax.y(yInd),(Yxy'),'ButtonDownFcn',{@Plot4OnClickXY,handles})
@@ -3703,6 +3717,10 @@ if m > length(Xmerged)
 end
 X = Xmerged{m};
 assignin('base','Xfilt',X)
+set(handles.active_xfilt,'String','AE');
+if ~isempty(handles.hfchans.String)
+    set(handles.active_chan,'String',handles.hfchan.String);
+end
 
 
 
@@ -3833,7 +3851,7 @@ if handles.use_chop.Value == 1
     Xmerged{str2double(handles.channel.String)} = X;
     assignin('base','Xmerged',Xmerged);
 else
-    X = evalin('base','Xflilt');
+    X = evalin('base','Xfilt');
     Xmerged = evalin('base','Xmerged');
     Xmerged{str2double(handles.channel.String)} = X;
     assignin('base','Xmerged',Xmerged);
@@ -3977,3 +3995,72 @@ function all_movie_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of all_movie
+
+
+
+function med_x_Callback(hObject, eventdata, handles)
+% hObject    handle to med_x (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of med_x as text
+%        str2double(get(hObject,'String')) returns contents of med_x as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function med_x_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to med_x (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function med_y_Callback(hObject, eventdata, handles)
+% hObject    handle to med_y (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of med_y as text
+%        str2double(get(hObject,'String')) returns contents of med_y as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function med_y_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to med_y (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function med_z_Callback(hObject, eventdata, handles)
+% hObject    handle to med_z (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of med_z as text
+%        str2double(get(hObject,'String')) returns contents of med_z as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function med_z_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to med_z (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

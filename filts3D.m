@@ -3,12 +3,34 @@
 % tell the function whether to try that type of filter, the 2nd should be
 % the x direction value, the third should be z direction value
 
-function X = filts3D(HF,ave,in,param)
+function X = filts3D(HF,ave,in,med,param)
  b = waitbar(0);
  %dims = [param.velmex.XNStep param.velmex.YNStep param.daq.HFdaq.pts param.daq.HFdaq.NoBurstTriggers];
  dims = size(HF);
 if length(dims) ==3
     dims(4) = 1;
+end
+
+if med(1) == 1
+ HF = real(HF);
+    dims = size(HF);
+    for i = 2:4
+        if mod(med(i),2) ~= 1
+            errordlg('Need window size for each dimension to be odd')
+            return
+        end
+    end
+    Sx = zeros(dims);
+    if length(dims) < 4
+        dims(4) = 1;
+    end
+    % H = ones(ave(2),ave(3))/(ave(2)*ave(3));
+  
+    for i = 1:dims(4)
+        Sx(:,:,:,i) = medfilt3(HF(:,:,:,i),med(2:end));
+        waitbar(i/dims(4),b,'Median Filtering');
+    end
+    HF = Sx;
 end
 
 
@@ -20,7 +42,8 @@ if in(1) == 1
     for i = 1:3
         if size(HF,i) == 1
             P(i) = 1;
-        else P(i) = 0;
+        else
+            P(i) = 0;
         end
         p = sum(P);
     end

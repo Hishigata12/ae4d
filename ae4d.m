@@ -491,21 +491,32 @@ param = read_ucsdi_info([path file]); %Gets scan parameters
 [~,~,LF] = read_ucsdi_data([path file],1); %Gets input current waveform
 cd(path);
 if handles.match_box.Value == 1
-[file2, path2] = uigetfile(fullfile(pwd,'*PEParm.mat')); %gets US pulse waveform
-PE = open([path2 file2]);
-US = PE.TW.Wvfm1Wy;
+    path2 = [path(1:end-8) 'PEData\'];
+    file2 = uigetfile(fullfile(path2,'*PEParm.mat')); %gets US pulse waveform
+    
+    PE = open([path2 file2]);
+    US = PE.TW.Wvfm1Wy;
 end
 ax.HFfreq = linspace(0,param.daq.HFdaq.fs_MHz,param.daq.HFdaq.pts); %Creates fast frequency axis
 ax.LFfreq = linspace(0,param.daq.HFdaq.pulseRepRate_Hz,param.daq.HFdaq.NoBurstTriggers); %creates slow frequency axis
 
 
+a_full = str2num(handles.hfchans.String);
+hf_num = length(a);
+
 %**************************************************************************
 %Builds 4D Matrix***************~~~~~~~~~~~~~~~~**************
+
+
 if isempty(handles.hfchans.String)
     a = 2;
-else
-    a = str2double(handles.hfchans.String);
+    hf_num = 1;
 end
+for p = 1:hf_num;
+    if ~isempty(handles.hfchans.String)
+    a = a_full(p);
+    end
+
 [~, HF1] = full_signal([path file],param,a); %Gets the raw data
 if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
     [X, LF] = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
@@ -577,7 +588,7 @@ if handles.save_4d.Value == 1
 
     f = file(1:end-4);
     if ~isempty(handles.hfchans.String)
-        hchan = str2double(handles.hfchans.String);
+        hchan = a;
         f2 = [f '_chan_' hchan '_4d_data.mat'];
     else
     f2 = [f '_4d_data.mat'];
@@ -591,6 +602,7 @@ if handles.save_4d.Value == 1
         save(f2); 
     end
     fprintf('Done\n')
+end
 end
 
     
@@ -1172,11 +1184,16 @@ dims = size(Xfilt);
 q.x = 1:dims(1);
 q.y = 1:dims(2);
 q.z = 1:dims(3);
+if length(size(Xfilt)) > 3
 q.t = 1:dims(4);
+tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+else 
+    tInd = 1;
+end
 xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
-tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+
 X = Xfilt(xInd,yInd,zInd,tInd);
 if length(tInd) == 1
     X = permute(X,[1 2 3 4]);
@@ -3042,36 +3059,36 @@ if handles.onemhz.Value == 1
     end
     delete(b)
     
-%     if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
-%     %    if param.velmex.SlowAxis == 'X'
-%             for i = 1:size(HF,1)
-%                 if mod(i,2) == 0
-%                     HF(i,:,:,:) = fliplr(HF(i,:,:,:));
-%                 end
-%             end
-%      %   end
-%     end
-
-if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
-    if param.velmex.SlowAxis == 'X'
-        for i = 1:size(HF,1)
-            if mod(i,2) == 0
-                HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+    %     if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+    %     %    if param.velmex.SlowAxis == 'X'
+    %             for i = 1:size(HF,1)
+    %                 if mod(i,2) == 0
+    %                     HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+    %                 end
+    %             end
+    %      %   end
+    %     end
+    
+    if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+        if param.velmex.SlowAxis == 'X'
+            for i = 1:size(HF,1)
+                if mod(i,2) == 0
+                    HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+                end
             end
-        end
-    else
-        for i = 1:size(HF,2)
-            if mod(i,2) == 0
-                HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+        else
+            for i = 1:size(HF,2)
+                if mod(i,2) == 0
+                    HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+                end
             end
         end
     end
-end
-
     
     
-   % PEdata = HF(:,:,:,1:2);
-   PEdata = HF;
+    
+    % PEdata = HF(:,:,:,1:2);
+    PEdata = HF;
     [~, pex] = make_axes(param,size(HF));
     pex.depth = linspace(0,1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz/2,size(PEdata,3));
     if handles.keep.Value == 1
@@ -3094,44 +3111,219 @@ else
     [f, p]  = uigetfile(fullfile(pwd,'*_PEParm.mat'));
     load([p f]);
     cd(p)
-    [PEbsqFile, p] = uigetfile(fullfile(pwd,'*.bsq'));
-    fid = fopen(PEbsqFile,'rb');
-    if fid > 0
+  
+    b = waitbar(0,'Filtering');
+    US = TW.Wvfm2Wy;
+    sz = size(PEMatrix);
+    %  PEM = zeros(sz(1)
+%     PEMatrix = permute(PEMatrix,[2 3 1]);
+%     PEMatrix = reshape(PEMatrix,[bScanParm.XSteps bScanParm.YSteps sz(1) sz(2)]);
+
+bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
+
+
+    % Do some filterings here!!! Keep in mind that PE is downsampled from
+    % 250MHz to something around 10 MHz
+    if handles.match_box.Value == 0
+        N = size(PEMatrix,1);
+        wc1 = str2double(handles.fast_cut1.String);
+        wc2 = str2double(handles.fast_cut2.String);
+        fast_axis = linspace(0,round(Rcv(1).decimSampleRate),size(PEMatrix,1));
+        f1 = find(fast_axis >= wc1,1);
+        f2 = find(fast_axis >= wc2,1);
+        H(1:f1-1) = 0;
+        H(f1:f2) = 1;
+        H(f2+1:N-f2-1) = 0;
+        H(N-f2:N-f1) = 1;
+        H(N-f1+1:N) = 0;
+        h = ifft(H);
+        h2 = circshift(h,round(N/2)).*hamming(N)';
+        H2 = fft(h2);
         
-        n = fread(fid,1,'int32');
-        dsize = fread(fid,[1,n],'int32');
-        nOffset = (n+1)*4;
-        fclose(fid);
+        Hn = round(length(find(H))/2);
+        ham = hamming(Hn);
+        fh1 = find(fast_axis >= mean([f1,f2]),1);
+        fh2 = N-fh1;
         
-        PEImage = multibandread(PEbsqFile,[dsize(1:2),prod(dsize(3:end))],...
-            'single',nOffset,'bsq','ieee-le',{'Band','Direct',bScanParm.nScanPt});
         
-        dims = size(PEImage);
-        tmax = pi/4;
-        theta = linspace(-tmax,tmax,31);
-        C = ceil(dims(2)/2);
-        r = linspace(0,abs(round(PData.Origin(1))),500);
-        for i = 1:length(r)
-            X(i,:) = r(i).*sin(theta);
-            Y(i,:) = r(i).*cos(theta);
+        for i = 1:sz(3)
+            Q{i} = fft(squeeze(PEMatrix(:,:,i)));
         end
-        W = mesh(X,Y);
-        s = size(X);
+        
+        %Insert FFT filter here
+        for i = 1:sz(3)
+            for j = 1:sz(2)
+                    PE{i}(:,j) = Q{i}(:,j).*H2';
+            end
+            waitbar(i/size(PEMatrix,3),b,'Filtering')
+        end
+        for i = 1:sz(3)    
+            pe{i} = ifft(PE{i});
+        end
+        
+        
+    else
+        FsAE = round(Rcv(1).decimSampleRate);
+        FsUS = bScanParm.vsx_fs;
+        US = interp1(linspace(0,100,length(US)),US,linspace(0,100,length(US)*2))';
+        if FsUS~=FsAE
+            RefPulse       = resample(US,FsAE,FsUS);
+        end
+        RefPulse = RefPulse/(sum(abs(RefPulse)));
+        RefPulse = flipud(conj(RefPulse));
+        hwin = hamming(length(RefPulse));
+        RefPulse = hwin.*RefPulse;
+        
+        for i = 1:sz(3)
+            for j = 1:sz(2)
+               Q{i}(:,j) = conv(squeeze(PEMatrix(:,j,i)),RefPulse);
+            end
+            waitbar(i/sz(3),b,'Filtering');
+        end
+        for i = 1:sz(3)
+            for j = 1:sz(2)
+
+                    pe{i}(:,j) = interp1(linspace(0,10,size(Q{1},1)),Q{i}(:,j),linspace(0,10,sz(1)));
+
+            end
+            waitbar(i/sz(3),b,'Compressing Depth Axis');
+        end
+    
+    end
+    
+  
+    
+
+    
+    for i = 1:sz(3)    
+        pdata(:,:,i) = pe{i};
+    end
+    pdata = permute(pdata,[3 1 2]);
+    pdata = reshape(pdata,[bScanParm.XSteps bScanParm.YSteps sz(1) sz(2)]);
+    fstele = find(TX.VDASApod,1)-1;
+    for i = 1:length(TX.VDASApod)
+        if TX.VDASApod(i) == 1
+            pedata(:,:,:,i-fstele) = pdata(:,:,:,i);
+        end
+    end
+    
+       PEformed = mean(abs(pedata),4);
+    
+    
+      % Create axes data
+    if bScanParm.xlen ~= 1
+        pex.x = linspace(-bScanParm.xlen/2,bScanParm.xlen/2,size(pedata,1));
+    else
+        pex.x = 1;
+    end
+    if bScanParm.ylen ~= 1
+        pex.y = linspace(-bScanParm.ylen/2,bScanParm.ylen/2,size(pedata,2));
+    else
+        pex.y = 1;  
+    end
+    pex.element = Trans.ElementPos(:,1)*PData.Lambda;
+    pex.depth = linspace(0,bScanParm.depth,size(pedata,3));  
+    pex.stime = linspace(0,bScanParm.Duration,size(pedata,4));
+    
+    delay.x = Trans.ElementPos(:,1)*PData.Lambda;
+    %for i = 1:
+    for i = 1:size(pedata,4) %Element
+        for j = 1:size(pedata,1) %Lateral Position
+            %bf.r(:,i,j) = sqrt((pex.element(i)-pex.x(j))^2+pex.depth.^2);
+            pex.theta(i,j) = abs((atan((pex.x(j)-pex.element(i))/(TX.focus*PData.Lambda))));
+            if pex.x(j)-pex.element(i) < 0
+                pex.theta(i,j) = pex.theta(i,j)*-1;
+            end
+        end
+    end
+    
+    new_x_rng = [pex.depth(end)*sin(pex.theta(end,1))+pex.element(end) pex.depth(end)*sin(pex.theta(1,end))+pex.element(1)]; 
+    pex.x2 = linspace(new_x_rng(1),new_x_rng(2),size(pedata,3));
+    for i = 1:size(pex.theta,1) % Element
+        for j = 1:size(pex.theta,2) %Lateral
+            for k = 1:size(pedata,3) %Radius
+               bfpos{i,j}(:,k) = [find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);find(pex.depth >= pex.depth(k).*cos(pex.theta(i,j)),1)];% pedata(j,1,k,i)];
+               bfdata{i,j}(k) = abs(pedata(j,1,k,i));
+%             bf.x.full(:,i,j) = bf.r(:,i,j).*sin(bf.theta(i,j));
+%             bf.z.full(:,i,j) = bf.r(:,i,j).*cos(bf.theta(i,j));
+            end
+        end
+        waitbar(i/size(pex.theta,1),b,'Creating Cell Matrix');
+    end
+    
+    %Align Lateral
+    bfdata2 = zeros(size(pedata,1),size(pedata,3));
+    bfnum = bfdata2;
+    
+    for i = 1:size(pex.theta,1) %Element
+        for j = 1:size(pex.theta,2) %Lateral
+            for k = 1:size(pedata,3) % x z and amplitude lines
+                if pex.depth(bfpos{i,j}(2,k)) == pex.depth(k)% && pex.x2(bfpos{i,j}(1,k)) == pex.x2(k)
+                bfdata2(j,k) = bfdata2(j,k) + bfdata{i,j}(k);
+                bfnum(j,k) = bfnum(j,k) + 1;
+                end
+            end
+        end
+        waitbar(i/size(pex.theta,1),b,'Condensing Image');
+    end
+bfdata3 = bfdata2./bfnum;
+bfdata3(isnan(bfdata3)) = 0;
+bfdata3 = bfdata3';
+bfdata3 = flipud(bfdata3);
+bfdata3 = fliplr(bfdata3);
+
+    bfdata4 = medfilt2(bfdata3,[5,1]);
+
+    
+
+clear pedata
+pedata = bfdata4;
+pex.depth = pex.depth - 4; %adjust this for accurate PE             
+end
+   
+    
+    
+    assignin('base','PEdata',pedata);
+    delete(b)
+    
+    
+    
+    
+    % LETS DO SOME BEAM FORMING!!!
+    
+    
+
+
+
+
+
+
+%     dims = size(PEImage);
+%     tmax = pi/4;
+%     theta = linspace(-tmax,tmax,31);
+%     C = ceil(dims(2)/2);
+%     r = linspace(0,abs(round(PData.Origin(1))),500);
+%     for i = 1:length(r)
+%         X(i,:) = r(i).*sin(theta);
+%         Y(i,:) = r(i).*cos(theta);
+%     end
+%     W = mesh(X,Y);
+%     s = size(X);
 %         for i = 1:s(2)
 %             for j = 1:s(1)
-%                 data(i,j) = 
-        if handles.save_4d.Value == 1
-             clearvars -except PEbsqFile bScanParm PEImage PData Trans TW TX
-                 f = PEbsqFile(1:end-4);
-        file02 = [f '_4d_PE.mat'];
-        fprintf('Saving 4D file...')
-        save(file02);
-        fprintf('Done\n')
-        end
-        
-        x = 3;
-    end
+%                 data(i,j) =
+if handles.save_4d.Value == 1
+    clearvars -except f bScanParm pedata PData Trans TW TX pex PEformed Rcv
+    f = f(1:end-10);
+    file02 = [f '_4d_PE.mat'];
+    fprintf('Saving 4D file...')
+    save(file02);
+    fprintf('Done\n')
 end
+
+%x = 3;
+
+        %end
 
 
 % --- Executes on button press in loadpe.
@@ -3171,12 +3363,14 @@ end
 else
     set(handles.fname,'String',file02);
 fprintf('Done\n')
-assignin('base','PEdata',PEImage);
-assignin('base','bScanParm',bScanParm);
+assignin('base','PEdata',pedata);
+assignin('base','pex',pex);
+assignin('base','param',bScanParm);
 assignin('base','Trans',Trans)
 assignin('base','PData',PData)
 assignin('base','TW',TW)
 assignin('base','TX',TX)
+assignin('base','PEformed',PEformed);
 end
 
 

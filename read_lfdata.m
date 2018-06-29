@@ -82,6 +82,8 @@ if(strcmpi(stype,szFileType)==1)
             [LFData,param] = read_lfdata_v161108(fid,blk_idx);
         case 170427
             [LFData,param] = read_lfdata_v170427(fid,blk_idx);
+        case 170612
+            [LFData,param] = read_lfdata_v170612(fid,blk_idx);
         otherwise
             LFData = [];
             param = struct;
@@ -149,6 +151,43 @@ cur_pos = ftell(fid);
 % first trace
 param.nPts = dsize(2);
 param.numChan = dsize(1);
+
+% blk_size = (length(dsize) + 1)*4 + prod(dsize)*4;
+blk_size = prod(dsize)*4;
+offset_n = cur_pos + blk_size * (ScanPt-1);
+fseek(fid,offset_n,'bof');
+
+data = fread(fid,fliplr(dsize),'single');
+
+% npos1 = ftell(fid);
+% fseek(fid,0,'eof');
+% nlen = ftell(fid);
+% 
+% numTrace = floor((nlen - npos)/(npos1 - npos));
+% fseek(fid,npos1,'bof');
+% 
+% data = repmat(data,[ones(1,length(dsize)),numTrace]);
+% for ni=2:numTrace
+%     dsize = fread(fid,[1,fread(fid,1,'int32')],'int32');
+%     data(:,:,ni) = fread(fid,dsize,'single');
+% end
+% 
+% param.NumAcq = numTrace;
+
+end
+
+
+function [data,param] = read_lfdata_v170612(fid,ScanPt)    
+% npos = ftell(fid);
+
+n = fread(fid,1,'int32');
+dsize = fread(fid,[1,n],'int32');
+
+cur_pos = ftell(fid);
+
+% first trace
+param.nPts = dsize(end);
+param.numChan = dsize(end-1);
 
 % blk_size = (length(dsize) + 1)*4 + prod(dsize)*4;
 blk_size = prod(dsize)*4;

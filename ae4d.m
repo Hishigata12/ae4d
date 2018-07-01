@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 14-Jun-2018 16:59:33
+% Last Modified by GUIDE v2.5 30-Jun-2018 19:18:38
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -235,6 +235,7 @@ else
     ax = evalin('base','ax');
 end
 
+Xfilt = real(Xfilt);
 xP = str2double(handles.xP.String);
 yP = str2double(handles.yP.String);
 zP = str2double(handles.zP.String);
@@ -305,9 +306,9 @@ if handles.plotbox1.Value == 6
 end
 
 
-xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
-yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
-zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
+xInd = find(ax.x >= xR(1)):find(ax.x >= xR(2));
+yInd = find(ax.y >= yR(1)):find(ax.y >= yR(2));
+zInd = find(ax.depth >= zR(1)):find(ax.depth >= zR(2));
 
 if length(size(Xfilt)) < 4
     Y = squeeze(Xfilt(xInd,yInd,zInd));
@@ -454,6 +455,7 @@ assignin('base','ax',ax);
 assignin('base','LF',LF);
 %assignin('base','PEparam',PE);
 set(handles.active_ae,'String',num2str(size(Xfilt)));
+set(handles.active_xfilt,'String','AE');
 set(handles.LF_chan,'String',num2str(size(LF,2)));
 set(handles.tms,'String',num2str([ax.stime(1) ax.stime(end)]));
 set(handles.tsamp,'String',num2str([1 length(ax.stime)]));
@@ -502,7 +504,7 @@ ax.LFfreq = linspace(0,param.daq.HFdaq.pulseRepRate_Hz,param.daq.HFdaq.NoBurstTr
 
 
 a_full = str2num(handles.hfchans.String);
-hf_num = length(a);
+hf_num = length(a_full);
 
 %**************************************************************************
 %Builds 4D Matrix***************~~~~~~~~~~~~~~~~**************
@@ -512,97 +514,98 @@ if isempty(handles.hfchans.String)
     a = 2;
     hf_num = 1;
 end
-for p = 1:hf_num;
+for p = 1:hf_num
     if ~isempty(handles.hfchans.String)
-    a = a_full(p);
+        a = a_full(p);
     end
-
-[~, HF1] = full_signal([path file],param,a); %Gets the raw data
-if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
-    [X, LF] = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
-elseif handles.slow_box.Value == 1
-    [X, LF] = w_slow_filt2(param, HF1,LF,handles.slow_box.Value);
-end
-if handles.match_box.Value == 1
-X = w_ae_filt2(param,X,US,1); %Filters in fast time; 0 is match, 1 uses cutoffs
-end
-if handles.match_box.Value == 0
-  X = w_ae_filt2(param,X,1,0,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs  
-end
-
-%%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
-b = waitbar(0,'Matrix Conversion');
-waitbar(0,b,'Enveloping and converting to 4D matrix')
-HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
-s = size(X);
-for i = 1:s(1)
-    for j = 1:s(2)
-         %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
-          HF(i,j,:,:) = X{i,j}; %Converts cell array to double
+    
+    [~, HF1] = full_signal([path file],param,a); %Gets the raw data
+    if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
+        [X, LF] = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
+    elseif handles.slow_box.Value == 1
+        [X, LF] = w_slow_filt2(param, HF1,LF,handles.slow_box.Value);
     end
-    waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
-end
-
-if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
-    if param.velmex.SlowAxis == 'X'
-        for i = 1:size(HF,1)
-            if mod(i,2) == 0
-                HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+    if handles.match_box.Value == 1
+        X = w_ae_filt2(param,X,US,1); %Filters in fast time; 0 is match, 1 uses cutoffs
+    end
+    if handles.match_box.Value == 0
+        X = w_ae_filt2(param,X,1,0,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
+    end
+    
+    %%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
+    b = waitbar(0,'Matrix Conversion');
+    waitbar(0,b,'Enveloping and converting to 4D matrix')
+    HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
+    s = size(X);
+    for i = 1:s(1)
+        for j = 1:s(2)
+            %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
+            HF(i,j,:,:) = X{i,j}; %Converts cell array to double
+        end
+        waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
+    end
+    
+    if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+        if param.velmex.SlowAxis == 'X'
+            for i = 1:size(HF,1)
+                if mod(i,2) == 0
+                    HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+                end
+            end
+        else
+            for i = 1:size(HF,2)
+                if mod(i,2) == 0
+                    HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+                end
             end
         end
+    end
+    
+    
+    %%%%%%%%
+    if isempty(num2str(handles.depR.String))
+        qq = [10 round(1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz-10)];
     else
-        for i = 1:size(HF,2)
-            if mod(i,2) == 0
-                HF(:,i,:,:) = fliplr(HF(:,i,:,:));
-            end
-        end        
+        qq = str2num(handles.depR.String);
     end
-end
-
-
-%%%%%%%%
-if isempty(num2str(handles.depR.String))
-    qq = [10 round(1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz-10)];
-else
-    qq = str2num(handles.depR.String);
-end
-
-dims = size(HF);
-[M, ax] = make_axes(param,dims,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
-
-% XdB = real(20*log10(real(HF)./max(max(max(max(real(HF(:,:,M.xT,:))))))));
-% Xfilt = filts2D(XdB,[0 1 12],[0 2 2]);
-Xfilt = HF;
-delete(b)
-
-if handles.keep.Value == 1
-    assignin('base','Xfilt',Xfilt);
-    assignin('base','fpath',[path file]);
-    assignin('base','param',param);
-    assignin('base','ax',ax);
-     assignin('base','PE',PE);
-    assignin('base','LF',LF);
-    set(handles.fname,'String',[path file]);
-end
-if handles.save_4d.Value == 1
-
-    f = file(1:end-4);
-    if ~isempty(handles.hfchans.String)
-        hchan = a;
-        f2 = [f '_chan_' hchan '_4d_data.mat'];
-    else
-    f2 = [f '_4d_data.mat'];
+    
+    dims = size(HF);
+    [M, ax] = make_axes(param,dims,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
+    
+    % XdB = real(20*log10(real(HF)./max(max(max(max(real(HF(:,:,M.xT,:))))))));
+    % Xfilt = filts2D(XdB,[0 1 12],[0 2 2]);
+    Xfilt = HF;
+    delete(b)
+    
+    if handles.keep.Value == 1
+        assignin('base','Xfilt',Xfilt);
+        assignin('base','fpath',[path file]);
+        assignin('base','param',param);
+        assignin('base','ax',ax);
+        assignin('base','PE',PE);
+        assignin('base','LF',LF);
+        set(handles.fname,'String',[path file]);
     end
-    fprintf('Saving 4D file...')
-    if handles.large_box.Value == 1
+    if handles.save_4d.Value == 1
+        
+        f = file(1:end-4);
+        if ~isempty(handles.hfchans.String)
+            hchan = num2str(a);
+            f2 = [f '_chan_' hchan '_4d_data.mat'];
+        else
+            f2 = [f '_4d_data.mat'];
+        end
+        fprintf('Saving 4D file...')
+        if handles.large_box.Value == 1
             clearvars -except Xfilt file path param ax LF PE f2
-        eval([ 'save ' f2 ' -v7.3']);
-    else 
-            clearvars -except Xfilt file path param ax LF PE f2
-        save(f2); 
+            eval([ 'save ' f2 ' -v7.3']);
+        else
+            %  clearvars -except Xfilt file path param ax LF PE f2
+            save(f2,'Xfilt','path','file','param','ax','LF','PE','f2');
+        end
+        clearvars -except a_full hf_num file path file2 path2 PE US LF param handles
+        fprintf('Done\n')
     end
-    fprintf('Done\n')
-end
 end
 
     
@@ -648,6 +651,7 @@ else
     ax = evalin('base','ax_c');
 end
 
+Xfilt = real(Xfilt);
 if handles.showlf.Value == 1
     LF = evalin('base','LF');
     LF = LF(:,str2double(handles.LF_chan.String));
@@ -1238,7 +1242,7 @@ if get(hObject,'Value') == 1
     ax = evalin('base','ax');
 set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
 set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
-set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
+set(handles.zR,'String', num2str([0 floor(ax.depth(end))]));
 set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
     else
             ax_c = evalin('base','ax_c');
@@ -2106,11 +2110,48 @@ X = circshift(X,str2double(handles.dshift.String),3);
 wc1 = str2double(handles.fast_cut1.String);
 wc2 = str2double(handles.fast_cut2.String);
 bb = str2num(handles.baseb.String);
+
+if handles.bb_win.Value == 1 && isempty(handles.baseb.String)
+    errordlg('Enter any number great than 0 into BB freq (temp fix) to allow for windowed basenbanding')
+end
+
 if length(str2num(handles.baseb.String)) == 1
     if bb(1) > 0
+        if handles.bb_win.Value == 0
+            X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz,wc1,wc2);
+        else
+            win_n = str2double(handles.bb_win_num.String); %number of windows
+            win = size(X,1)/win_n; %number of points per window
+              freqs = str2num(handles.bbvar.String);
+            if length(freqs) == 1
+                freqs2 = ones(win_n);
+                freqs = freqs2.*freqs;
+            end
+            if win_n > size(X,1)
+                errordlg('Number of windows too large')
+                return
+            elseif length(freqs) ~= win_n
+                errordlg('Number of baseband frequencies need to match number of windows')
+                return
+            end      
+          
+            if mod(win,win_n) ~= 0
+                win = floor(win);
+                win_ex = round(win_n*mod(win,win_n));
+                for i = 1:(win_n-1)
+                    X((i-1)*win+1:(i*win),:,:,:) = baseband2(X((i-1)*win+1:(i*win),:,:,:),freqs(i),param.daq.HFdaq.fs_MHz,wc1,wc2);
+                end
+                i = i+1;
+                X((i-1)*win+1:end,:,:,:) = baseband2(X((i-1)*win+1:end,:,:,:),freqs(end),param.daq.HFdaq.fs_MHz,wc1,wc2);
+            else
+                for i = 1:win_n
+                    X = baseband2(X((i-1)*win+1:(i*win),:,:,:),freqs(i),param.daq.HFdaq.fs_MHz,wc1,wc2);
+                end
+            end
+            
+        end
         
-        X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz,wc1,wc2);
-        
+        b = waitbar(0);
         if handles.signed_env.Value == 1
             S = sign(imag(X));
             dims = size(Xfilt);
@@ -2127,28 +2168,28 @@ if length(str2num(handles.baseb.String)) == 1
             X = S.*abs(Xfilt);
             %   X = S.*envelope(real(X));
         end
-         delete(b)
+        delete(b)
     end
     
     if handles.invertbox.Value == 1
         X = X*(-1);
     end
-   
     
-if handles.use_chop.Value == 0
-    assignin('base','Xfilt',X)
-else
-    assignin('base','X_c',X)
-end
+    
+    if handles.use_chop.Value == 0
+        assignin('base','Xfilt',X)
+    else
+        assignin('base','X_c',X)
+    end
     
 elseif length(str2num(handles.baseb.String)) == 3
     axes(handles.axes4)
     h = hotcoldDB;
     cfreq = str2num(handles.baseb.String);
     rfreq = cfreq(1):cfreq(3):cfreq(2);
-
+    
     for n  = 1:length(rfreq)
-            R = Xfilt;
+        R = Xfilt;
         X = baseband2(R,rfreq(n),param.daq.HFdaq.fs_MHz,wc1,wc2);
         
         if handles.signed_env.Value == 1
@@ -2207,9 +2248,9 @@ elseif length(str2num(handles.baseb.String)) == 3
             errordlg('Too many dimensions; check ranges')
             return
         end
-%         if handles.med_box.Value == 1
-%             Y = medfilt2(Y,[3 3]);
-%         end
+        %         if handles.med_box.Value == 1
+        %             Y = medfilt2(Y,[3 3]);
+        %         end
         delete(b)
         axes(handles.axes4)
         imagesc(ax.x(xInd),ax.depth(zInd),real(Y'))
@@ -3253,12 +3294,17 @@ bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
     
     %Align Lateral
     bfdata2 = zeros(size(pedata,1),size(pedata,3));
+    bfdata2 = zeros(size(pedata,3),size(pedata,3));
     bfnum = bfdata2;
+    
+    
     
     for i = 1:size(pex.theta,1) %Element
         for j = 1:size(pex.theta,2) %Lateral
+      % for m = 1:length(pex.x2)
             for k = 1:size(pedata,3) % x z and amplitude lines
                 if pex.depth(bfpos{i,j}(2,k)) == pex.depth(k)% && pex.x2(bfpos{i,j}(1,k)) == pex.x2(k)
+                  %  m = find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);
                 bfdata2(j,k) = bfdata2(j,k) + bfdata{i,j}(k);
                 bfnum(j,k) = bfnum(j,k) + 1;
                 end
@@ -3272,7 +3318,15 @@ bfdata3 = bfdata3';
 bfdata3 = flipud(bfdata3);
 bfdata3 = fliplr(bfdata3);
 
+    
+if length(size(bfdata4)) < 3
     bfdata4 = medfilt2(bfdata3,[5,1]);
+    bfdata4 = permute(bfdata4,[2,3,1]);
+    pex.y = 1;
+else 
+    bfdata4 = mefilt3(bfdata3,[5,1,1]);
+    bfdata4 = permute (bfdata3,[2,3,1]);
+end
 
     
 
@@ -3378,6 +3432,11 @@ end
 function usepe_Callback(hObject, eventdata, handles)
 X = evalin('base','PEdata');
 ax = evalin('base','pex');
+
+if length(size(X)) < 4
+X(:,:,:,2) = X(:,:,:);
+ax.stime = [0 1];
+end
 assignin('base','Xfilt',X);
 assignin('base','ax',ax);
 set(handles.active_xfilt,'String','PE')
@@ -3635,6 +3694,7 @@ else
     ax = evalin('base','ax');
 end
 
+Xfilt = real(Xfilt);
 %set(handles.axes1,'ButtonDownFcn',@Plot4OnClickXZ)
 
 %plot(handles.axes3,ax.x,'ButtonDownFcn',@Plot4OnClickXZ)
@@ -3734,7 +3794,7 @@ axes(handles.axes1)
         handles.axes1.YLabel.String = 'Depth (mm)';
 
 axes(handles.axes3)
-        imagesc(ax.y(yInd),ax.depth(zInd),(Yyz'),'ButtonDownFcn',{@Plot4OnClickYZ,handles})
+        imagesc(ax.y(yInd),ax.depth(zInd),(Yyz),'ButtonDownFcn',{@Plot4OnClickYZ,handles})
         colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)
@@ -4262,3 +4322,58 @@ function med_z_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+
+function bb_win_num_Callback(hObject, eventdata, handles)
+% hObject    handle to bb_win_num (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of bb_win_num as text
+%        str2double(get(hObject,'String')) returns contents of bb_win_num as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function bb_win_num_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to bb_win_num (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function bbvar_Callback(hObject, eventdata, handles)
+% hObject    handle to bbvar (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of bbvar as text
+%        str2double(get(hObject,'String')) returns contents of bbvar as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function bbvar_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to bbvar (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in bb_win.
+function bb_win_Callback(hObject, eventdata, handles)
+% hObject    handle to bb_win (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of bb_win

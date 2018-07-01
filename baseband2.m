@@ -70,7 +70,7 @@ end
 
 
 x2 = 2*x(:,:,1:end/2,:);
-f_axis = linspace(0,fs,size(x2,3));
+f_axis = linspace(0,fs/2,size(x2,3));
 wlow = find(f_axis > wc1,1)-1;
 whigh = find(f_axis >= wc2,1);
 hamlen = whigh-wlow;
@@ -105,21 +105,34 @@ if length(dims) < 4
     dims(4) = 1;
 end
 
+pk = zeros(size(x2,1),size(x2,2));
+
+
 
 for i = 1:dims(1)
     for j = 1:dims(2)
         for k = 1:dims(4)
             x2(i,j,:,k) = Hwin.*squeeze(x2(i,j,:,k));
             X2(i,j,:,k) = ifft(x2(i,j,:,k));
+            pk(i,j,k) = f_ax(find(abs(x2(i,j,:,k)) == max(abs(x2(i,j,:,k)))));
         end
+        
     end
      waitbar(.25 + i/dims(1)/4,b,'Filtering')
 end
+
+if fc == 0
+    fc = pk;
+else 
+    fc2 = ones(size(pk));
+    fc = fc2.*fc;
+end
+
 t = (1:dims(3)) /fs;
 for i = 1:dims(1)
     for j = 1:dims(2)
         for k = 1:dims(4)
-            xdemod2(i,j,:,k) = squeeze(X2(i,j,:,k)).*exp(-m*2*pi*fc*t');
+            xdemod2(i,j,:,k) = squeeze(X2(i,j,:,k)).*exp(-m*2*pi*fc(i,j,k)*t');
              %xdemod2(i,j,:,k) = squeeze(X(i,j,:,k)).*exp(-m*2*pi*fc*t');
         end
     end
@@ -134,6 +147,7 @@ for i = 1:dims(1)
     waitbar(.75 + i/dims(1)/4,b,'Interpolating')
 end
 
+delete(b)
 %figure; imagesc(real(squeeze(xdemod3(:,1,:,21))));
 % figure; imagesc(real(squeeze(xdemod(:,1,:,21))));
 % 

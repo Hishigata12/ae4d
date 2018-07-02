@@ -3277,14 +3277,18 @@ bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
             end
         end
     end
-    
-    new_x_rng = [pex.depth(end)*sin(pex.theta(end,1))+pex.element(end) pex.depth(end)*sin(pex.theta(1,end))+pex.element(1)]; 
-    pex.x2 = linspace(new_x_rng(1),new_x_rng(2),size(pedata,3));
+%     
+   % new_x_rng = [pex.depth(end)*sin(pex.theta(end,1))+pex.element(end) pex.depth(end)*sin(pex.theta(1,end))+pex.element(1)]; 
+   new_x_rng = [pex.depth(end)*sin(pex.theta(round(size(pex.theta,1)/2),1)) pex.depth(end)*sin(pex.theta(round(size(pex.theta,1)/2),1))*-1 ];  
+   pex.x2 = linspace(new_x_rng(1),new_x_rng(2),size(pedata,1));
+   % bfpos = zeros(size(pex.theta,1),size(pex.theta,2),3,size(pedata,3));
+    bfdata = zeros(size(pex.theta,1),size(pex.theta,2),size(pedata,3));
     for i = 1:size(pex.theta,1) % Element
         for j = 1:size(pex.theta,2) %Lateral
             for k = 1:size(pedata,3) %Radius
                bfpos{i,j}(:,k) = [find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);find(pex.depth >= pex.depth(k).*cos(pex.theta(i,j)),1)];% pedata(j,1,k,i)];
-               bfdata{i,j}(k) = abs(pedata(j,1,k,i));
+             %   bfpos(i,j,:,k) = [find(pex.x >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);find(pex.depth >= pex.depth(k).*cos(pex.theta(i,j)),1)];% 
+                bfdata(i,j,k) = abs(pedata(j,1,k,i));
 %             bf.x.full(:,i,j) = bf.r(:,i,j).*sin(bf.theta(i,j));
 %             bf.z.full(:,i,j) = bf.r(:,i,j).*cos(bf.theta(i,j));
             end
@@ -3294,7 +3298,7 @@ bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
     
     %Align Lateral
     bfdata2 = zeros(size(pedata,1),size(pedata,3));
-    bfdata2 = zeros(size(pedata,3),size(pedata,3));
+    %bfdata2 = zeros(size(pedata,3),size(pedata,3));
     bfnum = bfdata2;
     
     
@@ -3304,8 +3308,9 @@ bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
       % for m = 1:length(pex.x2)
             for k = 1:size(pedata,3) % x z and amplitude lines
                 if pex.depth(bfpos{i,j}(2,k)) == pex.depth(k)% && pex.x2(bfpos{i,j}(1,k)) == pex.x2(k)
-                  %  m = find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);
-                bfdata2(j,k) = bfdata2(j,k) + bfdata{i,j}(k);
+                    %m = find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);
+                   % m = bfpos{i,j}(1,k);
+                bfdata2(j,k) = bfdata2(j,k) + bfdata(i,j,k);
                 bfnum(j,k) = bfnum(j,k) + 1;
                 end
             end
@@ -3315,20 +3320,20 @@ bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
 bfdata3 = bfdata2./bfnum;
 bfdata3(isnan(bfdata3)) = 0;
 bfdata3 = bfdata3';
-bfdata3 = flipud(bfdata3);
-bfdata3 = fliplr(bfdata3);
+%bfdata3 = flipud(bfdata3);
+%bfdata3 = fliplr(bfdata3);
 
     
-if length(size(bfdata4)) < 3
+if length(size(bfdata3)) < 3
     bfdata4 = medfilt2(bfdata3,[5,1]);
     bfdata4 = permute(bfdata4,[2,3,1]);
     pex.y = 1;
 else 
-    bfdata4 = mefilt3(bfdata3,[5,1,1]);
+    bfdata4 = medfilt3(bfdata3,[5,1,1]);
     bfdata4 = permute (bfdata3,[2,3,1]);
 end
 
-    
+  %  pex.x = pex.x2;
 
 clear pedata
 pedata = bfdata4;
@@ -3425,6 +3430,7 @@ assignin('base','PData',PData)
 assignin('base','TW',TW)
 assignin('base','TX',TX)
 assignin('base','PEformed',PEformed);
+set(handles.pR,'String','0');
 end
 
 

@@ -3272,6 +3272,7 @@ bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
         for j = 1:size(pedata,1) %Lateral Position
             %bf.r(:,i,j) = sqrt((pex.element(i)-pex.x(j))^2+pex.depth.^2);
             pex.theta(i,j) = abs((atan((pex.x(j)-pex.element(i))/(TX.focus*PData.Lambda))));
+            %pex.theta(i,j) = abs((atan((pex.x(j)-pex.element(round(end/2)))/(TX.focus*PData.Lambda))));
             if pex.x(j)-pex.element(i) < 0
                 pex.theta(i,j) = pex.theta(i,j)*-1;
             end
@@ -3279,98 +3280,130 @@ bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
     end
 %     
    % new_x_rng = [pex.depth(end)*sin(pex.theta(end,1))+pex.element(end) pex.depth(end)*sin(pex.theta(1,end))+pex.element(1)]; 
-   new_x_rng = [pex.depth(end)*sin(pex.theta(round(size(pex.theta,1)/2),1)) pex.depth(end)*sin(pex.theta(round(size(pex.theta,1)/2),1))*-1 ];  
-   pex.x2 = linspace(new_x_rng(1),new_x_rng(2),size(pedata,1));
-   % bfpos = zeros(size(pex.theta,1),size(pex.theta,2),3,size(pedata,3));
-    bfdata = zeros(size(pex.theta,1),size(pex.theta,2),size(pedata,3));
-    for i = 1:size(pex.theta,1) % Element
-        for j = 1:size(pex.theta,2) %Lateral
-            for k = 1:size(pedata,3) %Radius
-               bfpos{i,j}(:,k) = [find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);find(pex.depth >= pex.depth(k).*cos(pex.theta(i,j)),1)];% pedata(j,1,k,i)];
-             %   bfpos(i,j,:,k) = [find(pex.x >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);find(pex.depth >= pex.depth(k).*cos(pex.theta(i,j)),1)];% 
-                bfdata(i,j,k) = abs(pedata(j,1,k,i));
-%             bf.x.full(:,i,j) = bf.r(:,i,j).*sin(bf.theta(i,j));
-%             bf.z.full(:,i,j) = bf.r(:,i,j).*cos(bf.theta(i,j));
-            end
-        end
-        waitbar(i/size(pex.theta,1),b,'Creating Cell Matrix');
-    end
+%    new_x_rng = [pex.depth(end)*sin(pex.theta(round(size(pex.theta,1)/2),1)) pex.depth(end)*sin(pex.theta(round(size(pex.theta,1)/2),1))*-1];  
+%    pex.x2 = linspace(new_x_rng(1),new_x_rng(2),size(pedata,1));
+%  
+%    % bfpos = zeros(size(pex.theta,1),size(pex.theta,2),3,size(pedata,3));
+%     bfdata = zeros(size(pex.theta,1),size(pex.theta,2),size(pedata,3));
+%     for i = 1:size(pex.theta,1) % Element
+%         for j = 1:size(pex.theta,2) %Lateral
+%             for k = 1:size(pedata,3) %Radius
+%                bfpos{i,j}(:,k) = [find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);find(pex.depth >= pex.depth(k).*cos(pex.theta(i,j)),1)];% pedata(j,1,k,i)];
+%              %   bfpos(i,j,:,k) = [find(pex.x >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);find(pex.depth >= pex.depth(k).*cos(pex.theta(i,j)),1)];% 
+% %              if pex.depth(k)*cos(pex.theta(i,j)) <= TX.focus*PData.Lambda   
+% %                  bfweight(i,j,k) = pex.depth(k).*cos(pex.theta(i,j))./(TX.focus*PData.Lambda);
+% %              else
+% %                  bfweight(i,j,k) = (TX.focus*PData.Lambda)./pex.depth(k).*cos(pex.theta(i,j));
+% %              end
+%                 bfdata(i,j,k) = abs(pedata(j,1,k,i));%.*bfweight(i,j,k);
+% %             bf.x.full(:,i,j) = bf.r(:,i,j).*sin(bf.theta(i,j));
+% %             bf.z.full(:,i,j) = bf.r(:,i,j).*cos(bf.theta(i,j));
+%             end
+%         end
+%         waitbar(i/size(pex.theta,1),b,'Creating Cell Matrix');
+%     end
+%     
+%     %Align Lateral
+%     bfdata2 = zeros(size(pedata,1),size(pedata,3));
+%     %bfdata2 = zeros(size(pedata,3),size(pedata,3));
+%     bfnum = bfdata2;
+%     
     
-    %Align Lateral
-    bfdata2 = zeros(size(pedata,1),size(pedata,3));
-    %bfdata2 = zeros(size(pedata,3),size(pedata,3));
-    bfnum = bfdata2;
     
-    
-    
-    for i = 1:size(pex.theta,1) %Element
-        for j = 1:size(pex.theta,2) %Lateral
-      % for m = 1:length(pex.x2)
-            for k = 1:size(pedata,3) % x z and amplitude lines
-                if pex.depth(bfpos{i,j}(2,k)) == pex.depth(k)% && pex.x2(bfpos{i,j}(1,k)) == pex.x2(k)
-                    %m = find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);
-                   % m = bfpos{i,j}(1,k);
-                bfdata2(j,k) = bfdata2(j,k) + bfdata(i,j,k);
-                bfnum(j,k) = bfnum(j,k) + 1;
-                end
-            end
-        end
-        waitbar(i/size(pex.theta,1),b,'Condensing Image');
-    end
-bfdata3 = bfdata2./bfnum;
-bfdata3(isnan(bfdata3)) = 0;
-bfdata3 = bfdata3';
-%bfdata3 = flipud(bfdata3);
-%bfdata3 = fliplr(bfdata3);
+%     for i = 1:size(pex.theta,1) %Element
+%         for j = 1:size(pex.theta,2) %Lateral
+%       % for m = 1:length(pex.x2)
+%             for k = 1:size(pedata,3) % x z and amplitude lines
+%                 if pex.depth(bfpos{i,j}(2,k)) == pex.depth(k)% && pex.x2(bfpos{i,j}(1,k)) == pex.x2(k)
+%                     %m = find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);
+%                    % m = bfpos{i,j}(1,k);
+%                 bfdata2(j,k) = bfdata2(j,k) + bfdata(i,j,k);
+% %                 bfdata2(bfpos{i,j}(1,k),k) = bfdata2(bfpos{i,j}(1,k),k) + bfdata(i,j,k);
+% %                 bfnum(bfpos{i,j}(1,k),k) = bfnum(bfpos{i,j}(1,k),k) +1;
+%                bfnum(j,k) = bfnum(j,k) + 1;
+%                 end
+%             end
+%         end
+%         waitbar(i/size(pex.theta,1),b,'Condensing Image');
+%     end
+% bfdata3 = bfdata2./bfnum;
+% bfdata3(isnan(bfdata3)) = 0;
+% bfdata3 = bfdata3';
+% bfdata3 = flipud(bfdata3);
+% bfdata3 = fliplr(bfdata3);
 
     
-if length(size(bfdata3)) < 3
-    bfdata4 = medfilt2(bfdata3,[5,1]);
-    bfdata4 = permute(bfdata4,[2,3,1]);
-    pex.y = 1;
-else 
-    bfdata4 = medfilt3(bfdata3,[5,1,1]);
-    bfdata4 = permute (bfdata3,[2,3,1]);
-end
+% if length(size(bfdata3)) < 3
+%     bfdata4 = medfilt2(bfdata3,[5,1]);
+%     bfdata4 = permute(bfdata4,[2,3,1]);
+%     pex.y = 1;
+% else 
+%     bfdata4 = medfilt3(bfdata3,[5,1,1]);
+%     bfdata4 = permute (bfdata3,[2,3,1]);
+% end
 
   %  pex.x = pex.x2;
 
-clear pedata
-pedata = bfdata4;
+% clear pedata
+% pedata = bfdata4;
 pex.depth = pex.depth - 4; %adjust this for accurate PE             
 end
    
+     
+    % LETS DO SOME BEAM FORMING!!!   
     
-    
-    assignin('base','PEdata',pedata);
-    delete(b)
-    
-    
-    
-    
-    % LETS DO SOME BEAM FORMING!!!
-    
-    
+    for a = 1:length(pex.element)
+        %a = 1+c(k);
+        C = pex.theta(32,:);
+        Qx = pex.depth.*sin(C');
+        Qz = pex.depth.*cos(C');
+        x2 = linspace(min(min(Qx)),max(max(Qx)),size(Qx,1));
+        if handles.match_box.Value == 1
+        D = real(squeeze(pedata(:,1,:,a)));
+        else
+        D = squeeze(PEMatrix(:,a+32,:))'; %This is not currently using filtered data
+        end
+        for i = 1:size(Qx,1)
+            for j = 1:size(Qx,2)
+                Qxind(i,j) = find(x2 >= Qx(i,j),1);
+                Qzind(i,j) = find(pex.depth >= Qz(i,j),1);
+            end
+        end
+        Qfin = zeros(size(Qx));
+        Qnum = Qfin;
+        for i = 1:size(Qx,1)
+            for j = 1:size(Qx,2)
+                Qfin(Qxind(i,j),Qzind(i,j)) = Qfin(Qxind(i,j),Qzind(i,j))+D(i,j);
+                Qnum(Qxind(i,j),Qzind(i,j)) = Qnum(Qxind(i,j),Qzind(i,j)) +1;
+            end
+        end
+        Qtot = Qfin./Qnum;
+        Qtot(isnan(Qtot)) = 0;
+        Qtot = abs(Qtot)';
+        BF(:,:,a) = Qtot;
+        % figure; imagesc(x2,pex.depth,Qtot)
+        % ylim([35 55]);
+        waitbar(a/64,b,'Beamforming');
+    end
 
+bf = mean(BF,3);
+%pex.x = x2;
+%figure; imagesc(x2,pex.depth,bf2)
+ 
+if length(size(bf)) < 3
+   % bf2 = medfilt2(bf,[3,1]);
+    bf2 = permute(bf,[2 3 1]);
+    pex.y = 1;
+else 
+    % bf2 = medfilt3(bf,[3,1,1]);
+     bf2 = permute(bf,[2 3 1]);
+end
+clear pedata
+pedata = bf2;
 
+assignin('base','PEdata',pedata);
+delete(b)
 
-
-
-
-%     dims = size(PEImage);
-%     tmax = pi/4;
-%     theta = linspace(-tmax,tmax,31);
-%     C = ceil(dims(2)/2);
-%     r = linspace(0,abs(round(PData.Origin(1))),500);
-%     for i = 1:length(r)
-%         X(i,:) = r(i).*sin(theta);
-%         Y(i,:) = r(i).*cos(theta);
-%     end
-%     W = mesh(X,Y);
-%     s = size(X);
-%         for i = 1:s(2)
-%             for j = 1:s(1)
-%                 data(i,j) =
 if handles.save_4d.Value == 1
     clearvars -except f bScanParm pedata PData Trans TW TX pex PEformed Rcv
     f = f(1:end-10);
@@ -3380,9 +3413,6 @@ if handles.save_4d.Value == 1
     fprintf('Done\n')
 end
 
-%x = 3;
-
-        %end
 
 
 % --- Executes on button press in loadpe.
@@ -3430,7 +3460,7 @@ assignin('base','PData',PData)
 assignin('base','TW',TW)
 assignin('base','TX',TX)
 assignin('base','PEformed',PEformed);
-set(handles.pR,'String','0');
+set(handles.tP,'String','0');
 end
 
 

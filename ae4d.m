@@ -533,8 +533,8 @@ for p = 1:hf_num
     end
     
     %%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
-    b = waitbar(0,'Matrix Conversion');
-    waitbar(0,b,'Enveloping and converting to 4D matrix')
+   % b = waitbar(0,'Matrix Conversion');
+%    waitbar(0,b,'Enveloping and converting to 4D matrix')
     HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
     s = size(X);
     for i = 1:s(1)
@@ -542,7 +542,8 @@ for p = 1:hf_num
             %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
             HF(i,j,:,:) = X{i,j}; %Converts cell array to double
         end
-        waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
+       % waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
+       multiWaitbar('Converting to 4D Matrix', i/s(1));
     end
     
     if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
@@ -575,7 +576,8 @@ for p = 1:hf_num
     % XdB = real(20*log10(real(HF)./max(max(max(max(real(HF(:,:,M.xT,:))))))));
     % Xfilt = filts2D(XdB,[0 1 12],[0 2 2]);
     Xfilt = HF;
-    delete(b)
+    multiWaitbar('CLOSEALL');
+   % delete(b)
     
     if handles.keep.Value == 1
         assignin('base','Xfilt',Xfilt);
@@ -587,7 +589,7 @@ for p = 1:hf_num
         set(handles.fname,'String',[path file]);
     end
     if handles.save_4d.Value == 1
-        
+        multiWaitbar('Saving','busy');
         f = file(1:end-4);
         if ~isempty(handles.hfchans.String)
             hchan = num2str(a);
@@ -605,6 +607,7 @@ for p = 1:hf_num
         end
         clearvars -except a_full hf_num file path file2 path2 PE US LF param handles
         fprintf('Done\n')
+        multiWaitbar('Saving','Close');
     end
 end
 
@@ -3153,7 +3156,7 @@ else
     load([p f]);
     cd(p)
   
-    b = waitbar(0,'Filtering');
+  %  b = waitbar(0,'Filtering');
     US = TW.Wvfm2Wy;
     sz = size(PEMatrix);
     %  PEM = zeros(sz(1)
@@ -3196,7 +3199,8 @@ bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
             for j = 1:sz(2)
                     PE{i}(:,j) = Q{i}(:,j).*H2';
             end
-            waitbar(i/size(PEMatrix,3),b,'Filtering')
+          %  waitbar(i/size(PEMatrix,3),b,'Filtering')
+            multiWaitbar('Filtering',i/size(PEMatrix,3))
         end
         for i = 1:sz(3)    
             pe{i} = ifft(PE{i});
@@ -3219,7 +3223,8 @@ bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
             for j = 1:sz(2)
                Q{i}(:,j) = conv(squeeze(PEMatrix(:,j,i)),RefPulse);
             end
-            waitbar(i/sz(3),b,'Filtering');
+          %  waitbar(i/sz(3),b,'Filtering');
+             multiWaitbar('Filtering',i/sz(3));
         end
         for i = 1:sz(3)
             for j = 1:sz(2)
@@ -3227,7 +3232,8 @@ bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
                     pe{i}(:,j) = interp1(linspace(0,10,size(Q{1},1)),Q{i}(:,j),linspace(0,10,sz(1)));
 
             end
-            waitbar(i/sz(3),b,'Compressing Depth Axis');
+         %   waitbar(i/sz(3),b,'Compressing Depth Axis');
+            multiWaitbar('Compressing Depth Axis',i/sz(3));
         end
     
     end
@@ -3351,42 +3357,56 @@ end
    
      
     % LETS DO SOME BEAM FORMING!!!   
-    
-    for a = 1:length(pex.element)
+    for m = 1:size(pedata,2) %Elevational
+    for a = 1:length(pex.element) %Element
         %a = 1+c(k);
         C = pex.theta(32,:);
         Qx = pex.depth.*sin(C');
         Qz = pex.depth.*cos(C');
         x2 = linspace(min(min(Qx)),max(max(Qx)),size(Qx,1));
         if handles.match_box.Value == 1
-        D = real(squeeze(pedata(:,1,:,a)));
+        D = real(squeeze(pedata(:,m,:,a)));
         else
         D = squeeze(PEMatrix(:,a+32,:))'; %This is not currently using filtered data
         end
-        for i = 1:size(Qx,1)
-            for j = 1:size(Qx,2)
+        for i = 1:size(Qx,1) %Lateral
+            for j = 1:size(Qx,2) %Depth
                 Qxind(i,j) = find(x2 >= Qx(i,j),1);
-                Qzind(i,j) = find(pex.depth >= Qz(i,j),1);
+                Qzind(i,j) = find(pex.depth+(TX.Delay(a)*PData.Lambda) >= Qz(i,j),1); %Experimental
+          %      Qzind(i,j) = find(pex.depth+(TX.Delay(a)*PData.Lambda) >= Qz(i,j),1); %Pair with pex.depth = pex.depth-max(TX.Delay)*PData.Lambda        
             end
+            multiWaitbar(['Element ' num2str(a)],i/size(Qx,1));
         end
+      
+      
         Qfin = zeros(size(Qx));
         Qnum = Qfin;
         for i = 1:size(Qx,1)
             for j = 1:size(Qx,2)
-                Qfin(Qxind(i,j),Qzind(i,j)) = Qfin(Qxind(i,j),Qzind(i,j))+D(i,j);
-                Qnum(Qxind(i,j),Qzind(i,j)) = Qnum(Qxind(i,j),Qzind(i,j)) +1;
+                Qfin(Qxind(i,j),Qzind(i,j),m) = Qfin(Qxind(i,j),Qzind(i,j),m)+D(i,j,m);
+                Qnum(Qxind(i,j),Qzind(i,j),m) = Qnum(Qxind(i,j),Qzind(i,j),m) +1;
             end
         end
         Qtot = Qfin./Qnum;
         Qtot(isnan(Qtot)) = 0;
         Qtot = abs(Qtot)';
-        BF(:,:,a) = Qtot;
+        BF(:,:,m,a) = Qtot;
+        
+        if a < length(pex.element)
+            multiWaitbar(['Element ' num2str(a)],'Relabel',['Element ' num2str(a+1)])
+        else 
+            multiWaitbar(['Element ' num2str(a)],'Close');
+        end
+        
         % figure; imagesc(x2,pex.depth,Qtot)
         % ylim([35 55]);
-        waitbar(a/64,b,'Beamforming');
+      %  waitbar(a/length(pex.element)*(m/size(pedata,2)),b,'Beamforming');
+        multiWaitbar('Beamforming Elements',a/length(pex.element));
     end
-
-bf = mean(BF,3);
+        multiWaitbar('Beamforming Elevation',m/size(pedata,2))
+    end
+multiWaitbar('CLOSEALL');
+bf = mean(BF,4);
 %pex.x = x2;
 %figure; imagesc(x2,pex.depth,bf2)
  
@@ -3402,7 +3422,8 @@ clear pedata
 pedata = bf2;
 
 assignin('base','PEdata',pedata);
-delete(b)
+%pex.depth = pex.depth-max(TX.Delay)*PData.Lambda;
+%delete(b)
 
 if handles.save_4d.Value == 1
     clearvars -except f bScanParm pedata PData Trans TW TX pex PEformed Rcv

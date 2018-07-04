@@ -99,7 +99,7 @@ if mode == 0
     end
     
  %   fprintf('Filtering 4D data\n')
-    b = waitbar(0,'Filtering 4D data');
+    %b = waitbar(0,'Filtering 4D data');
     
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
@@ -109,7 +109,8 @@ if mode == 0
                 
             end
         end
-        waitbar(i/HF_xy(1)/2,b,'Slow Time Filtering')
+        %waitbar(i/HF_xy(1)/2,b,'Slow Time Filtering')
+        multiWaitbar('Slow Time Filtering',i/HF_xy(1));
     end
     
     
@@ -151,9 +152,10 @@ if mode == 0
                 y{i,j}(k,:) = ifft(X2{i,j}(k,:),HF_zt(2));
             end
         end
-        waitbar(0.5+i/HF_xy(1)/2,b,'Slow Time Filtering')
+      %  waitbar(0.5+i/HF_xy(1)/2,b,'Slow Time Filtering')
+        multiWaitbar('Converting back to time domain',i/HF_xy(1));
     end
-    delete(b)
+ %   delete(b)
     
 elseif mode == 1
     
@@ -167,7 +169,7 @@ elseif mode == 1
   %  RefPulse = flipud(conj(RefPulse));
     
 %    fprintf('Filtering 4D data\n')
-    b = waitbar(0,'Filtering 4D data');
+   % b = waitbar(0,'Filtering 4D data');
     %y = zeros(size(HF_xy,1),size(HF_xy,2),size(HF_zt(1))+length(RefPulse)-1,size(HF_zt(2)));
     
     
@@ -183,9 +185,10 @@ elseif mode == 1
                 y{i,j}(k,:) = conv(HF{i,j}(k,:),RefPulse);
             end
         end
-        waitbar(i/HF_xy(1),b,'Slow Time Filtering')
+       % waitbar(i/HF_xy(1),b,'Slow Time Filtering')
+       multiWaitbar('Slow Time Filtering',i/HF_xy(1));
     end
-    delete(b)
+  %  delete(b)
 end
 
 % for i = 925

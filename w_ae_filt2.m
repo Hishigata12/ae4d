@@ -90,7 +90,7 @@ if mode == 0
     end
     
    % fprintf('Filtering 4D data\n')
-    b = waitbar(0,'Filtering 4D data');
+ %   b = waitbar(0,'Filtering 4D data');
     if size(H,2) > size(H,1)
         H = H';
     end
@@ -102,7 +102,8 @@ if mode == 0
                 %X2(i,j,k,:) = filter(Hd,squeeze(X(i,j,k,:)));
             end
         end
-        waitbar(i/HF_xy(1)/2,b,'Fast Time Filtering')
+      %  waitbar(i/HF_xy(1)/2,b,'Fast Time Filtering')
+        multiWaitbar('Fast Time Filtering',i/HF_xy(1));
     end
     
     
@@ -118,9 +119,10 @@ if mode == 0
                 y{i,j}(:,k) = ifft(X2{i,j}(:,k),HF_zt(1));
             end
         end
-        waitbar(0.5+i/HF_xy(1)/2,b,'Converting back to Time')
+     %   waitbar(0.5+i/HF_xy(1)/2,b,'Converting back to Time')
+     multiWaitbar('Converting to time domain',i/HF_xy(1));
     end
-    delete(b)
+   % delete(b)
     
     
     %%%%% CONVOLUTION FILTERING %%%%%
@@ -135,7 +137,7 @@ elseif mode == 1
     RefPulse = hwin.*RefPulse;
     
     %fprintf('Filtering 4D data\n')
-    b = waitbar(0,'Filtering 4D data');
+   % b = waitbar(0,'Filtering 4D data');
     %y = zeros(size(HF_xy,1),size(HF_xy,2),size(HF_zt(1))+length(RefPulse)-1,size(HF_zt(2)));
     
     Sz = HF_zt(1)+length(RefPulse)-1;
@@ -152,7 +154,8 @@ elseif mode == 1
                 y2{i,j}(:,k) = conv(HF{i,j}(:,k),RefPulse);
             end
         end
-        waitbar(i/HF_xy(1),b,'Fast Time Filtering')
+     %   waitbar(i/HF_xy(1),b,'Fast Time Filtering')
+        multiWaitbar('Fast Time Filtering',i/HF_xy(1));
     end
     
      for i = 1:HF_xy(1)
@@ -161,13 +164,12 @@ elseif mode == 1
                 y{i,j}(:,k) = interp1(linspace(0,HF_zt(1),size(y2{1},1)),y2{i,j}(:,k),linspace(0,HF_zt(1),HF_zt(1)));
             end
         end
-        waitbar(i/HF_xy(1),b,'Compressing Depth Axis');
+       % waitbar(i/HF_xy(1),b,'Compressing Depth Axis');
+       multiWaitbar('Compressing Depth Axis',i/HF_xy(1));
      end
 %y = y2;
-    delete(b)
+  %  delete(b)
 end
 
-% Need to resample y to original length - use decimate?
 
 
-x = 2;

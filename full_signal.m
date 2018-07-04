@@ -11,13 +11,14 @@ else
 end
 
 
-b = waitbar(0);
+%b = waitbar(0);
 for i = 1:fL
     for j = 1:sL
         [~,HF1{i,j}] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
     end
-    waitbar(i/(fL),b,'Creating 4D array');
-    fprintf('.');
+    %waitbar(i/(fL),b,'Creating 4D array');
+   % fprintf('.');
+    multiWaitbar('Creating 4D Array',i/fL);
 end
 
   
@@ -46,7 +47,7 @@ HF=zeros(size(HF1,1),size(HF1,2),size(HF1{1},1),size(HF1{1},2));
 if param.velmex.FastAxis == 'Y'
     HF = permute(HF,[2 1 3 4]); %rearrange Y and X if data was taken that way
 end
-delete(b);
+%delete(b);
 end
 
 

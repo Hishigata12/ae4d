@@ -546,17 +546,19 @@ for p = 1:hf_num
        multiWaitbar('Converting to 4D Matrix', i/s(1));
     end
     
-    if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
-        if param.velmex.SlowAxis == 'X'
-            for i = 1:size(HF,1)
-                if mod(i,2) == 0
-                    HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+    if handles.onemhz.Value == 1
+        if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+            if param.velmex.SlowAxis == 'X'
+                for i = 1:size(HF,1)
+                    if mod(i,2) == 0
+                        HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+                    end
                 end
-            end
-        else
-            for i = 1:size(HF,2)
-                if mod(i,2) == 0
-                    HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+            else
+                for i = 1:size(HF,2)
+                    if mod(i,2) == 0
+                        HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+                    end
                 end
             end
         end
@@ -915,7 +917,8 @@ if handles.all_movie.Value == 1
             
             plot(handles.axes4,lf_ax(lfInd),LF(lfInd),'k')
             hold(handles.axes4,'on')
-            plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
+          %  plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
+          plot(handles.axes4,lf_ax(round(k*lfdif)),LF(round(k*lfdif)),'ro','MarkerFaceColor','r')
             hold(handles.axes4,'off')
             
         end
@@ -3166,15 +3169,21 @@ elseif handles.bsq.Value == 1
     
     PEImage = multibandread(PEbsqFile,[dsize(1:2),prod(dsize(3:end))],...
         'single',nOffset,'bsq','ieee-le',{'Band','Direct',nScanPt});
-    
-    pedata = mean(PEImage,3);
+    if bScanParm.ylen > 1
+            PEImage = reshape(PEImage,[dsize(1),dsize(2),bScanParm.XSteps,bScanParm.YSteps]);
+    end
+    pedata = squeeze(mean(PEImage,3));
     wavlen = PData.Lambda;
-    x_mm = ((1:dsize(2))*wavlen*PData(1).PDelta(1))/2;
+    x_mm = ((1:dsize(2))*wavlen*PData(1).PDelta(1));
     x_mm = x_mm - mean(x_mm);
     z_mm = (1:dsize(1))*wavlen*PData(1).PDelta(3);
     pex.x = x_mm;
     pex.depth = z_mm;
-    pex.y = 1;
+    if bScanParm.ylen == 0
+        pex.y = 1;
+    else
+        pex.y = linspace(-bScanParm.ylen/2,bScanParm.ylen/2,bScanParm.YSteps);
+    end
     pedata = permute(pedata,[2 3 1]);
     if handles.save_4d.Value == 1
         clearvars -except f bScanParm pedata PData Trans TW TX pex TXArray
@@ -3386,26 +3395,43 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
     
     % clear pedata
     % pedata = bfdata4;
-    pex.depth = pex.depth - 4; %adjust this for accurate PE
+    %pex.depth = pex.depth - 4; %adjust this for accurate PE
     
-    
+    pex.element = pex.element.*TX.Apod';
+    pex.element = pex.element(pex.element~=0);
+    cent = round(length(pex.element));
     
     % LETS DO SOME BEAM FORMING!!!
     for m = 1:size(pedata,2) %Elevational
         for a = 1:length(pex.element) %Element
             %a = 1+c(k);
-            C = pex.theta(32,:);
-            Qx = pex.depth.*sin(C');
-            Qz = pex.depth.*cos(C');
-            x2 = linspace(min(min(Qx)),max(max(Qx)),size(Qx,1));
+            
+            %Decimation and Interpolation to reshape data
             if handles.match_box.Value == 1
                 D = real(squeeze(pedata(:,m,:,a)));
             else
                 D = squeeze(PEMatrix(:,a+32,:))'; %This is not currently using filtered data
-            end
+                %D = real(squeeze(pedata(:,m,:,a)));
+            end  
+            [grdx1, grdz1] = meshgrid(1:size(D,1),1:size(D,2));
+            [grdx2, grdz2] = meshgrid(linspace(1,size(D,1),PData(1).Size(2)),linspace(1,size(D,2),PData(1).Size(1)));
+            Dint = interp2(grdx1, grdz1,D',grdx2, grdz2);
+            clear D;
+            D = Dint';
+            C = interp1(1:size(pedata,1),pex.theta(cent,:),linspace(1,size(pedata,1),size(D,1)));     
+            wavelen = PData.Lambda;
+            %pex.x = (1:size(pedata,1))*wavlen*PData(1).PDelta(1).*(PData.Size(2)/size(pedata,1));
+            pex.x = (1:size(D,1))*wavelen*PData(1).PDelta(1);
+            pex.x = pex.x - mean(pex.x);
+          %  pex.depth = (1:size(pedata,3))*wavlen*PData(1).PDelta(3).*(PData.Size(1)/size(pedata,3));
+          pex.depth = (1:size(D,2))*wavelen*PData(1).PDelta(3) + 5;
+            Qx = pex.depth.*sin(C');
+            Qz = pex.depth.*cos(C');
+            x2 = linspace(min(min(Qx)),max(max(Qx)),size(Qx,1));
+          
             for i = 1:size(Qx,1) %Lateral
                 for j = 1:size(Qx,2) %Depth
-                    Qxind(i,j) = find(x2 >= Qx(i,j),1);
+                    Qxind(i,j) = find(pex.x >= Qx(i,j),1); %or use x2
                     %   Qzind(i,j) = find(pex.depth+(TXArray(i).Delay(a)*PData.Lambda) >= Qz(i,j),1); %Experimental
                     Qzind(i,j) = find(pex.depth >= Qz(i,j),1); %Pair with pex.depth = pex.depth-max(TX.Delay)*PData.Lambda
                 end
@@ -3442,10 +3468,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
     multiWaitbar('CLOSEALL');
     bf = mean(BF,4);
     %pex.x = x2;
-    wavlen = PData.Lambda;
-    pex.x = (1:dsize(2))*wavlen*PData(1).PDelta(1);
-    pex.x = pex.x - mean(pex.x);
-    pex.depth = (1:dsize(1))*wavlen*PData(1).PDelta(3);
+   
     %figure; imagesc(x2,pex.depth,bf2)
     
     if length(size(bf)) < 3

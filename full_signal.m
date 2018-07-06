@@ -1,6 +1,6 @@
 % input var a denotes which HF channel to take.
 
-function [HF, HF1] = full_signal(loc,param,a)
+function [HF, HF1] = full_signal(loc,param,a,bad)
 k = param.velmex.XNStep*param.velmex.YNStep;
 if param.velmex.FastAxis == 'X'
     fL = param.velmex.XNStep; % gets fast direction scan points
@@ -12,14 +12,28 @@ end
 
 
 %b = waitbar(0);
+if bad
+    sL = sL-1;
+end
+%     for i = 1:fL
+%         for j = 1:sL
+%             if read
+%             [~,HF1{i,j}] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
+%         end
+%         %waitbar(i/(fL),b,'Creating 4D array');
+%         % fprintf('.');
+%         multiWaitbar('Creating 4D Array',i/fL);
+%     end
+
 for i = 1:fL
     for j = 1:sL
         [~,HF1{i,j}] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
     end
     %waitbar(i/(fL),b,'Creating 4D array');
-   % fprintf('.');
+    % fprintf('.');
     multiWaitbar('Creating 4D Array',i/fL);
 end
+
 
   
 

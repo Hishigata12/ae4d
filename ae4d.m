@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 04-Jul-2018 15:18:40
+% Last Modified by GUIDE v2.5 06-Jul-2018 15:20:31
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -518,8 +518,8 @@ for p = 1:hf_num
     if ~isempty(handles.hfchans.String)
         a = a_full(p);
     end
-    
-    [~, HF1] = full_signal([path file],param,a); %Gets the raw data
+    bad = handles.bad.Value;
+    [~, HF1] = full_signal([path file],param,a,bad); %Gets the raw data
     if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
         [X, LF] = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
     elseif handles.slow_box.Value == 1
@@ -581,15 +581,6 @@ for p = 1:hf_num
     multiWaitbar('CLOSEALL');
    % delete(b)
     
-    if handles.keep.Value == 1
-        assignin('base','Xfilt',Xfilt);
-        assignin('base','fpath',[path file]);
-        assignin('base','param',param);
-        assignin('base','ax',ax);
-        assignin('base','PE',PE);
-        assignin('base','LF',LF);
-        set(handles.fname,'String',[path file]);
-    end
     if handles.save_4d.Value == 1
         multiWaitbar('Saving','busy');
         f = file(1:end-4);
@@ -616,13 +607,13 @@ end
     
 
 
-% --- Executes on button press in keep.
-function keep_Callback(hObject, eventdata, handles)
-% hObject    handle to keep (see GCBO)
+% --- Executes on button press in bad.
+function bad_Callback(hObject, eventdata, handles)
+% hObject    handle to bad (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hint: get(hObject,'Value') returns toggle state of keep
+% Hint: get(hObject,'Value') returns toggle state of bad
 
 
 % --- Executes on button press in save_4d.
@@ -3138,13 +3129,6 @@ if handles.onemhz.Value == 1
     PEdata = HF;
     [~, pex] = make_axes(param,size(HF));
     pex.depth = linspace(0,1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz/2,size(PEdata,3));
-    if handles.keep.Value == 1
-        assignin('base','PEdata',PEdata);
-        assignin('base','fpath',[path file]);
-        assignin('base','param',param);
-        assignin('base','pex',ax);
-        set(handles.fname,'String',[path file]);
-    end
     if handles.save_4d.Value == 1
         clearvars -except file path param pex PEdata
         f = file(1:end-4);
@@ -3209,7 +3193,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
     bScanParm.depth = Rcv(1).endDepth*PData.Lambda;
     
     
-    % Do some filterings here!!! Keep in mind that PE is downsampled from
+    % Do some filterings here!!! bad in mind that PE is downsampled from
     % 250MHz to something around 10 MHz
     if handles.match_box.Value == 0
         N = size(PEMatrix,1);
@@ -3312,9 +3296,12 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
         pex.y = 1;
     end
     pex.element = Trans.ElementPos(:,1)*PData.Lambda;
+    pex.element = pex.element.*TX.Apod';
+    pex.element = pex.element(pex.element~=0);
+    cent = round(length(pex.element)/2);
     pex.depth = linspace(0,bScanParm.depth,size(pedata,3));
     pex.stime = linspace(0,bScanParm.Duration,size(pedata,4));
-    
+    apods = find(TX.VDASApod);
     delay.x = Trans.ElementPos(:,1)*PData.Lambda;
     %for i = 1:
     for i = 1:size(pedata,4) %Element
@@ -3397,9 +3384,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
     % pedata = bfdata4;
     %pex.depth = pex.depth - 4; %adjust this for accurate PE
     
-    pex.element = pex.element.*TX.Apod';
-    pex.element = pex.element(pex.element~=0);
-    cent = round(length(pex.element));
+  
     
     % LETS DO SOME BEAM FORMING!!!
     for m = 1:size(pedata,2) %Elevational
@@ -3429,8 +3414,8 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             Qz = pex.depth.*cos(C');
             x2 = linspace(min(min(Qx)),max(max(Qx)),size(Qx,1));
           
-            for i = 1:size(Qx,1) %Lateral
-                for j = 1:size(Qx,2) %Depth
+            for i = 1:size(Qz,1) %Lateral
+                for j = 1:size(Qz,2) %Depth
                     Qxind(i,j) = find(pex.x >= Qx(i,j),1); %or use x2
                     %   Qzind(i,j) = find(pex.depth+(TXArray(i).Delay(a)*PData.Lambda) >= Qz(i,j),1); %Experimental
                     Qzind(i,j) = find(pex.depth >= Qz(i,j),1); %Pair with pex.depth = pex.depth-max(TX.Delay)*PData.Lambda
@@ -3441,8 +3426,8 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             
             Qfin = zeros(size(Qx));
             Qnum = Qfin;
-            for i = 1:size(Qx,1)
-                for j = 1:size(Qx,2)
+            for i = 1:size(Qz,1) % X
+                for j = 1:size(Qz,2) %Depth
                     Qfin(Qxind(i,j),Qzind(i,j),m) = Qfin(Qxind(i,j),Qzind(i,j),m)+D(i,j,m);
                     Qnum(Qxind(i,j),Qzind(i,j),m) = Qnum(Qxind(i,j),Qzind(i,j),m) +1;
                 end

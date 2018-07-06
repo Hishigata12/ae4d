@@ -280,8 +280,12 @@ dsize = fread(fid,[1,n],'int32');
 % blk_size = (length(dsize) + 1)*4 + prod(dsize)*4;
 blk_size = prod(dsize)*4;
 fseek(fid,blk_size*(ScanPt-1),'cof');
-
 data = fread(fid,[prod(dsize),1],'single');
+tsize = dsize(1)*dsize(2)*dsize(3);
+if tsize ~= length(data)
+    data = zeros(tsize,1);
+    disp(['Missing point ' num2str(ScanPt)]);
+end
 data = reshape(data,fliplr(dsize));
 
 data = permute(data,[1,3,2]);

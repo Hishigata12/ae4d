@@ -562,6 +562,14 @@ for p = 1:hf_num
                 end
             end
         end
+    else
+        if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+             for i = 1:size(HF,2)
+                    if mod(i,2) == 0
+                        HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+                    end
+             end
+        end
     end
     
     
@@ -3898,7 +3906,7 @@ axes(handles.axes1)
         handles.axes1.YLabel.String = 'Depth (mm)';
 
 axes(handles.axes3)
-        imagesc(ax.y(yInd),ax.depth(zInd),(Yyz),'ButtonDownFcn',{@Plot4OnClickYZ,handles})
+        imagesc(ax.y(yInd),ax.depth(zInd),(Yyz'),'ButtonDownFcn',{@Plot4OnClickYZ,handles})
         colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)

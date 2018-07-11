@@ -14,9 +14,9 @@ Used for up to 4 dimensional processing of acoustoelectric data
 7) Readouts: 1 - Slope in microvolts per mA, 
              2 - Mean AE value $$ Not really useful
              3 - STD of AE values $$ Not really useful
-             4 - Adjusted slope calculated by slope 2 and pressure
+             4 - Adjusted slope calculated by slope and pressure
              5 - Pressure (user input)
-             6 - 2nd slope calculation, generally more accurate
+             6 - 2nd slope calculation, generally less accurate
              7 - The two signals (LF - Black, AE - Red) are shown in top right with given R^2 value as title
 8) If slope is negative, check Invert on bottom left and press Modify to change the sign of the AE signal
 9) If there is a time delay between LF and AE, use the TimeShift box in bottom left

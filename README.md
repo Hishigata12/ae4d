@@ -21,3 +21,15 @@ Used for up to 4 dimensional processing of acoustoelectric data
 8) If slope is negative, check Invert on bottom left and press Modify to change the sign of the AE signal
 9) If there is a time delay between LF and AE, use the TimeShift box in bottom left
 Note: Is is best to use non-enveloped and non-rectified data for both LF and HF
+
+
+
+%%%%% USING 2D OVERLAY %%%%%%%%
+1) Load PE
+2) Press Use
+3) Filter PE data - Make sure there is only 1 time point in chopped version
+4) Press To PEData
+5) Load AE
+6) Filter AE data - Make sure there is only 1 time point in chopped version
+7) Press Overlay
+8) Adjust height of AE signal compared to PE using Depth Shift

@@ -33,3 +33,10 @@ Note: Is is best to use non-enveloped and non-rectified data for both LF and HF
 6) Filter AE data - Make sure there is only 1 time point in chopped version
 7) Press Overlay
 8) Adjust height of AE signal compared to PE using Depth Shift
+
+
+
+%%%%%%% USING IRADON %%%%%%
+1) Create file 
+2) Set Range to perform (more x and z points results in more accurate image)
+3) Set Enhancesments

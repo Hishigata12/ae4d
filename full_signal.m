@@ -25,15 +25,21 @@ end
 %         multiWaitbar('Creating 4D Array',i/fL);
 %     end
 
-for i = 1:fL
-    for j = 1:sL
+for j = 1:sL
+    for i = 1:fL
         [~,HF1{i,j}] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
     end
     %waitbar(i/(fL),b,'Creating 4D array');
     % fprintf('.');
-    multiWaitbar('Creating 4D Array',i/fL);
+    multiWaitbar('Creating 4D Array',i/sL);
 end
 
+% for i = 1:size(HF1,1)
+%     for j = 1:size(HF1,2)
+%     y(i,:,:) = HF1{i,1};
+%     y2(j,:,:) = HF1{75,j};
+%     end
+% end
 
   
 

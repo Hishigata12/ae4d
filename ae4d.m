@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 06-Jul-2018 15:20:31
+% Last Modified by GUIDE v2.5 12-Jul-2018 19:17:20
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -492,6 +492,7 @@ function create_4d_Callback(hObject, eventdata, handles)
 param = read_ucsdi_info([path file]); %Gets scan parameters
 [~,~,LF] = read_ucsdi_data([path file],1); %Gets input current waveform
 cd(path);
+PE = [];
 if handles.match_box.Value == 1
     path2 = [path(1:end-8) 'PEData\'];
     file2 = uigetfile(fullfile(path2,'*PEParm.mat')); %gets US pulse waveform
@@ -562,14 +563,14 @@ for p = 1:hf_num
                 end
             end
         end
-    else
-        if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
-             for i = 1:size(HF,2)
-                    if mod(i,2) == 0
-                        HF(:,i,:,:) = fliplr(HF(:,i,:,:));
-                    end
-             end
-        end
+%     else
+%         if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+%              for i = 1:size(HF,2)
+%                     if mod(i,2) == 0
+%                         HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+%                     end
+%              end
+%         end
     end
     
     
@@ -1245,9 +1246,11 @@ function max_box_Callback(hObject, eventdata, handles)
 if get(hObject,'Value') == 1
     if handles.use_chop.Value == 0
     ax = evalin('base','ax');
-set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
+    x1 = num2str(round(ax.x(1),1)); x2 = num2str(round(ax.x(end),1));
+    z2 = floor(ax.depth(end));
+set(handles.xR,'String', [x1 ' ' x2]);
 set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
-set(handles.zR,'String', num2str([0 floor(ax.depth(end))]));
+set(handles.zR,'String', num2str([0 z2]));
 set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
     else
             ax_c = evalin('base','ax_c');
@@ -1508,7 +1511,21 @@ end
 HF = squeeze(HF); %Converts down to lateral+depth+time
 t = str2num(handles.tR.String); %gets range of time points
 y = str2num(handles.yR.String);
-if length(size(HF)) == 3
+
+if length(size(HF)) == 2
+    HF = permute(HF,[2 1]);
+    R = iradon(HF,str2double(handles.dtheta.String),'None');
+    R = permute(R,[2 1]);
+    dims = size(R);
+    ax.depth = linspace(0,ax.depth(end),dims(2));
+    ax.x = linspace(ax.x(1),ax.x(end),dims(1));
+    low_x = find(ax.x >= min(ax.x),1);
+    high_x = find(ax.x >= max(ax.x),1);
+    R = R(low_x:high_x,:,:,:);
+    ax.x = linspace(ax.x(low_x),ax.x(high_x),size(R,1));
+    R = permute(R,[1 3 2]);
+
+elseif length(size(HF)) == 3
     q.t = 1:size(HF,3);
     tInd =  q.t(find(ax.stime >= t(1)):find(ax.stime >= t(2)));
     HF = permute(HF,[2 1 3]);
@@ -1521,13 +1538,14 @@ if length(size(HF)) == 3
     
     R = permute(R,[1 4 2 3]);
     delete(b);
-    dims = size(R); %gets no dimensions of reconstructed data
+    dims = size(R); %gets new dimensions of reconstructed data
     ax.depth = linspace(0,ax.depth(end),dims(3));
     ax.x = linspace(ax.x(1),ax.x(end),dims(1));
-    low_x = find(ax.x >= -10,1);
-    high_x = find(ax.x >= 10,1);
+    low_x = find(ax.x >= min(ax.x),1);
+    high_x = find(ax.x >= max(ax.x),1);
     R = R(low_x:high_x,:,:,:);
     ax.x = linspace(ax.x(low_x),ax.x(high_x),size(R,1));
+   
     
 else
     q.t = 1:size(HF,4);
@@ -1540,7 +1558,7 @@ else
     for j = yInd
         for i = tInd
             R(:,:,j,i) = iradon(HF(:,:,j,i),str2double(handles.dtheta.String),'None');
-            waitbar((j-1)/yInd + i/yInd(end),b,'Computing inverse radon transform');
+            waitbar((j)/yInd(end),b,'Computing inverse radon transform');
         end
     end
 
@@ -1870,7 +1888,10 @@ Lae = Lae/str2double(handles.lfgain.String)*1000;
 %R = corrcoef(abs(Sae2),abs(Lae));
 R = corrcoef(Sae2,Lae);
 R = R(2);
-fit  = polyfit(Lae,Sae2',1);
+if size(Sae2,1) ~= size(Lae,1)
+    Sae2 = Sae2';
+end
+fit  = polyfit(Lae,Sae2,1);
 taxis = linspace(min(Lae),max(Lae),length(Lae));
 yfit = fit(1)*taxis+fit(2);
 
@@ -1914,7 +1935,7 @@ else
 end
 
 %m = round(mean(abs(Sae2)./abs(Lae)),2);
-m = round(mean(Sae2./Lae),2);
+m = fit(1);
 m2 = (max(abs(Sae2))-min(abs(Sae2)))/(max(abs(Lae))-min(abs(Lae)));
 ave = round(mean(abs(Sae2)),2);
 dev = round(std((Sae2)),2);
@@ -1924,7 +1945,7 @@ else
     pres = 1;   
 end
 %m3 = m/pres;
-m3 = m2/pres;
+m3 = m/pres;
 
 set(handles.param1,'String','slope')
 set(handles.param2,'String','mean')
@@ -2168,9 +2189,10 @@ if length(str2num(handles.baseb.String)) == 1
                 waitbar(i/dims(1),b,'Basebanding');
             end
             if handles.bbdb.Value == 1
-                Xfilt = 20*log10(Xfilt./max(max(max(max(Xfilt)))));
+                Xfilt = 20*log10(Xfilt./max(max(max(max(abs(Xfilt))))));
             end
             X = S.*abs(Xfilt);
+           
             %   X = S.*envelope(real(X));
         end
         delete(b)
@@ -2494,18 +2516,18 @@ end
 Y = circshift(Y,str2double(handles.dshift.String),2);
 
 if length(size(PEData)) == 3
-     P = squeeze(PEData(xInd,yInd,peInd));
+     P = squeeze(PEData(1:size(PEData,1),yInd,peInd));
 else
 
-P = squeeze(PEData(xInd,yInd,peInd,tInd));
+    P = squeeze(PEData(1:size(PEData,1),yInd,peInd,tInd));
 end
 
 
 
-if size(Y) ~= size(P)
-    errordlg('PE and AE datasets must be same size')
-    return
-end
+% if size(Y) ~= size(P)
+%     errordlg('PE and AE datasets must be same size')
+%     return
+% end
 
 if length(size(Y)) > 2
     errordlg('Too many dimensions; check ranges')
@@ -2654,7 +2676,9 @@ if handles.use_ext_fig.Value == 0
        end
    end
                    
-   imagesc(G);
+   imagesc(ax.x(xInd),ax.depth(zInd),G);
+   handles.axes4.XLabel.String = 'Lateral (mm)';
+   handles.axes4.YLabel.String = 'Depth (mm)';
    caxis(gca,[0.5 1])
 %    if ~isempty(aeR)
 %        caxis(aeR)
@@ -3146,6 +3170,7 @@ if handles.onemhz.Value == 1
         fprintf('Done\n')
     end
     
+    %FOR PROCESSING BSQDATA
 elseif handles.bsq.Value == 1
     [f, p]  = uigetfile(fullfile(pwd,'*_PEParm.mat'));
     f_root = f(1:(end-11));
@@ -3186,7 +3211,8 @@ elseif handles.bsq.Value == 1
         fprintf('Done\n')
     end
     
-elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
+    %FOR PROCESSING CHIRP DATA VERASONICS DATA
+elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0 
     [f, p]  = uigetfile(fullfile(pwd,'*_PEParm.mat'));
     load([p f]);
     cd(p)
@@ -3238,7 +3264,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             multiWaitbar('Filtering',i/size(PEMatrix,3));
         end
         for i = 1:sz(3)
-            pe{i} = ifft(PE{i});
+            pe{i} = real(flipud(ifft(PE{i})));
         end
         
         
@@ -3252,7 +3278,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
         RefPulse = RefPulse/(sum(abs(RefPulse)));
         RefPulse = flipud(conj(RefPulse));
         hwin = hamming(length(RefPulse));
-        RefPulse = hwin.*RefPulse;
+        %RefPulse = hwin.*RefPulse;
         
         for i = 1:sz(3)
             for j = 1:sz(2)
@@ -3404,29 +3430,40 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
                 D = real(squeeze(pedata(:,m,:,a)));
             else
                 D = squeeze(PEMatrix(:,a+32,:))'; %This is not currently using filtered data
-                %D = real(squeeze(pedata(:,m,:,a)));
+              %  D = real(squeeze(pedata(:,m,:,a)));
             end  
             [grdx1, grdz1] = meshgrid(1:size(D,1),1:size(D,2));
             [grdx2, grdz2] = meshgrid(linspace(1,size(D,1),PData(1).Size(2)),linspace(1,size(D,2),PData(1).Size(1)));
-            Dint = interp2(grdx1, grdz1,D',grdx2, grdz2);
+            Dint = interp2(grdx1, grdz1,D',grdx2, grdz2);   
+              
             clear D;
             D = Dint';
-            C = interp1(1:size(pedata,1),pex.theta(cent,:),linspace(1,size(pedata,1),size(D,1)));     
+            
+            C = interp1(1:size(pedata,1),pex.theta(cent,:),linspace(1,size(pedata,1),size(D,1)));  % Adjust where Center is here   
+         %   C = pex.theta(cent,:);
             wavelen = PData.Lambda;
             %pex.x = (1:size(pedata,1))*wavlen*PData(1).PDelta(1).*(PData.Size(2)/size(pedata,1));
             pex.x = (1:size(D,1))*wavelen*PData(1).PDelta(1);
             pex.x = pex.x - mean(pex.x);
           %  pex.depth = (1:size(pedata,3))*wavlen*PData(1).PDelta(3).*(PData.Size(1)/size(pedata,3));
-          pex.depth = (1:size(D,2))*wavelen*PData(1).PDelta(3) + 5;
+            pex.depth = (1:size(D,2))*wavelen*PData(1).PDelta(3); % + delay.x(1,1);
             Qx = pex.depth.*sin(C');
             Qz = pex.depth.*cos(C');
             x2 = linspace(min(min(Qx)),max(max(Qx)),size(Qx,1));
-          
+            foc = find(pex.depth >= TX.focus*PData.Lambda,1);
+            Qxind = zeros(size(Qz,1),size(Qz,2));
+            Qzind = Qxind;
+            Qweight = Qzind;
             for i = 1:size(Qz,1) %Lateral
                 for j = 1:size(Qz,2) %Depth
                     Qxind(i,j) = find(pex.x >= Qx(i,j),1); %or use x2
                     %   Qzind(i,j) = find(pex.depth+(TXArray(i).Delay(a)*PData.Lambda) >= Qz(i,j),1); %Experimental
                     Qzind(i,j) = find(pex.depth >= Qz(i,j),1); %Pair with pex.depth = pex.depth-max(TX.Delay)*PData.Lambda
+                    if Qzind(i,j) <= foc
+                        Qweight(i,j) = 1+Qzind(i,j)/foc;
+                    else
+                        Qweight(i,j) = 1+foc/Qzind(i,j);
+                    end
                 end
                 multiWaitbar(['Element ' num2str(a)],i/size(Qx,1));
             end
@@ -3436,7 +3473,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             Qnum = Qfin;
             for i = 1:size(Qz,1) % X
                 for j = 1:size(Qz,2) %Depth
-                    Qfin(Qxind(i,j),Qzind(i,j),m) = Qfin(Qxind(i,j),Qzind(i,j),m)+D(i,j,m);
+                    Qfin(Qxind(i,j),Qzind(i,j),m) = Qfin(Qxind(i,j),Qzind(i,j),m)+D(i,j,m).*Qweight(i,j);
                     Qnum(Qxind(i,j),Qzind(i,j),m) = Qnum(Qxind(i,j),Qzind(i,j),m) +1;
                 end
             end
@@ -3849,11 +3886,15 @@ dims = size(Xfilt);
 q.x = 1:dims(1);
 q.y = 1:dims(2);
 q.z = 1:dims(3);
+if length(size(Xfilt)) > 3
 q.t = 1:dims(4);
+end
 xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
+if length(size(Xfilt)) > 3
 tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+end
 if length(xR) < 3 || length(yR) < 3 || length(zR) <3 || length(tR) <3
     errordlg('All 4 dimensions need 3 values ([range1, range2, point])')
     return
@@ -3861,12 +3902,20 @@ end
 px = q.x(find(ax.x >=xR(3),1));
 py = q.y(find(ax.y >=yR(3),1));
 pz = q.z(find(ax.depth >=zR(3),1));
+if length(size(Xfilt)) > 3
 pt = q.t(find(ax.stime >=tR(3),1));
-
-Yxy = squeeze(Xfilt(xInd,yInd,pz,pt));
-Yxz = squeeze(Xfilt(xInd,py,zInd,pt));
-Yyz = squeeze(Xfilt(px,yInd,zInd,pt));
-Yzt = squeeze(Xfilt(px,py,zInd,tInd));
+end
+if length(size(Xfilt)) < 4
+    Yxy = squeeze(Xfilt(xInd,yInd,pz));
+    Yxz = squeeze(Xfilt(xInd,py,zInd));
+    Yyz = squeeze(Xfilt(px,yInd,zInd));
+    Yzt = squeeze(Xfilt(px,py,zInd));
+else
+    Yxy = squeeze(Xfilt(xInd,yInd,pz,pt));
+    Yxz = squeeze(Xfilt(xInd,py,zInd,pt));
+    Yyz = squeeze(Xfilt(px,yInd,zInd,pt));
+    Yzt = squeeze(Xfilt(px,py,zInd,tInd));
+end
 
 if handles.hotcold.Value == 1
     h = hotcoldDB;
@@ -3915,7 +3964,11 @@ axes(handles.axes3)
         handles.axes3.YLabel.String = 'Depth (mm)';
 
   axes(handles.axes4)
+        if length(size(Xfilt)) > 3
         imagesc(ax.stime(tInd),ax.depth(zInd),Yzt,'ButtonDownFcn',{@Plot4OnClickTZ,handles})
+        else
+            imagesc(1,ax.depth(zInd),Yzt,'ButtonDownFcn',{@Plot4OnClickTZ,handles})
+        end
         colormap(gca,h)
         if ~isempty(aeR)
             caxis(aeR)
@@ -4498,3 +4551,120 @@ function bsq_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of bsq
+
+
+% --- Executes on slider movement.
+function tshifter_Callback(hObject, eventdata, handles)
+if handles.use_chop.Value
+    ax = evalin('base','ax_c');
+else
+    ax = evalin('base','ax');
+end
+%set(hObject,'Value',str2double(handles.tP.String));
+val = get(hObject,'Value');
+if val < ax.stime(1) || val > ax.stime(end) 
+    errordlg('T value outside of range');
+    return
+end
+if length(ax.stime) > 1
+inc = ax.stime(2)-ax.stime(1);
+handles.tshifter.SliderStep = [inc/30, inc/3];   
+end
+val = round(val,1);
+val = num2str(val);
+set(handles.tP,'String',val);
+set(hObject,'Value',str2double(val));
+set(hObject,'Max',ax.stime(end));
+set(hObject,'Min',ax.stime(1));
+plot_ae_Callback(hObject, eventdata, handles)
+% hObject    handle to tshifter (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+
+
+% --- Executes during object creation, after setting all properties.
+function tshifter_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to tshifter (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+% --- Executes on slider movement.
+function zshifter_Callback(hObject, eventdata, handles)
+if handles.use_chop.Value
+    ax = evalin('base','ax_c');
+else
+    ax = evalin('base','ax');
+end
+%set(hObject,'Value',str2double(handles.zP.String));
+val = get(hObject,'Value');
+if val < ax.depth(1) || val > ax.depth(end) 
+    errordlg('Z value outside of range');
+    return
+end
+if length(ax.depth) > 1
+inc = ax.depth(2)-ax.depth(1);
+handles.zshifter.SliderStep = [inc/30, inc/3];  
+end
+val = round(val,2);
+val = num2str(val);
+set(handles.zP,'String',val);
+set(hObject,'Value',str2double(val));
+set(hObject,'Max',ax.depth(end));
+set(hObject,'Min',ax.depth(1));
+plot_ae_Callback(hObject, eventdata, handles)
+
+
+
+% --- Executes during object creation, after setting all properties.
+function zshifter_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to zshifter (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+% --- Executes on slider movement.
+function yshifter_Callback(hObject, eventdata, handles)
+if handles.use_chop.Value
+    ax = evalin('base','ax_c');
+else
+    ax = evalin('base','ax');
+end
+val = get(hObject,'Value');
+if val < ax.y(1) || val > ax.y(end) 
+    errordlg('Y value outside of range');
+    return
+end
+if length(ax.y) > 1
+inc = ax.y(2)-ax.y(1);
+handles.y.SliderStep = [inc/10, inc];  
+end
+set(handles.yP,'String',num2str(val));
+set(hObject,'Max',ax.y(end));
+set(hObject,'Min',ax.y(1));
+plot_ae_Callback(hObject, eventdata, handles)
+
+
+% --- Executes during object creation, after setting all properties.
+function yshifter_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to yshifter (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end

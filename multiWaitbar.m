@@ -179,6 +179,7 @@ else
                     error( 'multiWaitbar:BadString', 'Value for ''Relabel'' must be a string.' );
                 end
                 if ismember( values{ii}, {entries.Label} )
+                    multiWaitbar('CLOSEALL');
                     error( 'multiWaitbar:NameAlreadyExists', 'Cannot relabel an entry to a label that already exists.' );
                 end
                 entries(idx).Label = values{ii};

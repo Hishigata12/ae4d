@@ -104,7 +104,7 @@ if mode == 0
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
             for k = 1:HF_zt(1)
-                X2{i,j}(k,:) = fft(HF{i,j}(k,:)).*H';
+                y{i,j}(k,:) = real(ifft(fft(HF{i,j}(k,:)).*H',HF_zt(2)));
                 %X2(i,j,k,:) = filter(Hd,squeeze(X(i,j,k,:)));
                 
             end
@@ -113,8 +113,7 @@ if mode == 0
         multiWaitbar('Slow Time Filtering',i/HF_xy(1));
     end
     
-    
-    
+%     
     LF2 = fft(LF);
     LFHam = hamming(length(LF));
     lf_axis = linspace(0,Fs,L);
@@ -139,23 +138,23 @@ if mode == 0
     lf = circshift(lf,round(L/2));
 %     LF3 = LF2.*LFH';
 %     lf = real(ifft(LF3));
-%    fprintf('Converting to space domain\n');
-    
-    %Xf = flip(X2,4);
-    %Xs = cat(4,X2,Xf);
-    
-    %y = zeros(size(Xs));
-    
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            for k = 1:HF_zt(1)
-                y{i,j}(k,:) = ifft(X2{i,j}(k,:),HF_zt(2));
-            end
-        end
-      %  waitbar(0.5+i/HF_xy(1)/2,b,'Slow Time Filtering')
-        multiWaitbar('Converting back to time domain',i/HF_xy(1));
-    end
- %   delete(b)
+% %    fprintf('Converting to space domain\n');
+%     
+%     %Xf = flip(X2,4);
+%     %Xs = cat(4,X2,Xf);
+%     
+%     %y = zeros(size(Xs));
+%     
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             for k = 1:HF_zt(1)
+%                 y{i,j}(k,:) = ifft(X2{i,j}(k,:),HF_zt(2));
+%             end
+%         end
+%       %  waitbar(0.5+i/HF_xy(1)/2,b,'Slow Time Filtering')
+%         multiWaitbar('Converting back to time domain',i/HF_xy(1));
+%     end
+%  %   delete(b)
     
 elseif mode == 1
     
@@ -175,7 +174,7 @@ elseif mode == 1
     
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
-            y{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);
+            y{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);   
         end
     end
     
@@ -189,6 +188,7 @@ elseif mode == 1
        multiWaitbar('Slow Time Filtering',i/HF_xy(1));
     end
   %  delete(b)
+  lf = LF;
 end
 
 % for i = 925

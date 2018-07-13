@@ -133,8 +133,8 @@ elseif mode == 1
     end
     RefPulse = RefPulse/(sum(abs(RefPulse)));
     RefPulse = flipud(conj(RefPulse));
-    hwin = hamming(length(RefPulse));
-    RefPulse = hwin.*RefPulse;
+%     hwin = hamming(length(RefPulse));
+%     RefPulse = hwin.*RefPulse;
     
     %fprintf('Filtering 4D data\n')
    % b = waitbar(0,'Filtering 4D data');
@@ -167,7 +167,9 @@ elseif mode == 1
        % waitbar(i/HF_xy(1),b,'Compressing Depth Axis');
        multiWaitbar('Compressing Depth Axis',i/HF_xy(1));
      end
-%y = y2;
+x=1;
+
+
   %  delete(b)
 end
 

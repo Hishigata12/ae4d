@@ -134,18 +134,19 @@ for i = 1:dims(1)
         for k = 1:dims(4)
             xdemod2(i,j,:,k) = squeeze(X2(i,j,:,k)).*exp(-m*2*pi*fc(i,j,k)*t');
              %xdemod2(i,j,:,k) = squeeze(X(i,j,:,k)).*exp(-m*2*pi*fc*t');
+                      xdemod3(i,j,:,k) = interp1(linspace(0,1,dims(3)),squeeze(xdemod2(i,j,:,k)),linspace(0,1,size(X,3)));
         end
     end
-       waitbar(.5 + i/dims(1)/4,b,'Demodulating')
+       waitbar(.5 + i/dims(1)/2,b,'Demodulating')
 end
-for i = 1:dims(1)
-    for j = 1:dims(2)
-        for k = 1:dims(4)
-            xdemod3(i,j,:,k) = interp1(linspace(0,1,dims(3)),squeeze(xdemod2(i,j,:,k)),linspace(0,1,size(X,3)));
-        end
-    end
-    waitbar(.75 + i/dims(1)/4,b,'Interpolating')
-end
+% for i = 1:dims(1)
+%     for j = 1:dims(2)
+%         for k = 1:dims(4)
+%            % xdemod3(i,j,:,k) = interp1(linspace(0,1,dims(3)),squeeze(xdemod2(i,j,:,k)),linspace(0,1,size(X,3)));
+%         end
+%     end
+%     waitbar(.75 + i/dims(1)/4,b,'Interpolating')
+% end
 
 delete(b)
 %figure; imagesc(real(squeeze(xdemod3(:,1,:,21))));

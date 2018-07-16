@@ -1,6 +1,6 @@
 % input var a denotes which HF channel to take.
 
-function [HF, HF1] = full_signal(loc,param,a,bad)
+function [HF, HF1] = full_signal(loc,param,a,one)
 k = param.velmex.XNStep*param.velmex.YNStep;
 if param.velmex.FastAxis == 'X'
     fL = param.velmex.XNStep; % gets fast direction scan points
@@ -12,9 +12,6 @@ end
 
 
 %b = waitbar(0);
-if bad
-    sL = sL-1;
-end
 %     for i = 1:fL
 %         for j = 1:sL
 %             if read
@@ -24,17 +21,34 @@ end
 %         % fprintf('.');
 %         multiWaitbar('Creating 4D Array',i/fL);
 %     end
-
-for j = 1:sL
-    for i = 1:fL
-        [~,HF1{i,j}] = read_ucsdi_data(loc,(i)+(fL*(j-1))); % Gets data sequentially
-       % disp((i)+(fL*(j-1)));
+if one
+    for j = 1:sL
+        for i = 1:fL
+            [~,HF1{i,j}] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
+            % disp((i)+(fL*(j-1)));
+            multiWaitbar(['Creating 4D Array y = ' num2str(j)],i/fL);
+        end
+        %waitbar(i/(fL),b,'Creating 4D array');
+        % fprintf('.');
+        if j < sL
+        multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
+        end
     end
-    %waitbar(i/(fL),b,'Creating 4D array');
-    % fprintf('.');
-    multiWaitbar('Creating 4D Array',i/sL);
+else
+    
+    for j = 1:sL
+        for i = 1:fL
+            [~,HF1{i,j}] = read_ucsdi_data(loc,(i)+(fL*(j-1))); % Gets data sequentially
+            % disp((i)+(fL*(j-1)));
+            multiWaitbar(['Creating 4D Array y = ' num2str(j)],i/fL);
+        end
+        %waitbar(i/(fL),b,'Creating 4D array');
+        % fprintf('.');
+        if j < sL
+        multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
+        end 
+    end
 end
-
 % for i = 1:size(HF1,1)
 %     for j = 1:size(HF1,2)
 %     y(i,:,:) = HF1{i,1};

@@ -519,8 +519,7 @@ for p = 1:hf_num
     if ~isempty(handles.hfchans.String)
         a = a_full(p);
     end
-    bad = handles.bad.Value;
-    [~, HF1] = full_signal([path file],param,a,bad); %Gets the raw data
+    [~, HF1] = full_signal([path file],param,a,handles.onemhz.Value); %Gets the raw data
     if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
         [X, LF] = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
     elseif handles.slow_box.Value == 1
@@ -583,7 +582,6 @@ for p = 1:hf_num
     
     dims = size(HF);
     [M, ax] = make_axes(param,dims,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
-    
     % XdB = real(20*log10(real(HF)./max(max(max(max(real(HF(:,:,M.xT,:))))))));
     % Xfilt = filts2D(XdB,[0 1 12],[0 2 2]);
     Xfilt = HF;

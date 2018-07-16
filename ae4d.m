@@ -1842,25 +1842,29 @@ if handles.plotbox1.Value == 2 || handles.plotbox1.Value == 3 || handles.plotbox
     lfInd = q.lf(find(LF_axis >= tR(1),1):find(LF_axis >= tR(2),1));
     Lae = LF(lfInd);
     if handles.plotbox1.Value == 3
-        yR = str2num(handles.yR.String);
-        if length(yR) > 1
-            yR = yR(1);
-        end
+%         yR = str2num(handles.yR.String);
+%         if length(yR) > 1
+%             yR = yR(1);
+%         end
+        yP = str2double(handles.yP.String);
+        sy = find(ax.y >=yP,1);
         sx = find(ax.x>=x,1);
         sz = find(ax.depth>=y,1);
-        Sae = squeeze(Xfilt(sx,yR,sz,tInd));
+        Sae = squeeze(Xfilt(sx,sy,sz,tInd));
         Sae2 = resample(Sae,length(Lae),length(Sae));  %This might need to be interp1
         %Sae2 = interp1(linspace(0,dims(4),dims(4)),Sae,linspace(0,dims(4),length(Lae)));
         
     end
     if handles.plotbox1.Value == 2
-        zR = str2num(handles.zR.String);
-        if length(zR) > 1
-            zR = zR(1);
-        end
+%         zR = str2num(handles.zR.String);
+%         if length(zR) > 1
+%             zR = zR(1);
+%         end
+           zP = str2double(handles.zP.String);
+        sZ = find(ax.y >=zP,1);
         sx = find(ax.x>=x,1);
         sy = find(ax.y>=y,1);
-        Sae = squeeze(Xfilt(sx,sy,zR,tInd));
+        Sae = squeeze(Xfilt(sx,sy,sZ,tInd));
         Sae2 = resample(Sae,length(Lae),length(S));
         
     end
@@ -1869,9 +1873,11 @@ if handles.plotbox1.Value == 2 || handles.plotbox1.Value == 3 || handles.plotbox
         if length(xR) > 1
             xR = xR(1);
         end
+        xP = str2double(handles.xP.String);
+        sX = find(ax.y >=xP,1);
         sx = find(ax.y>=x,1);
         sz = find(ax.depth>=y,1);
-        Sae = squeeze(Xfilt(xR,sx,sz,tInd));
+        Sae = squeeze(Xfilt(sX,sx,sz,tInd));
         Sae2 = resample(Sae,length(Lae),length(S));
     end
 end
@@ -3937,6 +3943,9 @@ end
 % end
 if handles.use_ext_fig.Value == 0
     axes(handles.axes2)
+    if size(Yxy,2) == 1
+        Yxy = Yxy';
+    end
         imagesc(ax.x(xInd),ax.y(yInd),(Yxy'),'ButtonDownFcn',{@Plot4OnClickXY,handles})
         colormap(gca,h)
         if ~isempty(aeR)
@@ -3946,6 +3955,9 @@ if handles.use_ext_fig.Value == 0
         handles.axes2.YLabel.String = 'Elevational (mm)';
 
 axes(handles.axes1)
+if size(Yxz,2) == 1
+    Yxz = Yxz';
+end
         imagesc(ax.x(xInd),ax.depth(zInd),(Yxz'),'ButtonDownFcn',{@Plot4OnClickXZ,handles})
         colormap(gca,h)
         if ~isempty(aeR)
@@ -3955,6 +3967,9 @@ axes(handles.axes1)
         handles.axes1.YLabel.String = 'Depth (mm)';
 
 axes(handles.axes3)
+if size(Yyz,2) == 1
+    Yyz = Yyz';
+end
         imagesc(ax.y(yInd),ax.depth(zInd),(Yyz'),'ButtonDownFcn',{@Plot4OnClickYZ,handles})
         colormap(gca,h)
         if ~isempty(aeR)
@@ -3964,6 +3979,9 @@ axes(handles.axes3)
         handles.axes3.YLabel.String = 'Depth (mm)';
 
   axes(handles.axes4)
+  if size(Yzt,2) == 1
+      Yzt = Yzt';
+  end
         if length(size(Xfilt)) > 3
         imagesc(ax.stime(tInd),ax.depth(zInd),Yzt,'ButtonDownFcn',{@Plot4OnClickTZ,handles})
         else

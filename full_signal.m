@@ -27,7 +27,8 @@ end
 
 for j = 1:sL
     for i = 1:fL
-        [~,HF1{i,j}] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
+        [~,HF1{i,j}] = read_ucsdi_data(loc,(i)+(fL*(j-1))); % Gets data sequentially
+       % disp((i)+(fL*(j-1)));
     end
     %waitbar(i/(fL),b,'Creating 4D array');
     % fprintf('.');

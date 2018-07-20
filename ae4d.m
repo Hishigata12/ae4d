@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 12-Jul-2018 19:17:20
+% Last Modified by GUIDE v2.5 18-Jul-2018 14:57:39
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -2022,8 +2022,10 @@ set(handles.param1,'String','peak')
 set(handles.output1,'String',num2str(P));
 set(handles.param2,'String','minX')
 set(handles.param3,'String','maxX')
+set(handles.param7,'String','FWHM X')
 set(handles.output2,'String',num2str(cut1));
 set(handles.output3,'String',num2str(cut2));
+set(handles.output7,'String',num2str(cut2-cut1));
 
 if ~isempty(handles.xlims.String)
     xlim(str2num(handles.xlims.String));
@@ -2077,8 +2079,10 @@ cut2 = round(yax(f2),3);
 
 set(handles.param5,'String','minZ')
 set(handles.param6,'String','maxZ')
+set(handles.param8,'String','FWHM Z')
 set(handles.output5,'String',num2str(cut1));
 set(handles.output6,'String',num2str(cut2));
+set(handles.output8,'String',num2str(cut2-cut1));
 
 
 if ~isempty(handles.xlims3.String)
@@ -3636,6 +3640,11 @@ function savefig_Callback(hObject, eventdata, handles)
 fname = handles.savefigname.String;
 if ~isempty(handles.fignum.String)
     num = str2double(handles.fignum.String);
+    if handles.borderless.Value == 1
+        figure(num);
+        a = gca;
+        a.Visible = 'off';
+    end
     if fname(end-2:end) == 'png'
         fname = [fname ' -transparent'];
         figure(num)
@@ -4683,4 +4692,67 @@ function yshifter_CreateFcn(hObject, eventdata, handles)
 % Hint: slider controls usually have a light gray background.
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+% --- Executes on button press in stitch_gui.
+function stitch_gui_Callback(hObject, eventdata, handles)
+Stitch;
+% hObject    handle to stitch_gui (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in borderless.
+function borderless_Callback(hObject, eventdata, handles)
+% hObject    handle to borderless (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of borderless
+
+
+
+function output7_Callback(hObject, eventdata, handles)
+% hObject    handle to output7 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of output7 as text
+%        str2double(get(hObject,'String')) returns contents of output7 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function output7_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to output7 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function output8_Callback(hObject, eventdata, handles)
+% hObject    handle to output8 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of output8 as text
+%        str2double(get(hObject,'String')) returns contents of output8 as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function output8_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to output8 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
 end

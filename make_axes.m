@@ -1,9 +1,11 @@
-function [M, ax] = make_axes(param,dims,D,t)
-
-M.Depth = 1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz-5.2;  % Max Depth
+function [M, ax] = make_axes(param,dims,delay,D,t)
+if ~exist('delay','var')
+    delay = 5.2;
+end
+M.Depth = 1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz-delay;  % Max Depth
 M.x = linspace(0,M.Depth,param.daq.HFdaq.pts);
 M.stime = param.daq.HFdaq.duration_ms; %duration in of slow time
-ax.depth = linspace(-5.2,M.Depth,dims(3));
+ax.depth = linspace(-delay,M.Depth,dims(3));
 ax.stime = linspace(0,M.stime,dims(4));
 if param.velmex.XDist > 1
     if param.velmex.SlowAxis == 'X'

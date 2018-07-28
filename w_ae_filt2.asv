@@ -4,16 +4,12 @@
 %n is the point along slow time that contains the noise spectrum in the
 %depth direction
 
-function y = w_ae_filt2(param,HF,PE,mode,handles,c)
+function y = w_ae_filt2(param,HF,us,mode,handles,c)
 
 %mode = 0;
 %~~~~Create Filter~~~~%
-tc = handles.tc.Value;
-if tc
-    tc_params = evalin('base','tc_params');
-end
-us = PE.TW.Wvfm1Wy;
-FsUS = PE.bScanParm.vsx_fs;
+tc = handles.tc
+FsUS = 250;
 FsAE = param.daq.HFdaq.fs_MHz;
 Lus = length(us);
 Lae = param.daq.HFdaq.pts;
@@ -141,9 +137,8 @@ elseif mode == 1
 %     hwin = hamming(length(RefPulse));
 %     RefPulse = hwin.*RefPulse;
 if tc
-    hwin = logspace(tc_params.freq_divisor,1,length(RefPulse))/10;
-%hwin = linspace(0.3,1,length(RefPulse))';
-RefPulse = RefPulse.*hwin';
+hwin = linspace(0.3,1,length(RefPulse))';
+RefPulse = RefPulse.*hwin;
 end
     
     %fprintf('Filtering 4D data\n')

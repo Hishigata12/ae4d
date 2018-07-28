@@ -22,9 +22,45 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 18-Jul-2018 14:57:39
+% Last Modified by GUIDE v2.5 27-Jul-2018 13:34:40
 
 % Begin initialization code - DO NOT EDIT
+
+% Search Guide
+% @001 = Opening Function
+% @002 = Plot 1
+% @003 = Load AE Data
+% @004 = Create AE Data
+% @005 = Movie
+% @006 = Enhance
+% @007 = Chop
+% @008 = Max Ranges
+% @009 = Envelope
+% @010 = iRadon
+% @011 = dB
+% @012 = Plot LF
+% @013 = Sensitivity
+% @014 = FWHM
+% @015 = Reset Plots
+% @016 = Modify (baseband)
+% @017 = 4D Overlay
+% @018 = 2D Overlay
+% @019 = Get Noise
+% @020 = Create PE
+% @021 = Load PE
+% @022 = Use PE
+% @023 = Save Figure
+% @024 = Return to PE
+% @025 = Plot data in all 4 windows
+% @026 = Merge AE datasets into structure
+% @027 = Use particular channel for merged data
+% @028 = Create LF Movie
+% @029 = Plot on Click
+% @030 = T shift slider
+% @031 = Z shift slider
+% @032 = Y shift slider
+% @033 = Stich for fusing two images
+
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
                    'gui_Singleton',  gui_Singleton, ...
@@ -45,7 +81,7 @@ end
 
 
 % --- Executes just before ae4d is made visible.
-function ae4d_OpeningFcn(hObject, eventdata, handles, varargin)
+function ae4d_OpeningFcn(hObject, eventdata, handles, varargin) % @001
 % This function has no output args, see OutputFcn.
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -221,7 +257,7 @@ end
 
 
 % --- Executes on button press in plot_ae.
-function plot_ae_Callback(hObject, eventdata, handles)
+function plot_ae_Callback(hObject, eventdata, handles) % @002
 % hObject    handle to plot_ae (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -439,13 +475,13 @@ end
 
 
 % --- Executes on button press in load_data.
-function load_data_Callback(hObject, eventdata, handles)
+function load_data_Callback(hObject, eventdata, handles) %@003
 % hObject    handle to load_data (see GCBO)
 [f,  p] = uigetfile(fullfile(pwd,'*4d_data.mat'));
 cd(p)
 fprintf('Loading 4D Dataset...')
 load([p f]);
-[~, ax] = make_axes(param,size(Xfilt),[1 2],1);
+%[~, ax] = make_axes(param,size(Xfilt),[1 2],1);
 set(handles.fname,'String',file);
 fprintf('Done\n')
 assignin('base','Xfilt',Xfilt);
@@ -453,7 +489,13 @@ assignin('base','fpath',[path file]);
 assignin('base','param',param);
 assignin('base','ax',ax);
 assignin('base','LF',LF);
-%assignin('base','PEparam',PE);
+if handles.onemhz.Value == 0
+assignin('base','PEparam',PE);
+else
+    if exist('PE','var')
+        errordlg('Uncheck the 1MHz box')
+    end
+end
 set(handles.active_ae,'String',num2str(size(Xfilt)));
 set(handles.active_xfilt,'String','AE');
 set(handles.LF_chan,'String',num2str(size(LF,2)));
@@ -484,7 +526,7 @@ function load_data_CreateFcn(hObject, eventdata, handles)
 
 
 % --- Executes on button press in create_4d.
-function create_4d_Callback(hObject, eventdata, handles)
+function create_4d_Callback(hObject, eventdata, handles) % @004
 % hObject    handle to create_4d (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -493,12 +535,14 @@ param = read_ucsdi_info([path file]); %Gets scan parameters
 [~,~,LF] = read_ucsdi_data([path file],1); %Gets input current waveform
 cd(path);
 PE = [];
+t_delay = 5.2;
 if handles.match_box.Value == 1
     path2 = [path(1:end-8) 'PEData\'];
     file2 = uigetfile(fullfile(path2,'*PEParm.mat')); %gets US pulse waveform
     
     PE = open([path2 file2]);
     US = PE.TW.Wvfm1Wy;
+    t_delay = length(US)*(1/PE.bScanParm.vsx_fs); %adjusts depth based on length of pulse
 end
 ax.HFfreq = linspace(0,param.daq.HFdaq.fs_MHz,param.daq.HFdaq.pts); %Creates fast frequency axis
 ax.LFfreq = linspace(0,param.daq.HFdaq.pulseRepRate_Hz,param.daq.HFdaq.NoBurstTriggers); %creates slow frequency axis
@@ -526,10 +570,10 @@ for p = 1:hf_num
         [X, LF] = w_slow_filt2(param, HF1,LF,handles.slow_box.Value);
     end
     if handles.match_box.Value == 1
-        X = w_ae_filt2(param,X,US,1); %Filters in fast time; 0 is match, 1 uses cutoffs
+        X = w_ae_filt2(param,X,PE,1,handles); %Filters in fast time; 0 is match, 1 uses cutoffs
     end
     if handles.match_box.Value == 0
-        X = w_ae_filt2(param,X,1,0,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
+        X = w_ae_filt2(param,X,1,0,handles.tc.Value,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
     end
     
     %%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
@@ -581,7 +625,7 @@ for p = 1:hf_num
     end
     
     dims = size(HF);
-    [M, ax] = make_axes(param,dims,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
+    [~, ax] = make_axes(param,dims,t_delay,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
     % XdB = real(20*log10(real(HF)./max(max(max(max(real(HF(:,:,M.xT,:))))))));
     % Xfilt = filts2D(XdB,[0 1 12],[0 2 2]);
     Xfilt = HF;
@@ -642,7 +686,7 @@ function reset_axes_Callback(hObject, eventdata, handles)
 
 
 % --- Executes on button press in movie_button.
-function movie_button_Callback(hObject, eventdata, handles)
+function movie_button_Callback(hObject, eventdata, handles) %@005
 % hObject    handle to movie_button (see GCBO)
 if handles.use_chop.Value == 0
     Xfilt = evalin('base','Xfilt');
@@ -1114,7 +1158,7 @@ end
 
 
 % --- Executes on button press in Enhance_Sig.
-function Enhance_Sig_Callback(hObject, eventdata, handles)
+function Enhance_Sig_Callback(hObject, eventdata, handles) % @006
 % hObject    handle to Enhance_Sig (see GCBO)
 if handles.use_chop.Value == 0
 param = evalin('base','param');
@@ -1164,7 +1208,7 @@ end
 
 
 % --- Executes on button press in chop.
-function chop_Callback(hObject, eventdata, handles)
+function chop_Callback(hObject, eventdata, handles) %@007
 % hObject    handle to chop (see GCBO)
 Xfilt = evalin('base','Xfilt');
 param = evalin('base','param');
@@ -1239,7 +1283,7 @@ assignin('base','X_c',X);
 
 
 % --- Executes on button press in max_box.
-function max_box_Callback(hObject, eventdata, handles)
+function max_box_Callback(hObject, eventdata, handles) %@008
 % hObject    handle to max_box (see GCBO)
 if get(hObject,'Value') == 1
     if handles.use_chop.Value == 0
@@ -1433,7 +1477,7 @@ end
 
 
 % --- Executes on button press in env_button.
-function env_button_Callback(hObject, eventdata, handles)
+function env_button_Callback(hObject, eventdata, handles) %@009
 % hObject    handle to env_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -1496,7 +1540,7 @@ end
 
 
 % --- Executes on button press in irad.
-function irad_Callback(hObject, eventdata, handles)
+function irad_Callback(hObject, eventdata, handles) %@010
 param = evalin('base','param');
 if handles.use_chop.Value == 1
     HF = evalin('base','X_c');
@@ -1607,7 +1651,7 @@ end
 
 
 % --- Executes on button press in dB_Button.
-function dB_Button_Callback(hObject, eventdata, handles)
+function dB_Button_Callback(hObject, eventdata, handles) %@011
 % hObject    handle to dB_Button (see GCBO)
 if handles.use_chop.Value == 0
 HF = evalin('base','Xfilt');
@@ -1699,7 +1743,7 @@ function LF_FFT_Callback(hObject, eventdata, handles)
 
 
 % --- Executes on button press in LF_butt.
-function LF_butt_Callback(hObject, eventdata, handles)
+function LF_butt_Callback(hObject, eventdata, handles) %@012
 param = evalin('base','param');
 LF = evalin('base','LF');
 LF = LF(:,str2double(handles.LF_chan.String));
@@ -1790,7 +1834,7 @@ end
 
 
 % --- Executes on button press in sense_button.
-function sense_button_Callback(hObject, eventdata, handles)
+function sense_button_Callback(hObject, eventdata, handles) %@013
 % hObject    handle to sense_button (see GCBO)
 %datacursormode on
 %dcm = datacursormode(gcf);
@@ -1969,7 +2013,7 @@ p = 7;
 
 
 % --- Executes on button press in fwhm_button.
-function fwhm_button_Callback(hObject, eventdata, handles)
+function fwhm_button_Callback(hObject, eventdata, handles) %@014
 [x,y] = ginput(1);
 
 C = handles.axes1.Children.CData; %Gets image data, Y is dim 1, X is dim 2
@@ -2105,7 +2149,7 @@ function hold_box_Callback(hObject, eventdata, handles)
 
 
 % --- Executes on button press in reset_button.
-function reset_button_Callback(hObject, eventdata, handles)
+function reset_button_Callback(hObject, eventdata, handles) %@015
 % hObject    handle to reset_button (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -2128,7 +2172,7 @@ function text6_CreateFcn(hObject, eventdata, handles)
 
 
 % --- Executes on button press in modify_button.
-function modify_button_Callback(jObject, eventdata, handles)
+function modify_button_Callback(jObject, eventdata, handles) %@016
 if handles.use_chop.Value == 0
     Xfilt = evalin('base','Xfilt');
     param = evalin('base','param');
@@ -2439,7 +2483,7 @@ function IJ_butts_Callback(hObject, eventdata, handles)
 SendToImageJ(handles,handles.overlay4d.Value);
 
 
-function overlay4d_Callback(hObject, eventdata, handles)
+function overlay4d_Callback(hObject, eventdata, handles) %@017
 Overlay4D(handles);
 
 
@@ -2461,7 +2505,7 @@ function PE_4dbox_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of PE_4dbox
 
 % --- Executes on button press in overlay.
-function overlay_Callback(hObject, eventdata, handles)
+function overlay_Callback(hObject, eventdata, handles) %@018
 if handles.use_chop.Value == 1
     Xfilt = evalin('base','X_c');
     ax = evalin('base','ax_c');
@@ -2941,7 +2985,7 @@ end
 
 
 % --- Executes on button press in noise_button.
-function noise_button_Callback(hObject, eventdata, handles)
+function noise_button_Callback(hObject, eventdata, handles) %@019
 param = evalin('base','param');
 if handles.use_chop.Value == 1
     Xfilt = evalin('base','X_c');
@@ -3098,7 +3142,7 @@ function pushbutton24_Callback(hObject, eventdata, handles)
 
 
 % --- Executes on button press in create_pe.
-function create_pe_Callback(hObject, eventdata, handles)
+function create_pe_Callback(hObject, eventdata, handles) %@020
 % hObject    handle to create_pe (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 
@@ -3272,13 +3316,15 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             multiWaitbar('Filtering',i/size(PEMatrix,3));
         end
         for i = 1:sz(3)
-            pe{i} = real(flipud(ifft(PE{i})));
+          %  pe2{i} = real(flipud(ifft(PE{i})));
+            pe{i} = circshift(real(ifft(PE{i})),round(size(PE{i},1)/2));
         end
-        
+ 
         
     else
         FsAE = round(Rcv(1).decimSampleRate);
         FsUS = bScanParm.vsx_fs;
+        t_delay = length(US)*(1/FsUS);
         US = interp1(linspace(0,100,length(US)),US,linspace(0,100,length(US)*2))';
         if FsUS~=FsAE
             RefPulse       = resample(US,FsAE,FsUS);
@@ -3288,13 +3334,17 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
         hwin = hamming(length(RefPulse));
         %RefPulse = hwin.*RefPulse;
         
+        %d_fix = round(sz(1)*.75); %0.75 is a scaling factor chosen to stretch the decompressed image back to regular size
+        
         for i = 1:sz(3)
             for j = 1:sz(2)
                 Q{i}(:,j) = conv(squeeze(PEMatrix(:,j,i)),RefPulse);
             end
+         %   Q{i} = Q{i}(1:round(size(Q{i},1)*.75),:); %scaling new data range
             %  waitbar(i/sz(3),b,'Filtering');
             multiWaitbar('Filtering',i/sz(3));
         end
+        
         for i = 1:sz(3)
             for j = 1:sz(2)
                 
@@ -3308,12 +3358,10 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
     end
     
     
-    
-    
-    
     for i = 1:sz(3)
         pdata(:,:,i) = pe{i};
     end
+    sz = size(pdata);
     pdata = permute(pdata,[3 1 2]);
     pdata = reshape(pdata,[bScanParm.XSteps bScanParm.YSteps sz(1) sz(2)]);
     fstele = find(TX.VDASApod,1)-1;
@@ -3356,76 +3404,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             end
         end
     end
-    %
-    % new_x_rng = [pex.depth(end)*sin(pex.theta(end,1))+pex.element(end) pex.depth(end)*sin(pex.theta(1,end))+pex.element(1)];
-    %    new_x_rng = [pex.depth(end)*sin(pex.theta(round(size(pex.theta,1)/2),1)) pex.depth(end)*sin(pex.theta(round(size(pex.theta,1)/2),1))*-1];
-    %    pex.x2 = linspace(new_x_rng(1),new_x_rng(2),size(pedata,1));
-    %
-    %    % bfpos = zeros(size(pex.theta,1),size(pex.theta,2),3,size(pedata,3));
-    %     bfdata = zeros(size(pex.theta,1),size(pex.theta,2),size(pedata,3));
-    %     for i = 1:size(pex.theta,1) % Element
-    %         for j = 1:size(pex.theta,2) %Lateral
-    %             for k = 1:size(pedata,3) %Radius
-    %                bfpos{i,j}(:,k) = [find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);find(pex.depth >= pex.depth(k).*cos(pex.theta(i,j)),1)];% pedata(j,1,k,i)];
-    %              %   bfpos(i,j,:,k) = [find(pex.x >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);find(pex.depth >= pex.depth(k).*cos(pex.theta(i,j)),1)];%
-    % %              if pex.depth(k)*cos(pex.theta(i,j)) <= TX.focus*PData.Lambda
-    % %                  bfweight(i,j,k) = pex.depth(k).*cos(pex.theta(i,j))./(TX.focus*PData.Lambda);
-    % %              else
-    % %                  bfweight(i,j,k) = (TX.focus*PData.Lambda)./pex.depth(k).*cos(pex.theta(i,j));
-    % %              end
-    %                 bfdata(i,j,k) = abs(pedata(j,1,k,i));%.*bfweight(i,j,k);
-    % %             bf.x.full(:,i,j) = bf.r(:,i,j).*sin(bf.theta(i,j));
-    % %             bf.z.full(:,i,j) = bf.r(:,i,j).*cos(bf.theta(i,j));
-    %             end
-    %         end
-    %         waitbar(i/size(pex.theta,1),b,'Creating Cell Matrix');
-    %     end
-    %
-    %     %Align Lateral
-    %     bfdata2 = zeros(size(pedata,1),size(pedata,3));
-    %     %bfdata2 = zeros(size(pedata,3),size(pedata,3));
-    %     bfnum = bfdata2;
-    %
-    
-    
-    %     for i = 1:size(pex.theta,1) %Element
-    %         for j = 1:size(pex.theta,2) %Lateral
-    %       % for m = 1:length(pex.x2)
-    %             for k = 1:size(pedata,3) % x z and amplitude lines
-    %                 if pex.depth(bfpos{i,j}(2,k)) == pex.depth(k)% && pex.x2(bfpos{i,j}(1,k)) == pex.x2(k)
-    %                     %m = find(pex.x2 >= pex.depth(k).*sin(pex.theta(i,j))+pex.element(i),1);
-    %                    % m = bfpos{i,j}(1,k);
-    %                 bfdata2(j,k) = bfdata2(j,k) + bfdata(i,j,k);
-    % %                 bfdata2(bfpos{i,j}(1,k),k) = bfdata2(bfpos{i,j}(1,k),k) + bfdata(i,j,k);
-    % %                 bfnum(bfpos{i,j}(1,k),k) = bfnum(bfpos{i,j}(1,k),k) +1;
-    %                bfnum(j,k) = bfnum(j,k) + 1;
-    %                 end
-    %             end
-    %         end
-    %         waitbar(i/size(pex.theta,1),b,'Condensing Image');
-    %     end
-    % bfdata3 = bfdata2./bfnum;
-    % bfdata3(isnan(bfdata3)) = 0;
-    % bfdata3 = bfdata3';
-    % bfdata3 = flipud(bfdata3);
-    % bfdata3 = fliplr(bfdata3);
-    
-    
-    % if length(size(bfdata3)) < 3
-    %     bfdata4 = medfilt2(bfdata3,[5,1]);
-    %     bfdata4 = permute(bfdata4,[2,3,1]);
-    %     pex.y = 1;
-    % else
-    %     bfdata4 = medfilt3(bfdata3,[5,1,1]);
-    %     bfdata4 = permute (bfdata3,[2,3,1]);
-    % end
-    
-    %  pex.x = pex.x2;
-    
-    % clear pedata
-    % pedata = bfdata4;
-    %pex.depth = pex.depth - 4; %adjust this for accurate PE
-    
+
   
     
     % LETS DO SOME BEAM FORMING!!!
@@ -3437,8 +3416,8 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             if handles.match_box.Value == 1
                 D = real(squeeze(pedata(:,m,:,a)));
             else
-                D = squeeze(PEMatrix(:,a+32,:))'; %This is not currently using filtered data
-              %  D = real(squeeze(pedata(:,m,:,a)));
+              %  D = squeeze(PEMatrix(:,a+32,:))'; %This is not currently using filtered data
+                D = real(squeeze(pedata(:,m,:,a)));
             end  
             [grdx1, grdz1] = meshgrid(1:size(D,1),1:size(D,2));
             [grdx2, grdz2] = meshgrid(linspace(1,size(D,1),PData(1).Size(2)),linspace(1,size(D,2),PData(1).Size(1)));
@@ -3455,6 +3434,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             pex.x = pex.x - mean(pex.x);
           %  pex.depth = (1:size(pedata,3))*wavlen*PData(1).PDelta(3).*(PData.Size(1)/size(pedata,3));
             pex.depth = (1:size(D,2))*wavelen*PData(1).PDelta(3); % + delay.x(1,1);
+            depth2 = pex.depth - 4.5; %Correcting 
             Qx = pex.depth.*sin(C');
             Qz = pex.depth.*cos(C');
             x2 = linspace(min(min(Qx)),max(max(Qx)),size(Qx,1));
@@ -3466,7 +3446,11 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
                 for j = 1:size(Qz,2) %Depth
                     Qxind(i,j) = find(pex.x >= Qx(i,j),1); %or use x2
                     %   Qzind(i,j) = find(pex.depth+(TXArray(i).Delay(a)*PData.Lambda) >= Qz(i,j),1); %Experimental
-                    Qzind(i,j) = find(pex.depth >= Qz(i,j),1); %Pair with pex.depth = pex.depth-max(TX.Delay)*PData.Lambda
+                    if max(depth2) >= Qz(i,j)
+                        Qzind(i,j) = find(depth2 >= Qz(i,j),1); %Pair with pex.depth = pex.depth-max(TX.Delay)*PData.Lambda
+                    else 
+                        Qzind(i,j) = length(depth2);
+                    end
                     if Qzind(i,j) <= foc
                         Qweight(i,j) = 1+Qzind(i,j)/foc;
                     else
@@ -3536,8 +3520,8 @@ end
 
 
 
-% --- Executes on button press in loadpe.
-function loadpe_Callback(hObject, eventdata, handles)
+% --- Executes on button press in loadpe. @021
+function loadpe_Callback(hObject, eventdata, handles) 
 [f,  p] = uigetfile(fullfile(pwd,'*4d_PE.mat'));
 cd(p)
 fprintf('Loading 4D Dataset...')
@@ -3585,7 +3569,7 @@ set(handles.tP,'String','0');
 end
 
 
-% --- Executes on button press in usepe.
+% --- Executes on button press in usepe. @022
 function usepe_Callback(hObject, eventdata, handles)
 X = evalin('base','PEdata');
 ax = evalin('base','pex');
@@ -3598,7 +3582,7 @@ assignin('base','Xfilt',X);
 assignin('base','ax',ax);
 set(handles.active_xfilt,'String','PE')
 if ~isempty(handles.hfchans.String)
-    set(handles.active_chan,'String',handles.hfchan.String);
+    set(handles.active_chan,'String',handles.hfchans.String);
 end
 
 
@@ -3635,7 +3619,7 @@ function figfolder_Callback(hObject, eventdata, handles)
 path = uigetdir;
 set(handles.savefolder,'String',path);
 
-% --- Executes on button press in savefig.
+% --- Executes on button press in savefig. @023
 function savefig_Callback(hObject, eventdata, handles)
 fname = handles.savefigname.String;
 if ~isempty(handles.fignum.String)
@@ -3762,8 +3746,8 @@ function large_box_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of large_box
 
 
-% --- Executes on button press in tope.
-function tope_Callback(hObject, eventdata, handles)
+% --- Executes on button press in tope. @024
+function tope_Callback(hObject, eventdata, handles) 
 if handles.use_chop.Value == 1
     X = evalin('base','X_c');
     ax = evalin('base','ax_c');
@@ -3845,7 +3829,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in plot4.
+% --- Executes on button press in plot4. @025
 function plot4_Callback(hObject, eventdata, handles) 
 param = evalin('base','param');
 if handles.use_chop.Value == 1
@@ -4071,7 +4055,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in MergeHF.
+% --- Executes on button press in MergeHF. @026
 function MergeHF_Callback(hObject, eventdata, handles)
 n = str2double(handles.numhf.String);
 b = waitbar(0,'Loading');
@@ -4156,7 +4140,7 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in usechan.
+% --- Executes on button press in usechan. @027
 function usechan_Callback(hObject, eventdata, handles)
 m = str2double(handles.channel.String);
 Xmerged = evalin('base','Xmerged');
@@ -4167,7 +4151,7 @@ X = Xmerged{m};
 assignin('base','Xfilt',X)
 set(handles.active_xfilt,'String','AE');
 if ~isempty(handles.hfchans.String)
-    set(handles.active_chan,'String',handles.hfchan.String);
+    set(handles.active_chan,'String',handles.hfchans.String);
 end
 
 
@@ -4203,7 +4187,7 @@ function graybox_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of graybox
 
 
-% --- Executes on button press in lfmovie.
+% --- Executes on button press in lfmovie. @028
 function lfmovie_Callback(hObject, eventdata, handles) %Low Frequency Movie
 % hObject    handle to lfmovie (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -4314,7 +4298,7 @@ function showlf_Callback(hObject, eventdata, handles)
 
 % Hint: get(hObject,'Value') returns toggle state of showlf
 
-function Plot4OnClickXZ(hObject,eventdata,handles)
+function Plot4OnClickXZ(hObject,eventdata,handles) %@029
 pt = get(gca,'currentpoint');
 
 
@@ -4578,7 +4562,7 @@ function bsq_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of bsq
 
 
-% --- Executes on slider movement.
+% --- Executes on slider movement. @030
 function tshifter_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value
     ax = evalin('base','ax_c');
@@ -4622,7 +4606,7 @@ if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColo
 end
 
 
-% --- Executes on slider movement.
+% --- Executes on slider movement. @031
 function zshifter_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value
     ax = evalin('base','ax_c');
@@ -4661,7 +4645,7 @@ if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColo
 end
 
 
-% --- Executes on slider movement.
+% --- Executes on slider movement. @032
 function yshifter_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value
     ax = evalin('base','ax_c');
@@ -4695,7 +4679,7 @@ if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColo
 end
 
 
-% --- Executes on button press in stitch_gui.
+% --- Executes on button press in stitch_gui. @033
 function stitch_gui_Callback(hObject, eventdata, handles)
 Stitch;
 % hObject    handle to stitch_gui (see GCBO)
@@ -4756,3 +4740,20 @@ function output8_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in tc.
+function tc_Callback(hObject, eventdata, handles)
+% hObject    handle to tc (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of tc
+
+
+% --- Executes on button press in TC_params.
+function TC_params_Callback(hObject, eventdata, handles)
+tc_params;
+% hObject    handle to TC_params (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

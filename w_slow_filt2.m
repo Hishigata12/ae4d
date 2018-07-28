@@ -20,9 +20,9 @@ if length(size(HF{1}))>2
     clear HF2
 end
 
-if size(LF,2) > 1
-    LF = LF(:,1);
-end
+% if size(LF,2) > 1
+%     LF = LF(:,1); %Not sure why I had this in...
+% end
 
 
 Fs = param.daq.LFdaq.fs_Hz;
@@ -161,7 +161,7 @@ elseif mode == 1
     %%%%%CONVOLUTION FILTERING %%%%%%%%%%%%%
     
     if Fs~=Fs_us
-        RefPulse       = resample(LF,Fs_us,Fs);
+        RefPulse       = resample(LF(:,1),Fs_us,Fs);
     end
     
     RefPulse = RefPulse/(sum(abs(RefPulse)));

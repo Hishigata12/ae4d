@@ -7,7 +7,7 @@ M.x = linspace(0,M.Depth,param.daq.HFdaq.pts);
 M.stime = param.daq.HFdaq.duration_ms; %duration in of slow time
 ax.depth = linspace(-delay,M.Depth,dims(3));
 ax.stime = linspace(0,M.stime,dims(4));
-if param.velmex.XDist > 1
+if param.velmex.XDist ~= 0
     if param.velmex.SlowAxis == 'X'
          ax.x = linspace(-param.velmex.YDist/2,param.velmex.YDist/2,dims(1));
     else
@@ -16,7 +16,7 @@ if param.velmex.XDist > 1
 else
     ax.x = 1;
 end
-if param.velmex.YDist > 1
+if param.velmex.YDist ~= 0
      if param.velmex.SlowAxis == 'X'
           ax.y = linspace(-param.velmex.XDist/2,param.velmex.XDist/2,dims(2));
      else

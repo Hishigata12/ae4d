@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 27-Jul-2018 13:34:40
+% Last Modified by GUIDE v2.5 22-Aug-2018 16:55:13
 
 % Begin initialization code - DO NOT EDIT
 
@@ -536,13 +536,16 @@ param = read_ucsdi_info([path file]); %Gets scan parameters
 cd(path);
 PE = [];
 t_delay = 5.2;
-if handles.match_box.Value == 1
+if handles.trans.Value ~= 4
     path2 = [path(1:end-8) 'PEData\'];
     file2 = uigetfile(fullfile(path2,'*PEParm.mat')); %gets US pulse waveform
     
     PE = open([path2 file2]);
     US = PE.TW.Wvfm1Wy;
     t_delay = length(US)*(1/PE.bScanParm.vsx_fs); %adjusts depth based on length of pulse
+    if handles.trans.Value == 3
+        t_delay = t_delay + 12;
+    end
 end
 ax.HFfreq = linspace(0,param.daq.HFdaq.fs_MHz,param.daq.HFdaq.pts); %Creates fast frequency axis
 ax.LFfreq = linspace(0,param.daq.HFdaq.pulseRepRate_Hz,param.daq.HFdaq.NoBurstTriggers); %creates slow frequency axis
@@ -573,7 +576,7 @@ for p = 1:hf_num
         X = w_ae_filt2(param,X,PE,1,handles); %Filters in fast time; 0 is match, 1 uses cutoffs
     end
     if handles.match_box.Value == 0
-        X = w_ae_filt2(param,X,1,0,handles.tc.Value,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
+        X = w_ae_filt2(param,X,1,0,handles,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
     end
     
     %%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
@@ -628,6 +631,18 @@ for p = 1:hf_num
     [~, ax] = make_axes(param,dims,t_delay,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
     % XdB = real(20*log10(real(HF)./max(max(max(max(real(HF(:,:,M.xT,:))))))));
     % Xfilt = filts2D(XdB,[0 1 12],[0 2 2]);
+    if handles.tc.Value
+        tc_params = evalin('base','tc_params');
+        dep_sub = tc_params.thickness/1.48 - tc_params.thickness/tc_params.speed;
+        ax.depth = ax.depth-dep_sub;
+    end
+%     if ~isempty('PE')
+%         for i = 1:length(PE.TXArray)
+%             fd(i) = max(PE.TXArray(i).Delay);
+%         end
+%         form_delay = max(fd);
+%         ax.depth = ax.depth - form_delay;
+%     end
     Xfilt = HF;
     multiWaitbar('CLOSEALL');
    % delete(b)
@@ -1164,7 +1179,7 @@ if handles.use_chop.Value == 0
 param = evalin('base','param');
 Xfilt = evalin('base','Xfilt');
 m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
-n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String)];
+n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) get(handles.squarify_box,'Value')];
 o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
 Xfilt = filts3D(Xfilt,m,n,o,param);
 [~,ax] = make_axes(param,size(Xfilt));
@@ -1175,7 +1190,7 @@ else
 Xfilt = evalin('base','X_c');
 ax = evalin('base','ax_c');
 m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
-n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String)];
+n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) get(handles.squarify_box,'Value')];
 o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
 Xfilt = filts3D(Xfilt,m,n,o,param);
 
@@ -2062,7 +2077,7 @@ cut2 = round(xax(f2),3);
 % cut2 = round(xax(length(xax)-cutt));
 
 
-set(handles.param1,'String','peak')
+set(handles.param1,'String','peak X')
 set(handles.output1,'String',num2str(P));
 set(handles.param2,'String','minX')
 set(handles.param3,'String','maxX')
@@ -2110,7 +2125,7 @@ plot(yax,S,'k')
 plot(yax,ydb,'r--')
 xlabel('mm')
 
-
+P = round(max(S),2);
 f1 = find(S>=ydb(1),1);
 f2 = find(S(f1:end) <= ydb(1),1) +f1;
 cut1 = round(yax(f1),3);
@@ -2121,6 +2136,8 @@ cut2 = round(yax(f2),3);
 % cutt = (find(S2>=ydb,1)); %Finish this later
 % cut2 = round(yax(length(yax)-cutt));
 
+set(handles.param4,'String','peak Z')
+set(handles.output4,'String',num2str(P));
 set(handles.param5,'String','minZ')
 set(handles.param6,'String','maxZ')
 set(handles.param8,'String','FWHM Z')
@@ -3031,6 +3048,10 @@ set(handles.output6,'String',num2str(detect));
 
 % --- Executes on button press in onemhz.
 function onemhz_Callback(hObject, eventdata, handles)
+if handles.onemhz.Value == 1;
+    set(handles.trans,'Value',4)
+    trans_Callback(hObject, eventdata, handles)
+end
 % hObject    handle to onemhz (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -3629,12 +3650,12 @@ if ~isempty(handles.fignum.String)
         a = gca;
         a.Visible = 'off';
     end
-    if fname(end-2:end) == 'png'
-        fname = [fname ' -transparent'];
-        figure(num)
-        set(gca,'Color','none');
-    else
-    end
+%     if fname(end-2:end) == 'png'
+%         fname = [fname ' -transparent'];
+%         figure(num)
+%         set(gca,'Color','none');
+%     else
+%     end
     if ~isempty(handles.savefolder.String)
         pname = handles.savefolder.String;
         sname = [pname '\' fname];
@@ -3643,7 +3664,9 @@ if ~isempty(handles.fignum.String)
     end
     
     figure(num)
-    eval([ 'export_fig ' sname])
+    set(gca,'Color','none')
+  %  eval([ 'export_fig ' sname])
+  export_fig(sname,'-transparent');
 else
     if ~isempty(handles.savefolder.String)
         pname = handles.savefolder.String;
@@ -3651,7 +3674,7 @@ else
     else
         sname = fname;
     end
-    eval([ 'export_fig ' sname])
+    export_fig(sname)
     
     
 end
@@ -4751,9 +4774,54 @@ function tc_Callback(hObject, eventdata, handles)
 % Hint: get(hObject,'Value') returns toggle state of tc
 
 
-% --- Executes on button press in TC_params.
-function TC_params_Callback(hObject, eventdata, handles)
-tc_params;
-% hObject    handle to TC_params (see GCBO)
+% --- Executes on button press in TC_param.
+function TC_param_Callback(hObject, eventdata, handles)
+tc_param;
+% hObject    handle to TC_param (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in squarify_box.
+function squarify_box_Callback(hObject, eventdata, handles)
+% hObject    handle to squarify_box (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of squarify_box
+
+
+% --- Executes on selection change in trans.
+function trans_Callback(hObject, eventdata, handles)
+% hObject    handle to trans (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if handles.trans.Value == 1
+    set(handles.fast_cut1,'String',1);
+    set(handles.fast_cut2,'String',4);
+elseif handles.trans.Value == 2
+     set(handles.fast_cut1,'String',2);
+    set(handles.fast_cut2,'String',4);
+elseif handles.trans.Value == 3
+     set(handles.fast_cut1,'String',0.3);
+    set(handles.fast_cut2,'String',0.9);
+elseif handles.trans.Value == 4
+     set(handles.fast_cut1,'String',0.6);
+    set(handles.fast_cut2,'String',1.4);
+end
+            
+% Hints: contents = cellstr(get(hObject,'String')) returns trans contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from trans
+
+
+% --- Executes during object creation, after setting all properties.
+function trans_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to trans (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

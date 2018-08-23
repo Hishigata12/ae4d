@@ -50,13 +50,10 @@ if in(1) == 1
     if p == 0
         [x, y, z] = meshgrid(1:dims(2),1:dims(1),1:dims(3));
         [x2, y2, z2] = meshgrid(1:(1/in(3)):dims(2),1:(1/in(2)):dims(1),1:(1/in(4)):dims(3));
-        %Ix = zeros(size(x2));
         for i = 1:dims(4)
             if in(5) == 0
-                Ix(:,:,:,i) = interp3(x,y,z,HF(:,:,:,i),x2,y2,z2);
-            elseif in(5) == 1
-                Ix(:,:,:,i) = squarify(HF(:,:,:,i),'m');
-            end
+            Ix(:,:,:,i) = interp3(x,y,z,HF(:,:,:,i),x2,y2,z2);
+            els
             waitbar(i/dims(4),b,'Interpolating')
         end
         X = Ix;

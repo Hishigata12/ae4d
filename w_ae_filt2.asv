@@ -1,28 +1,39 @@
 %x contains output filtered signal
 %HF contains 4D AE data
-%US contains the US waveform
-%n is the point along slow time that contains the noise spectrum in the
-%depth direction
+%PE contains the US waveform
+%mode signifies whether using match filter (1) or not (0)
+%handles is the handles struct passed from GUI t
 
-function y = w_ae_filt2(param,HF,us,mode,handles,c)
+function y = w_ae_filt2(param,HF,PE,mode,handles,c)
 
 %mode = 0;
 %~~~~Create Filter~~~~%
-tc = handles.tc
-FsUS = 250;
-FsAE = param.daq.HFdaq.fs_MHz;
-Lus = length(us);
-Lae = param.daq.HFdaq.pts;
-if Lus > Lae
-    us = us(1:Lae);
-    Lus = Lae;
+tc = handles.tc.Value;
+if tc
+    tc_params = evalin('base','tc_params');
 end
-
-frequs = linspace(0,FsUS,Lus);
-freqae = linspace(0,FsAE,Lae);
-max_fUS = length(frequs)/2;
-max_fAE = length(freqae)/2;
-fus = frequs(1:end/2);
+if mode == 1
+    us = PE.TW.Wvfm1Wy;
+    FsUS = PE.bScanParm.vsx_fs;
+    FsAE = param.daq.HFdaq.fs_MHz;
+    Lus = length(us);
+    Lae = param.daq.HFdaq.pts;
+    if Lus > Lae
+        us = us(1:Lae);
+        Lus = Lae;
+    end
+    
+    frequs = linspace(0,FsUS,Lus);
+    freqae = linspace(0,FsAE,Lae);
+    max_fUS = length(frequs)/2;
+    max_fAE = length(freqae)/2;
+    fus = frequs(1:end/2);
+else
+    Lae = param.daq.HFdaq.pts;
+    FsAE = param.daq.HFdaq.fs_MHz;
+    freqaq = linspace(0,FsAE,Lae);
+    max_fAE = length(freqae)/2;
+end
 fae = freqae(1:end/2);
 % q = find(fus>15,1); % Fix US samples to AE
 % US = fft(us);
@@ -61,26 +72,26 @@ if mode == 0
     h = padarray(wq,size(HF{1},1)-100,'post').*hd';
     H = fft(h,size(HF{1},1));
     
-        
-% elseif mode == 1
-%     if FsUS > FsAE
-%         RefPulse       = resample(us,FsAE,FsUS);
-%    
-%     else
-%         RefPulse = resample(us,FsUS,FsAE);
-%     end
-%     
-%     RefPulse = RefPulse/(sum(abs(RefPulse)));
-%     RefPulse = flipud(conj(RefPulse));
-%     H = fft(RefPulse);
-%     H = interp1(linspace(0,FsAE,length(RefPulse)),H',linspace(0,FsAE,Lae));
-%     a = find(freqae > 0.4,1);
-%     s = length(H);
-%     H2(1:(a-1)) = 0;
-%     H2(a:s-(a-1)) = 1;
-%     H2(s-(a-1):s) = 0;
-%     H = H.*H2;
-% end 
+    
+    % elseif mode == 1
+    %     if FsUS > FsAE
+    %         RefPulse       = resample(us,FsAE,FsUS);
+    %
+    %     else
+    %         RefPulse = resample(us,FsUS,FsAE);
+    %     end
+    %
+    %     RefPulse = RefPulse/(sum(abs(RefPulse)));
+    %     RefPulse = flipud(conj(RefPulse));
+    %     H = fft(RefPulse);
+    %     H = interp1(linspace(0,FsAE,length(RefPulse)),H',linspace(0,FsAE,Lae));
+    %     a = find(freqae > 0.4,1);
+    %     s = length(H);
+    %     H2(1:(a-1)) = 0;
+    %     H2(a:s-(a-1)) = 1;
+    %     H2(s-(a-1):s) = 0;
+    %     H = H.*H2;
+    % end
     
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
@@ -90,8 +101,8 @@ if mode == 0
         end
     end
     
-   % fprintf('Filtering 4D data\n')
- %   b = waitbar(0,'Filtering 4D data');
+    % fprintf('Filtering 4D data\n')
+    %   b = waitbar(0,'Filtering 4D data');
     if size(H,2) > size(H,1)
         H = H';
     end
@@ -103,7 +114,7 @@ if mode == 0
                 %X2(i,j,k,:) = filter(Hd,squeeze(X(i,j,k,:)));
             end
         end
-      %  waitbar(i/HF_xy(1)/2,b,'Fast Time Filtering')
+        %  waitbar(i/HF_xy(1)/2,b,'Fast Time Filtering')
         multiWaitbar('Fast Time Filtering',i/HF_xy(1));
     end
     
@@ -120,10 +131,10 @@ if mode == 0
                 y{i,j}(:,k) = ifft(X2{i,j}(:,k),HF_zt(1));
             end
         end
-     %   waitbar(0.5+i/HF_xy(1)/2,b,'Converting back to Time')
-     multiWaitbar('Converting to time domain',i/HF_xy(1));
+        %   waitbar(0.5+i/HF_xy(1)/2,b,'Converting back to Time')
+        multiWaitbar('Converting to time domain',i/HF_xy(1));
     end
-   % delete(b)
+    % delete(b)
     
     
     %%%%% CONVOLUTION FILTERING %%%%%
@@ -134,15 +145,16 @@ elseif mode == 1
     end
     RefPulse = RefPulse/(sum(abs(RefPulse)));
     RefPulse = flipud(conj(RefPulse));
-%     hwin = hamming(length(RefPulse));
-%     RefPulse = hwin.*RefPulse;
-if tc
-hwin = linspace(0.3,1,length(RefPulse))';
-RefPulse = RefPulse.*hwin;
-end
+    %     hwin = hamming(length(RefPulse));
+    %     RefPulse = hwin.*RefPulse;
+    if tc
+        hwin = logspace(tc_params.freq_divisor,1,length(RefPulse))/10;
+        %hwin = linspace(0.3,1,length(RefPulse))';
+        RefPulse = RefPulse.*hwin;
+    end
     
     %fprintf('Filtering 4D data\n')
-   % b = waitbar(0,'Filtering 4D data');
+    % b = waitbar(0,'Filtering 4D data');
     %y = zeros(size(HF_xy,1),size(HF_xy,2),size(HF_zt(1))+length(RefPulse)-1,size(HF_zt(2)));
     
     Sz = HF_zt(1)+length(RefPulse)-1;
@@ -159,23 +171,23 @@ end
                 y2{i,j}(:,k) = conv(HF{i,j}(:,k),RefPulse);
             end
         end
-     %   waitbar(i/HF_xy(1),b,'Fast Time Filtering')
+        %   waitbar(i/HF_xy(1),b,'Fast Time Filtering')
         multiWaitbar('Fast Time Filtering',i/HF_xy(1));
     end
     
-     for i = 1:HF_xy(1)
+    for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
             for k = 1:HF_zt(2)
                 y{i,j}(:,k) = interp1(linspace(0,HF_zt(1),size(y2{1},1)),y2{i,j}(:,k),linspace(0,HF_zt(1),HF_zt(1)));
             end
         end
-       % waitbar(i/HF_xy(1),b,'Compressing Depth Axis');
-       multiWaitbar('Compressing Depth Axis',i/HF_xy(1));
-     end
-x=1;
-
-
-  %  delete(b)
+        % waitbar(i/HF_xy(1),b,'Compressing Depth Axis');
+        multiWaitbar('Compressing Depth Axis',i/HF_xy(1));
+    end
+    x=1;
+    
+    
+    %  delete(b)
 end
 
 

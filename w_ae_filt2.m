@@ -66,13 +66,37 @@ if mode == 0
             Hd(i) = 0;
         end
     end
-    
+    hsize = round(length(find(Hd == 1))/2);
     hd =ifft(Hd);
-    w1q = hamming(100);
-    wq = circshift(w1q,100/2);
-    h = padarray(wq,size(HF{1},1)-100,'post').*hd';
-    H = fft(h,size(HF{1},1));
+    if tc
+        hwin = logspace(1,tc_params.freq_divisor,hsize)/10;
+        if size(hwin,2) > size(hwin,1)
+            hwin = hwin';
+        end
+        wq = hwin;
+    else
+        
+        w1q = hamming(hsize);
+        %     wq = circshift(w1q,round(hsize/2));
+        %     h = padarray(wq,size(HF{1},1)-100,'post').*hd';
+        %     H = fft(h,size(HF{1},1));
+        wq = w1q;
+    end
+    H1 = padarray(wq,find(Hd == 1,1)-1,'pre');
+    H2 = padarray(H1,length(Hd)-length(H1),'post');
+    H2 = H2(1:end/2);
+    H2 = [H2; flipud(H2)];
+    H = Hd.*H2';
+    if mod(hsize,2) == 0
+        m = 1;
+    else 
+        m = 0;
+    end
+    if tc
+    H = imboxfilt(H,round(hsize/2)+m);
+    end
     
+       
     
     % elseif mode == 1
     %     if FsUS > FsAE
@@ -136,7 +160,7 @@ if mode == 0
         multiWaitbar('Converting to time domain',i/HF_xy(1));
     end
     % delete(b)
-    
+  x =2;  
     
     %%%%% CONVOLUTION FILTERING %%%%%
 elseif mode == 1
@@ -178,16 +202,16 @@ elseif mode == 1
         %   waitbar(i/HF_xy(1),b,'Fast Time Filtering')
         multiWaitbar('Fast Time Filtering',i/HF_xy(1));
     end
-    
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            for k = 1:HF_zt(2)
-                y{i,j}(:,k) = interp1(linspace(0,HF_zt(1),size(y2{1},1)),y2{i,j}(:,k),linspace(0,HF_zt(1),HF_zt(1)));
-            end
-        end
-        % waitbar(i/HF_xy(1),b,'Compressing Depth Axis');
-        multiWaitbar('Compressing Depth Axis',i/HF_xy(1));
-    end
+    y = y2;
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             for k = 1:HF_zt(2)
+%                 y{i,j}(:,k) = interp1(linspace(0,HF_zt(1),size(y2{1},1)),y2{i,j}(:,k),linspace(0,HF_zt(1),HF_zt(1)));
+%             end
+%         end
+%         % waitbar(i/HF_xy(1),b,'Compressing Depth Axis');
+%         multiWaitbar('Compressing Depth Axis',i/HF_xy(1));
+%     end
     x=1;
     
     

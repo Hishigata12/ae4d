@@ -631,6 +631,20 @@ for p = 1:hf_num
     [~, ax] = make_axes(param,dims,t_delay,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
     % XdB = real(20*log10(real(HF)./max(max(max(max(real(HF(:,:,M.xT,:))))))));
     % Xfilt = filts2D(XdB,[0 1 12],[0 2 2]);
+    
+    %%%%% Using depth calculation from SEP
+    if handles.onemhz.Value == 0
+    lensDelay = PE.Trans.lensCorrection.*PE.PData.Lambda/1.49; %modified to 1.49
+    RefPulseOneWay = PE.TW.Wvfm1Wy;                
+    RefPulse       = resample(RefPulseOneWay,PE.bScanParm.HFSamplingRate,PE.bScanParm.vsx_fs);
+    [~,b]          = max(abs(hilbert(RefPulse-mean(RefPulse))));
+    RefPulseT      = (0:size(RefPulse,1)-1)/PE.bScanParm.HFSamplingRate;
+    peakDelay       = RefPulseT(b);
+    z_delay = (lensDelay + peakDelay).*1.485;
+    ax.depth = ax.depth - z_delay;
+    end
+    %%%%%%%%%%%%%
+    
     if handles.tc.Value
         tc_params = evalin('base','tc_params');
         dep_sub = tc_params.thickness/1.48 - tc_params.thickness/tc_params.speed;
@@ -643,6 +657,41 @@ for p = 1:hf_num
 %         form_delay = max(fd);
 %         ax.depth = ax.depth - form_delay;
 %     end
+
+%%%%% Cyl to Cart %%% This is very rough draft 
+ptheta = atan((ax.x-mean(ax.x))./PE.TX.focus*PE.PData.Lambda);
+px = ax.x.*cos(ptheta);
+pz = ax.depth.*cos(ptheta)';
+for i = 1:length(ax.x)
+    pXind(i) = find(ax.x >= px(i),1);
+XF2(i,:,:,:) = circshift(HF(i,:,:,:),abs(round(length(ax.x)/2)-i)*-1,3);
+for j = 1:length(ax.depth)
+    pZind(i,j) = find(ax.depth >= pz(i,j),1);
+end
+end
+
+if length(size(XF2)) <4
+    HF = permute(XF2,[1 4 2 3]);
+else
+HF = XF2;
+end
+% for m = 1:size(HF,4)
+%     Pfin = zeros(length(pXind),length(pZind));
+%     Pnum = Pfin;
+%    % for i = 1:length(pXind)
+%    for i = 1:length(ax.x)
+%         for j = 1:length(pZind)
+%             Pfin(i,pZind(i,j)) = Pfin(i,pZind(i,j)) + squeeze(HF(i,1,j,m));
+%             Pnum(i,pZind(i,j)) = Pnum(i,pZind(i,j)) + 1;
+%         end
+%     end
+%     Ptot = Pfin./Pnum;
+%     Ptot(isnan(Ptot)) = 0;
+%     XF(:,:,m) = Ptot;
+%     
+% end
+
+%%%%%
     Xfilt = HF;
     multiWaitbar('CLOSEALL');
    % delete(b)
@@ -1259,7 +1308,7 @@ else
 end
 xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
-zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
+zInd = q.z(find(ax.depth >= zR(1),1):find(ax.depth >= zR(2),1));
 
 X = Xfilt(xInd,yInd,zInd,tInd);
 if length(tInd) == 1
@@ -1589,7 +1638,7 @@ elseif length(size(HF)) == 3
     b = waitbar(0);
     
     for i = tInd
-        R(:,:,i) = iradon(HF(:,:,i),str2double(handles.dtheta.String),'None');
+        R(:,:,i) = iradon(HF(:,:,i),str2double(handles.dtheta.String));
         waitbar(i/tInd(end),b,'Computing inverse radon transform');
     end
     
@@ -2249,6 +2298,19 @@ if length(str2num(handles.baseb.String)) == 1
         b = waitbar(0);
         if handles.signed_env.Value == 1
             S = sign(imag(X));
+            if length(size(squeeze(S))) < 4
+                for i = 1:size(S,4)
+                    S = squeeze(S);
+                    S2(:,1,:,i) = medfilt2(S(:,:,i),[5 5]);
+                    S2(:,1,:,i) = medfilt2(S(:,:,i),[3,3]);
+                end
+                S = S2;
+            else
+                for i = 1:size(S,4)
+                    S(:,:,:,i) = medfilt3(S(:,:,:,i),[5 5 5]);
+                    S(:,:,:,i) = medfilt3(S(:,:,:,i),[3 3 3]);
+                end
+            end
             dims = size(Xfilt);
             b = waitbar(0);
             for i = 1:dims(1)
@@ -2260,7 +2322,19 @@ if length(str2num(handles.baseb.String)) == 1
             if handles.bbdb.Value == 1
                 Xfilt = 20*log10(Xfilt./max(max(max(max(abs(Xfilt))))));
             end
-            X = S.*abs(Xfilt);
+            if length(size(squeeze(Xfilt))) < 4
+                Xf = real(squeeze(Xfilt(:,1,:,:)));
+                for i = 1:size(Xfilt,4)
+                    Xf2(:,:,i) = imboxfilt(Xf(:,:,i),[5 5]);
+                end
+                Xfilt = permute(Xf2,[1 4 2 3]);
+            else
+                for i = 1:size(Xfilt,4)
+                    Xfilt(:,:,:,i) = imboxfilt3(real(Xfilt(:,:,:,i)),[5 5 5]);
+                end
+            end
+            
+            X = S.*real(Xfilt);
            
             %   X = S.*envelope(real(X));
         end
@@ -3346,7 +3420,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
         FsAE = round(Rcv(1).decimSampleRate);
         FsUS = bScanParm.vsx_fs;
         t_delay = length(US)*(1/FsUS);
-        US = interp1(linspace(0,100,length(US)),US,linspace(0,100,length(US)*2))';
+       % US = interp1(linspace(0,100,length(US)),US,linspace(0,100,length(US)*2))';
         if FsUS~=FsAE
             RefPulse       = resample(US,FsAE,FsUS);
         end
@@ -3366,15 +3440,16 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             multiWaitbar('Filtering',i/sz(3));
         end
         
-        for i = 1:sz(3)
-            for j = 1:sz(2)
-                
-                pe{i}(:,j) = interp1(linspace(0,10,size(Q{1},1)),Q{i}(:,j),linspace(0,10,sz(1)));
-                
-            end
-            %   waitbar(i/sz(3),b,'Compressing Depth Axis');
-            multiWaitbar('Compressing Depth Axis',i/sz(3));
-        end
+%         for i = 1:sz(3)
+%             for j = 1:sz(2)
+%                 
+%                 pe{i}(:,j) = interp1(linspace(0,10,size(Q{1},1)),Q{i}(:,j),linspace(0,10,sz(1)));
+%                 
+%             end
+%             %   waitbar(i/sz(3),b,'Compressing Depth Axis');
+%             multiWaitbar('Compressing Depth Axis',i/sz(3));
+%         end
+pe = Q;
         
     end
     
@@ -3391,8 +3466,16 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             pedata(:,:,:,i-fstele) = pdata(:,:,:,i);
         end
     end
+%     
+%     PEformed = mean(abs(pedata),4);
+%     figure;
+%     for i = 1:64
+%         imagesc(squeeze(pedata(:,1,:,i))')
+%         drawnow;
+%         pause(.1)
+%         title(num2str(i));
+%     end
     
-    PEformed = mean(abs(pedata),4);
     
     
     % Create axes data
@@ -3415,6 +3498,11 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
     apods = find(TX.VDASApod);
     delay.x = Trans.ElementPos(:,1)*PData.Lambda;
     %for i = 1:
+    
+   
+    
+        
+    
     for i = 1:size(pedata,4) %Element
         for j = 1:size(pedata,1) %Lateral Position
             %bf.r(:,i,j) = sqrt((pex.element(i)-pex.x(j))^2+pex.depth.^2);
@@ -3455,7 +3543,9 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             pex.x = pex.x - mean(pex.x);
           %  pex.depth = (1:size(pedata,3))*wavlen*PData(1).PDelta(3).*(PData.Size(1)/size(pedata,3));
             pex.depth = (1:size(D,2))*wavelen*PData(1).PDelta(3); % + delay.x(1,1);
-            depth2 = pex.depth - 4.5; %Correcting 
+     
+            t_delay = length(US)*(1/bScanParm.vsx_fs); %adjusts depth based on length of pulse
+            depth2 = pex.depth; % - t_delay; %Correcting 
             Qx = pex.depth.*sin(C');
             Qz = pex.depth.*cos(C');
             x2 = linspace(min(min(Qx)),max(max(Qx)),size(Qx,1));
@@ -3524,7 +3614,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
     end
     clear pedata
     pedata = bf2;
-    
+
     assignin('base','PEdata',pedata);
     %pex.depth = pex.depth-max(TX.Delay)*PData.Lambda;
     %delete(b)

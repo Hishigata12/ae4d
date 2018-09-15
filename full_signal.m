@@ -1,6 +1,11 @@
 % input var a denotes which HF channel to take.
+% location is the filepath of the ae files
+% param is the parameter file
+% a designates the channel to process
+% one: if 1 designates single element transducer
+% new: if 1 designates that scan was taken using new AEScan
 
-function [HF, HF1] = full_signal(loc,param,a,one)
+function [HF, HF1] = full_signal(loc,param,a,one,new)
 k = param.velmex.XNStep*param.velmex.YNStep;
 if param.velmex.FastAxis == 'X'
     fL = param.velmex.XNStep; % gets fast direction scan points
@@ -24,7 +29,11 @@ end
 if one
     for j = 1:sL
         for i = 1:fL
-            [~,HF1{i,j}] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
+            if new
+                [~,HF1{i,j}] = Read_Data(loc,(i-1)*sL+j); % Gets data sequentially
+            else
+                [~,HF1{i,j}] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
+            end
             % disp((i)+(fL*(j-1)));
             multiWaitbar(['Creating 4D Array y = ' num2str(j)],i/fL);
         end
@@ -38,7 +47,11 @@ else
     
     for j = 1:sL
         for i = 1:fL
-            [~,HF1{i,j}] = read_ucsdi_data(loc,(i)+(fL*(j-1))); % Gets data sequentially
+            if new
+                [HF1{i,j}] = Read_Data(loc,(i-1)*sL+j); % Gets data sequentially
+            else
+                [~,HF1{i,j}] = read_ucsdi_data(loc,(i)+(fL*(j-1))); % Gets data sequentially
+            end
             % disp((i)+(fL*(j-1)));
             multiWaitbar(['Creating 4D Array y = ' num2str(j)],i/fL);
         end

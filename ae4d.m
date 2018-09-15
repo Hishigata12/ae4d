@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 22-Aug-2018 16:55:13
+% Last Modified by GUIDE v2.5 05-Sep-2018 16:01:05
 
 % Begin initialization code - DO NOT EDIT
 
@@ -63,11 +63,11 @@ function varargout = ae4d(varargin)
 
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @ae4d_OpeningFcn, ...
-                   'gui_OutputFcn',  @ae4d_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
+    'gui_Singleton',  gui_Singleton, ...
+    'gui_OpeningFcn', @ae4d_OpeningFcn, ...
+    'gui_OutputFcn',  @ae4d_OutputFcn, ...
+    'gui_LayoutFcn',  [] , ...
+    'gui_Callback',   []);
 if nargin && ischar(varargin{1})
     gui_State.gui_Callback = str2func(varargin{1});
 end
@@ -108,7 +108,7 @@ guidata(hObject, handles);
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = ae4d_OutputFcn(hObject, eventdata, handles) 
+function varargout = ae4d_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -277,7 +277,7 @@ yP = str2double(handles.yP.String);
 zP = str2double(handles.zP.String);
 tP = str2double(handles.tP.String);
 
-    xR = str2num(handles.xR.String);
+xR = str2num(handles.xR.String);
 if length(xR) == 1
     xR = [xR xR xR];
 else
@@ -293,13 +293,13 @@ zR = str2num(handles.zR.String);
 if length(zR) == 1
     zR = [zR zR zR];
 else
-     zR = [zR(1) zR(2) zP];
+    zR = [zR(1) zR(2) zP];
 end
 tR = str2num(handles.tR.String);
 if length(tR) == 1
     tR = [tR tR tR];
 else
-     tR = [tR(1) tR(2) tP];
+    tR = [tR(1) tR(2) tP];
 end
 aeR = str2num(handles.aeR.String);
 dims = size(Xfilt);
@@ -349,9 +349,9 @@ zInd = find(ax.depth >= zR(1)):find(ax.depth >= zR(2));
 if length(size(Xfilt)) < 4
     Y = squeeze(Xfilt(xInd,yInd,zInd));
 else
-q.t = 1:dims(4);
-tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
-Y = squeeze(Xfilt(xInd,yInd,zInd,tInd));
+    q.t = 1:dims(4);
+    tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+    Y = squeeze(Xfilt(xInd,yInd,zInd,tInd));
 end
 
 if length(size(Y)) > 2
@@ -366,7 +366,7 @@ if handles.hotcold.Value == 1
     h = hotcoldDB;
 elseif handles.graybox.Value == 1
     h = 'gray';
-else 
+else
     h = 'hot';
 end
 
@@ -447,7 +447,7 @@ end
 % if handles.plotbox1.Value == 1
 %     handles.plotbox1.CData = squeeze(XdB(:,
 %     handles.xR
-%    
+%
 
 
 
@@ -490,7 +490,7 @@ assignin('base','param',param);
 assignin('base','ax',ax);
 assignin('base','LF',LF);
 if handles.onemhz.Value == 0
-assignin('base','PEparam',PE);
+    assignin('base','PEparam',PE);
 else
     if exist('PE','var')
         errordlg('Uncheck the 1MHz box')
@@ -508,12 +508,12 @@ set(handles.ysamp,'String',num2str([1 length(ax.y)]));
 set(handles.zmm,'String',num2str([round(ax.depth(1)) round(ax.depth(end))]));
 set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
 
-if handles.reset_axes.Value == 1    
-set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
-set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
-set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
-set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
-
+if handles.reset_axes.Value == 1
+    set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
+    set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
+    set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
+    set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+    
 end
 
 
@@ -530,9 +530,17 @@ function create_4d_Callback(hObject, eventdata, handles) % @004
 % hObject    handle to create_4d (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-[file, path] = uigetfile(fullfile(pwd,'*_info.dat')); %Gets file location
-param = read_ucsdi_info([path file]); %Gets scan parameters
-[~,~,LF] = read_ucsdi_data([path file],1); %Gets input current waveform
+
+if handles.newaescan.Value
+    [file, path] = uigetfile(fullfile(pwd,'*_info.mat'));
+    param = load([path file]);
+    param = param.bScanParm;
+    [~,LF] = Read_Data([path file],1);
+else
+    [file, path] = uigetfile(fullfile(pwd,'*_info.dat')); %Gets file location
+    param = read_ucsdi_info([path file]); %Gets scan parameters
+    [~,~,LF] = read_ucsdi_data([path file],1); %Gets input current waveform
+end
 cd(path);
 PE = [];
 t_delay = 5.2;
@@ -566,7 +574,9 @@ for p = 1:hf_num
     if ~isempty(handles.hfchans.String)
         a = a_full(p);
     end
-    [~, HF1] = full_signal([path file],param,a,handles.onemhz.Value); %Gets the raw data
+    
+    [~, HF1] = full_signal([path file],param,a,handles.onemhz.Value,handles.newaescan.Value); %Gets the raw data
+    
     if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
         [X, LF] = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
     elseif handles.slow_box.Value == 1
@@ -580,8 +590,8 @@ for p = 1:hf_num
     end
     
     %%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
-   % b = waitbar(0,'Matrix Conversion');
-%    waitbar(0,b,'Enveloping and converting to 4D matrix')
+    % b = waitbar(0,'Matrix Conversion');
+    %    waitbar(0,b,'Enveloping and converting to 4D matrix')
     HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
     s = size(X);
     for i = 1:s(1)
@@ -589,8 +599,8 @@ for p = 1:hf_num
             %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
             HF(i,j,:,:) = X{i,j}; %Converts cell array to double
         end
-       % waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
-       multiWaitbar('Converting to 4D Matrix', i/s(1));
+        % waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
+        multiWaitbar('Converting to 4D Matrix', i/s(1));
     end
     
     if handles.onemhz.Value == 1
@@ -609,14 +619,14 @@ for p = 1:hf_num
                 end
             end
         end
-%     else
-%         if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
-%              for i = 1:size(HF,2)
-%                     if mod(i,2) == 0
-%                         HF(:,i,:,:) = fliplr(HF(:,i,:,:));
-%                     end
-%              end
-%         end
+        %     else
+        %         if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+        %              for i = 1:size(HF,2)
+        %                     if mod(i,2) == 0
+        %                         HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+        %                     end
+        %              end
+        %         end
     end
     
     
@@ -634,14 +644,14 @@ for p = 1:hf_num
     
     %%%%% Using depth calculation from SEP
     if handles.onemhz.Value == 0
-    lensDelay = PE.Trans.lensCorrection.*PE.PData.Lambda/1.49; %modified to 1.49
-    RefPulseOneWay = PE.TW.Wvfm1Wy;                
-    RefPulse       = resample(RefPulseOneWay,PE.bScanParm.HFSamplingRate,PE.bScanParm.vsx_fs);
-    [~,b]          = max(abs(hilbert(RefPulse-mean(RefPulse))));
-    RefPulseT      = (0:size(RefPulse,1)-1)/PE.bScanParm.HFSamplingRate;
-    peakDelay       = RefPulseT(b);
-    z_delay = (lensDelay + peakDelay).*1.485;
-    ax.depth = ax.depth - z_delay;
+        lensDelay = PE.Trans.lensCorrection.*PE.PData.Lambda/1.49; %modified to 1.49
+        RefPulseOneWay = PE.TW.Wvfm1Wy;
+        RefPulse       = resample(RefPulseOneWay,PE.bScanParm.HFSamplingRate,PE.bScanParm.vsx_fs);
+        [~,b]          = max(abs(hilbert(RefPulse-mean(RefPulse))));
+        RefPulseT      = (0:size(RefPulse,1)-1)/PE.bScanParm.HFSamplingRate;
+        peakDelay       = RefPulseT(b);
+        z_delay = (lensDelay + peakDelay).*1.485;
+        ax.depth = ax.depth - z_delay;
     end
     %%%%%%%%%%%%%
     
@@ -650,51 +660,51 @@ for p = 1:hf_num
         dep_sub = tc_params.thickness/1.48 - tc_params.thickness/tc_params.speed;
         ax.depth = ax.depth-dep_sub;
     end
-%     if ~isempty('PE')
-%         for i = 1:length(PE.TXArray)
-%             fd(i) = max(PE.TXArray(i).Delay);
-%         end
-%         form_delay = max(fd);
-%         ax.depth = ax.depth - form_delay;
-%     end
-
-%%%%% Cyl to Cart %%% This is very rough draft 
-ptheta = atan((ax.x-mean(ax.x))./PE.TX.focus*PE.PData.Lambda);
-px = ax.x.*cos(ptheta);
-pz = ax.depth.*cos(ptheta)';
-for i = 1:length(ax.x)
-    pXind(i) = find(ax.x >= px(i),1);
-XF2(i,:,:,:) = circshift(HF(i,:,:,:),abs(round(length(ax.x)/2)-i)*-1,3);
-for j = 1:length(ax.depth)
-    pZind(i,j) = find(ax.depth >= pz(i,j),1);
-end
-end
-
-if length(size(XF2)) <4
-    HF = permute(XF2,[1 4 2 3]);
-else
-HF = XF2;
-end
-% for m = 1:size(HF,4)
-%     Pfin = zeros(length(pXind),length(pZind));
-%     Pnum = Pfin;
-%    % for i = 1:length(pXind)
-%    for i = 1:length(ax.x)
-%         for j = 1:length(pZind)
-%             Pfin(i,pZind(i,j)) = Pfin(i,pZind(i,j)) + squeeze(HF(i,1,j,m));
-%             Pnum(i,pZind(i,j)) = Pnum(i,pZind(i,j)) + 1;
-%         end
-%     end
-%     Ptot = Pfin./Pnum;
-%     Ptot(isnan(Ptot)) = 0;
-%     XF(:,:,m) = Ptot;
-%     
-% end
-
-%%%%%
+    %     if ~isempty('PE')
+    %         for i = 1:length(PE.TXArray)
+    %             fd(i) = max(PE.TXArray(i).Delay);
+    %         end
+    %         form_delay = max(fd);
+    %         ax.depth = ax.depth - form_delay;
+    %     end
+    
+    %%%%% Cyl to Cart %%% This is very rough draft
+    ptheta = atan((ax.x-mean(ax.x))./PE.TX.focus*PE.PData.Lambda);
+    px = ax.x.*cos(ptheta);
+    pz = ax.depth.*cos(ptheta)';
+    for i = 1:length(ax.x)
+        pXind(i) = find(ax.x >= px(i),1);
+        XF2(i,:,:,:) = circshift(HF(i,:,:,:),abs(round(length(ax.x)/2)-i)*-1,3);
+        for j = 1:length(ax.depth)
+            pZind(i,j) = find(ax.depth >= pz(i,j),1);
+        end
+    end
+    
+    if length(size(XF2)) <4
+        HF = permute(XF2,[1 4 2 3]);
+    else
+        HF = XF2;
+    end
+    % for m = 1:size(HF,4)
+    %     Pfin = zeros(length(pXind),length(pZind));
+    %     Pnum = Pfin;
+    %    % for i = 1:length(pXind)
+    %    for i = 1:length(ax.x)
+    %         for j = 1:length(pZind)
+    %             Pfin(i,pZind(i,j)) = Pfin(i,pZind(i,j)) + squeeze(HF(i,1,j,m));
+    %             Pnum(i,pZind(i,j)) = Pnum(i,pZind(i,j)) + 1;
+    %         end
+    %     end
+    %     Ptot = Pfin./Pnum;
+    %     Ptot(isnan(Ptot)) = 0;
+    %     XF(:,:,m) = Ptot;
+    %
+    % end
+    
+    %%%%%
     Xfilt = HF;
     multiWaitbar('CLOSEALL');
-   % delete(b)
+    % delete(b)
     
     if handles.save_4d.Value == 1
         multiWaitbar('Saving','busy');
@@ -719,7 +729,7 @@ end
     end
 end
 
-    
+
 
 
 % --- Executes on button press in bad.
@@ -801,14 +811,14 @@ yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
 
-    xP = str2double(handles.xP.String);
-    yP = str2double(handles.yP.String);
-    zP = str2double(handles.zP.String);
-    tP = str2double(handles.tP.String);
-    xpoint = find(ax.x >= xP,1);
-    ypoint = find(ax.y >= yP,1);
-    zpoint = find(ax.depth >= zP,1);
-    tpoint = find(ax.stime >= tP,1);
+xP = str2double(handles.xP.String);
+yP = str2double(handles.yP.String);
+zP = str2double(handles.zP.String);
+tP = str2double(handles.tP.String);
+xpoint = find(ax.x >= xP,1);
+ypoint = find(ax.y >= yP,1);
+zpoint = find(ax.depth >= zP,1);
+tpoint = find(ax.stime >= tP,1);
 
 
 
@@ -833,12 +843,12 @@ end
 if handles.plotbox2.Value == 1 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = tInd %Mod loop
-%             if handles.med_box.Value == 1
-%                 J = medfilt2((squeeze(Xfilt(xInd,ypoint,zInd,k)))',[5 5]);
-%             else
-                J = squeeze(Xfilt(xInd,ypoint,zInd,k))';
-%             end
-
+            %             if handles.med_box.Value == 1
+            %                 J = medfilt2((squeeze(Xfilt(xInd,ypoint,zInd,k)))',[5 5]);
+            %             else
+            J = squeeze(Xfilt(xInd,ypoint,zInd,k))';
+            %             end
+            
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.x(xInd),ax.depth(zInd),J) % mod plots
                 colormap(h)
@@ -850,7 +860,7 @@ if handles.plotbox2.Value == 1 && handles.all_movie.Value == 0
                     hold(handles.axes4,'off')
                     
                 end
-             
+                
             else
                 imshow(J)
                 colormap(h)
@@ -865,23 +875,23 @@ if handles.plotbox2.Value == 1 && handles.all_movie.Value == 0
             drawnow
         end
     elseif handles.save_fig.Value == 1
-            vidwrite(param,ax,Xfilt,handles)
+        vidwrite(param,ax,Xfilt,handles)
     end
     
 elseif handles.plotbox2.Value == 2 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = tInd %Mod loop
-%             if handles.med_box.Value == 1
-%                 J = medfilt2((squeeze(Xfilt(xpoint,yInd,zInd,k)))',[5 5]);
-%             else
-                J = squeeze(Xfilt(xpoint,yInd,zInd,k))';
-%             end
-      
+            %             if handles.med_box.Value == 1
+            %                 J = medfilt2((squeeze(Xfilt(xpoint,yInd,zInd,k)))',[5 5]);
+            %             else
+            J = squeeze(Xfilt(xpoint,yInd,zInd,k))';
+            %             end
+            
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.y(yInd),ax.depth(zInd),J) % mod plots
-             %   h = hotcoldDB;
+                %   h = hotcoldDB;
                 colormap(h)
-                 if handles.showlf.Value == 1
+                if handles.showlf.Value == 1
                     
                     plot(handles.axes4,lf_ax(lfInd),LF(lfInd),'k')
                     hold(handles.axes4,'on')
@@ -889,7 +899,7 @@ elseif handles.plotbox2.Value == 2 && handles.all_movie.Value == 0
                     hold(handles.axes4,'off')
                     
                 end
-             
+                
             else
                 imshow(J)
                 colormap(h)
@@ -908,21 +918,21 @@ elseif handles.plotbox2.Value == 2 && handles.all_movie.Value == 0
     elseif handles.save_fig.Value == 1
         vidwrite(param,ax,Xfilt,handles)
     end
-   
+    
 elseif handles.plotbox2.Value == 4 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = tInd %Mod loop
-%             if handles.med_box.Value == 1
-%                 J = medfilt2((squeeze(Xfilt(xInd,yInd,zpoint,k)))',[5 5]);
-%             else
-                J = squeeze(Xfilt(xInd,yInd,zpoint,k))';
-%             end
-      
+            %             if handles.med_box.Value == 1
+            %                 J = medfilt2((squeeze(Xfilt(xInd,yInd,zpoint,k)))',[5 5]);
+            %             else
+            J = squeeze(Xfilt(xInd,yInd,zpoint,k))';
+            %             end
+            
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.x(xInd),ax.y(yInd),J) % mod plots
-             %   h = hotcoldDB;
+                %   h = hotcoldDB;
                 colormap(h)
-                 if handles.showlf.Value == 1
+                if handles.showlf.Value == 1
                     
                     plot(handles.axes4,lf_ax(lfInd),LF(lfInd),'k')
                     hold(handles.axes4,'on')
@@ -930,7 +940,7 @@ elseif handles.plotbox2.Value == 4 && handles.all_movie.Value == 0
                     hold(handles.axes4,'off')
                     
                 end
-             
+                
             else
                 imshow(J)
                 colormap(h)
@@ -949,20 +959,20 @@ elseif handles.plotbox2.Value == 4 && handles.all_movie.Value == 0
     elseif handles.save_fig.Value == 1
         vidwrite(param,ax,Xfilt,handles)
     end
-        
+    
     
 elseif handles.plotbox2.Value == 3 && handles.all_movie.Value == 0
     if handles.save_fig.Value == 0
         for k = zInd %Mod loop
-%             if handles.med_box.Value == 1
-%                 J = medfilt2((squeeze(Xfilt(xInd,yInd,k,tpoint)))',[5 5]);
-%             else
-                J = squeeze(Xfilt(xInd,yInd,k,tpoint))';
-%             end
+            %             if handles.med_box.Value == 1
+            %                 J = medfilt2((squeeze(Xfilt(xInd,yInd,k,tpoint)))',[5 5]);
+            %             else
+            J = squeeze(Xfilt(xInd,yInd,k,tpoint))';
+            %             end
             
             if handles.use_ext_fig.Value == 0
                 imagesc(ax.x(xInd),ax.y(yInd),J) % mod plots
-           %     h = hotcoldDB;
+                %     h = hotcoldDB;
                 colormap(h)
             else
                 imshow(J)
@@ -984,7 +994,7 @@ elseif handles.plotbox2.Value == 3 && handles.all_movie.Value == 0
     end
 end
 if handles.all_movie.Value == 1
-
+    
     for k = tInd
         J1 = squeeze(Xfilt(xInd,ypoint,zInd,k))';
         J2 = squeeze(Xfilt(xpoint,yInd,zInd,k))';
@@ -993,44 +1003,44 @@ if handles.all_movie.Value == 1
         axes(handles.axes1)
         imagesc(ax.x(xInd),ax.depth(zInd),J1) % mod plots
         colormap(h)
-          if ~isempty(aeR)
-                caxis(aeR)
-            end
-   
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        
         axes(handles.axes3)
         imagesc(ax.y(yInd),ax.depth(zInd),J2)
         colormap(h)
-          if ~isempty(aeR)
-                caxis(aeR)
-            end
-     
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        
         axes(handles.axes2)
         imagesc(ax.x(xInd),ax.y(yInd),J3)
         colormap(h)
-          if ~isempty(aeR)
-                caxis(aeR)
-            end
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
         drawnow
-%                     handles.axes1.XLabel.String = 'Lateral (mm)'; %Mod Axes
-%             handles.axes1.YLabel.String = 'Depth (mm)';
-%                         handles.axes3.XLabel.String = 'Elevational (mm)'; %Mod Axes
-%             handles.axes3.YLabel.String = 'Depth (mm)';
-%                         handles.axes2.XLabel.String = 'Lateral (mm)'; %Mod Axes
-%             handles.axes2.YLabel.String = 'Elevational (mm)';
+        %                     handles.axes1.XLabel.String = 'Lateral (mm)'; %Mod Axes
+        %             handles.axes1.YLabel.String = 'Depth (mm)';
+        %                         handles.axes3.XLabel.String = 'Elevational (mm)'; %Mod Axes
+        %             handles.axes3.YLabel.String = 'Depth (mm)';
+        %                         handles.axes2.XLabel.String = 'Lateral (mm)'; %Mod Axes
+        %             handles.axes2.YLabel.String = 'Elevational (mm)';
         
         
         if handles.showlf.Value == 1
             
             plot(handles.axes4,lf_ax(lfInd),LF(lfInd),'k')
             hold(handles.axes4,'on')
-          %  plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
-          plot(handles.axes4,lf_ax(round(k*lfdif)),LF(round(k*lfdif)),'ro','MarkerFaceColor','r')
+            %  plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
+            plot(handles.axes4,lf_ax(round(k*lfdif)),LF(round(k*lfdif)),'ro','MarkerFaceColor','r')
             hold(handles.axes4,'off')
             
         end
     end
 end
-             
+
 
 
 % --- Executes on button press in save_fig.
@@ -1225,50 +1235,50 @@ end
 function Enhance_Sig_Callback(hObject, eventdata, handles) % @006
 % hObject    handle to Enhance_Sig (see GCBO)
 if handles.use_chop.Value == 0
-param = evalin('base','param');
-Xfilt = evalin('base','Xfilt');
-m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
-n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) get(handles.squarify_box,'Value')];
-o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
-Xfilt = filts3D(Xfilt,m,n,o,param);
-[~,ax] = make_axes(param,size(Xfilt));
-assignin('base','ax',ax);
-assignin('base','Xfilt',Xfilt)
+    param = evalin('base','param');
+    Xfilt = evalin('base','Xfilt');
+    m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
+    n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) get(handles.squarify_box,'Value')];
+    o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
+    Xfilt = filts3D(Xfilt,m,n,o,param);
+    [~,ax] = make_axes(param,size(Xfilt));
+    assignin('base','ax',ax);
+    assignin('base','Xfilt',Xfilt)
 else
     param = evalin('base','param');
-Xfilt = evalin('base','X_c');
-ax = evalin('base','ax_c');
-m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
-n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) get(handles.squarify_box,'Value')];
-o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
-Xfilt = filts3D(Xfilt,m,n,o,param);
-
-dims = size(Xfilt);
-xR = [ax.x(1) ax.x(end)];
-yR = [ax.y(1) ax.y(end)];
-zR = [ax.depth(1) ax.depth(end)];
-tR = [ax.stime(1) ax.stime(end)];
-ax.depth = linspace(zR(1),zR(2),dims(3));
-if length(dims) > 3
-    ax.stime = linspace(tR(1),tR(2),dims(4));
-else 
-    ax.stime = 1;
-end
-if mean(abs(xR)) > 1
-    ax.x = linspace(xR(1),xR(2),dims(1));
-else
-    ax.x = 1;
-end
-if mean(abs(yR)) > 1
-    ax.y = linspace(yR(1),yR(2),dims(2));
-else
-    ax.y = 1;
-end
-
-assignin('base','ax_c',ax);
-assignin('base','X_c',Xfilt)
-end
+    Xfilt = evalin('base','X_c');
+    ax = evalin('base','ax_c');
+    m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
+    n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) get(handles.squarify_box,'Value')];
+    o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
+    Xfilt = filts3D(Xfilt,m,n,o,param);
     
+    dims = size(Xfilt);
+    xR = [ax.x(1) ax.x(end)];
+    yR = [ax.y(1) ax.y(end)];
+    zR = [ax.depth(1) ax.depth(end)];
+    tR = [ax.stime(1) ax.stime(end)];
+    ax.depth = linspace(zR(1),zR(2),dims(3));
+    if length(dims) > 3
+        ax.stime = linspace(tR(1),tR(2),dims(4));
+    else
+        ax.stime = 1;
+    end
+    if mean(abs(xR)) > 1
+        ax.x = linspace(xR(1),xR(2),dims(1));
+    else
+        ax.x = 1;
+    end
+    if mean(abs(yR)) > 1
+        ax.y = linspace(yR(1),yR(2),dims(2));
+    else
+        ax.y = 1;
+    end
+    
+    assignin('base','ax_c',ax);
+    assignin('base','X_c',Xfilt)
+end
+
 
 
 % --- Executes on button press in chop.
@@ -1301,9 +1311,9 @@ q.x = 1:dims(1);
 q.y = 1:dims(2);
 q.z = 1:dims(3);
 if length(size(Xfilt)) > 3
-q.t = 1:dims(4);
-tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
-else 
+    q.t = 1:dims(4);
+    tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+else
     tInd = 1;
 end
 xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
@@ -1320,7 +1330,7 @@ if length(dims) < 4
     if length(tInd) == 1 && length(zInd) == 1
         dims = [dims(1) dims(2) 1 1];
     else
-    dims = [dims(1) dims(2) dims(3) 1];
+        dims = [dims(1) dims(2) dims(3) 1];
     end
 end
 
@@ -1337,10 +1347,10 @@ if mean(abs(yR)) > 1
 else
     ax.y = 1;
 end
-if handles.active_xfilt.String == 'PE' 
+if handles.active_xfilt.String == 'PE'
     set(handles.active_pe,'String',num2str(size(X)))
 else
-set(handles.active_ae,'String',num2str(size(X)))
+    set(handles.active_ae,'String',num2str(size(X)))
 end
 assignin('base','ax_c',ax);
 assignin('base','X_c',X);
@@ -1351,19 +1361,19 @@ function max_box_Callback(hObject, eventdata, handles) %@008
 % hObject    handle to max_box (see GCBO)
 if get(hObject,'Value') == 1
     if handles.use_chop.Value == 0
-    ax = evalin('base','ax');
-    x1 = num2str(round(ax.x(1),1)); x2 = num2str(round(ax.x(end),1));
-    z2 = floor(ax.depth(end));
-set(handles.xR,'String', [x1 ' ' x2]);
-set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
-set(handles.zR,'String', num2str([0 z2]));
-set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+        ax = evalin('base','ax');
+        x1 = num2str(round(ax.x(1),1)); x2 = num2str(round(ax.x(end),1));
+        z2 = floor(ax.depth(end));
+        set(handles.xR,'String', [x1 ' ' x2]);
+        set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
+        set(handles.zR,'String', num2str([0 z2]));
+        set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
     else
-            ax_c = evalin('base','ax_c');
-set(handles.xR,'String', num2str([ax_c.x(1) ax_c.x(end)]));
-set(handles.yR,'String', num2str([ax_c.y(1) ax_c.y(end)]));
-set(handles.zR,'String', num2str([ax_c.depth(1) floor(ax_c.depth(end))]));
-set(handles.tR,'String', num2str([ax_c.stime(1) ax_c.stime(end)]));
+        ax_c = evalin('base','ax_c');
+        set(handles.xR,'String', num2str([ax_c.x(1) ax_c.x(end)]));
+        set(handles.yR,'String', num2str([ax_c.y(1) ax_c.y(end)]));
+        set(handles.zR,'String', num2str([ax_c.depth(1) floor(ax_c.depth(end))]));
+        set(handles.tR,'String', num2str([ax_c.stime(1) ax_c.stime(end)]));
     end
 end
 
@@ -1448,13 +1458,13 @@ tR = str2num(handles.tR.String);
 if length(tR) > 1;
     tR = tR(1);
 end
- aeR = str2num(handles.aeR.String);
+aeR = str2num(handles.aeR.String);
 % zR = str2num(handles.zR.String);
 % xR = str2num(handles.xR.String);
 % yR = str2num(handles.yR.String);
 % dims = size(X);
 % %[~,ax] = make_axes(param,dims);
-% 
+%
 % ax.depth = linspace(zR(1),zR(2),dims(3));
 % ax.stime = linspace(tR(1),tR(2),dims(4));
 % if mean(abs(xR)) > 1
@@ -1467,7 +1477,7 @@ end
 % else
 %     ax.y = 1;
 % end
-% 
+%
 % q.x = 1:dims(1);
 % q.y = 1:dims(2);
 % q.z = 1:dims(3);
@@ -1485,12 +1495,12 @@ yslice = ax.y(end);
 %zslice = [ax.depth(1),median(ax.depth),ax.depth(end)];
 zslice = ax.depth(1);
 axes(handles.axes2)
-for i = ax.x 
-slice(x,y,z,X,i,yslice,zslice);
-if ~isempty(aeR)
-caxis(aeR)
-end
-drawnow
+for i = ax.x
+    slice(x,y,z,X,i,yslice,zslice);
+    if ~isempty(aeR)
+        caxis(aeR)
+    end
+    drawnow
 end
 
 
@@ -1546,8 +1556,8 @@ function env_button_Callback(hObject, eventdata, handles) %@009
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 if handles.use_chop.Value == 0
-HF = evalin('base','Xfilt');
-else 
+    HF = evalin('base','Xfilt');
+else
     HF = evalin('base','X_c');
 end
 dims = (size(HF));
@@ -1555,20 +1565,20 @@ dims = (size(HF));
 b = waitbar(0);
 for i = 1:dims(1)
     for j = 1:dims(2)
-       % for k = 1:dims(4)
-            HF(i,j,:,:) = envelope(squeeze(real(HF(i,j,:,:))));
+        % for k = 1:dims(4)
+        HF(i,j,:,:) = envelope(squeeze(real(HF(i,j,:,:))));
         %end
     end
     waitbar(i/dims(1),b,'2D Enveloping');
 end
 delete(b)
 if handles.use_chop.Value == 0
-assignin('base','Xfilt',HF);
-else 
-assignin('base','X_c',HF);
+    assignin('base','Xfilt',HF);
+else
+    assignin('base','X_c',HF);
 end
 
-    
+
 
 
 % --- Executes on button press in slow_box.
@@ -1611,7 +1621,7 @@ if handles.use_chop.Value == 1
     ax = evalin('base','ax_c');
 else
     HF = evalin('base','Xfilt');
-      ax = evalin('base','ax');
+    ax = evalin('base','ax');
 end
 
 HF = squeeze(HF); %Converts down to lateral+depth+time
@@ -1630,7 +1640,7 @@ if length(size(HF)) == 2
     R = R(low_x:high_x,:,:,:);
     ax.x = linspace(ax.x(low_x),ax.x(high_x),size(R,1));
     R = permute(R,[1 3 2]);
-
+    
 elseif length(size(HF)) == 3
     q.t = 1:size(HF,3);
     tInd =  q.t(find(ax.stime >= t(1)):find(ax.stime >= t(2)));
@@ -1651,7 +1661,7 @@ elseif length(size(HF)) == 3
     high_x = find(ax.x >= max(ax.x),1);
     R = R(low_x:high_x,:,:,:);
     ax.x = linspace(ax.x(low_x),ax.x(high_x),size(R,1));
-   
+    
     
 else
     q.t = 1:size(HF,4);
@@ -1667,26 +1677,26 @@ else
             waitbar((j)/yInd(end),b,'Computing inverse radon transform');
         end
     end
-
-
-R = permute(R,[2 3 1 4]);
-delete(b);
-dims = size(R); %gets no dimensions of reconstructed data
-ax.depth = linspace(0,ax.depth(end),dims(3));
-ax.x = linspace(ax.x(1),ax.x(end),dims(1));
-ax.y = linspace(ax.y(1),ax.y(end),dims(2));
-end
     
+    
+    R = permute(R,[2 3 1 4]);
+    delete(b);
+    dims = size(R); %gets no dimensions of reconstructed data
+    ax.depth = linspace(0,ax.depth(end),dims(3));
+    ax.x = linspace(ax.x(1),ax.x(end),dims(1));
+    ax.y = linspace(ax.y(1),ax.y(end),dims(2));
+end
+
 
 if handles.use_chop.Value == 1
-assignin('base','ax_c',ax);
-assignin('base','X_c',R);
+    assignin('base','ax_c',ax);
+    assignin('base','X_c',R);
 else
     assignin('base','ax',ax);
-assignin('base','Xfilt',R);
+    assignin('base','Xfilt',R);
 end
-    
-    
+
+
 
 
 
@@ -1718,9 +1728,9 @@ end
 function dB_Button_Callback(hObject, eventdata, handles) %@011
 % hObject    handle to dB_Button (see GCBO)
 if handles.use_chop.Value == 0
-HF = evalin('base','Xfilt');
-ax = evalin('base','ax');
-else 
+    HF = evalin('base','Xfilt');
+    ax = evalin('base','ax');
+else
     HF = evalin('base','X_c');
     ax = evalin('base','ax_c');
 end
@@ -1736,9 +1746,9 @@ zInd =  q.z(find(ax.depth >= qq(1)):find(ax.depth >= qq(2)));
 HFdB = 20*log10(HF./(max(max(max(max(HF(:,:,zInd,:)))))));
 fprintf('Finished converting to dB\n');
 if handles.use_chop.Value == 0
-assignin('base','Xfilt',HFdB);
-else 
-assignin('base','X_c',HFdB);
+    assignin('base','Xfilt',HFdB);
+else
+    assignin('base','X_c',HFdB);
 end
 
 
@@ -1846,7 +1856,7 @@ end
 if ~isempty(handles.ylims.String)
     ylim(str2num(handles.ylims.String));
 end
-    
+
 
 
 
@@ -1948,10 +1958,10 @@ if handles.plotbox1.Value == 2 || handles.plotbox1.Value == 3 || handles.plotbox
     lfInd = q.lf(find(LF_axis >= tR(1),1):find(LF_axis >= tR(2),1));
     Lae = LF(lfInd);
     if handles.plotbox1.Value == 3
-%         yR = str2num(handles.yR.String);
-%         if length(yR) > 1
-%             yR = yR(1);
-%         end
+        %         yR = str2num(handles.yR.String);
+        %         if length(yR) > 1
+        %             yR = yR(1);
+        %         end
         yP = str2double(handles.yP.String);
         sy = find(ax.y >=yP,1);
         sx = find(ax.x>=x,1);
@@ -1962,11 +1972,11 @@ if handles.plotbox1.Value == 2 || handles.plotbox1.Value == 3 || handles.plotbox
         
     end
     if handles.plotbox1.Value == 2
-%         zR = str2num(handles.zR.String);
-%         if length(zR) > 1
-%             zR = zR(1);
-%         end
-           zP = str2double(handles.zP.String);
+        %         zR = str2num(handles.zR.String);
+        %         if length(zR) > 1
+        %             zR = zR(1);
+        %         end
+        zP = str2double(handles.zP.String);
         sZ = find(ax.y >=zP,1);
         sx = find(ax.x>=x,1);
         sy = find(ax.y>=y,1);
@@ -2011,7 +2021,7 @@ if handles.use_ext_fig.Value == 1
     figure(6);
     hold off;
     plot(0)
-   % scatter(abs(Lae),abs(Sae2));
+    % scatter(abs(Lae),abs(Sae2));
     scatter(Lae,Sae2,13,'r','filled')
     hold on
     plot(taxis,yfit,'Color','k','LineWidth',2.5)
@@ -2023,26 +2033,26 @@ if handles.use_ext_fig.Value == 1
     plot(T_axis,Lnorm,'k')
     plot(T_axis,Snorm,'r')
     title(['R^2 = ' num2str(R)]);
-    hold off    
+    hold off
     xlabel('ms')
 else
     axes(handles.axes2)
     hold off
     plot(0)
-   % scatter(abs(Lae),abs(Sae2));
-     scatter(Lae,Sae2,13,'r','filled')
-     hold on
+    % scatter(abs(Lae),abs(Sae2));
+    scatter(Lae,Sae2,13,'r','filled')
+    hold on
     plot(taxis,yfit,'Color','k','LineWidth',2.5)
     hold off
-     ylabel('\muV')
+    ylabel('\muV')
     xlabel('mA')
     axes(handles.axes3)
     hold on
     plot(T_axis,Lnorm,'k')
     plot(T_axis,Snorm,'r')
     title(['R^2 = ' num2str(R)]);
-      xlabel('ms')
-      xlim(tR)
+    xlabel('ms')
+    xlim(tR)
     hold off
 end
 
@@ -2054,7 +2064,7 @@ dev = round(std((Sae2)),2);
 if ~isempty(handles.output5.String)
     pres = str2num(handles.output5.String);
 else
-    pres = 1;   
+    pres = 1;
 end
 %m3 = m/pres;
 m3 = m/pres;
@@ -2103,10 +2113,10 @@ else
 end
 
 if max(S) <= 0
-ydb(1:length(S)) = max(S)-6;
-ylabel('dB')
-else 
-     S = S/str2double(handles.hfgain.String)*1000000;
+    ydb(1:length(S)) = max(S)-6;
+    ylabel('dB')
+else
+    S = S/str2double(handles.hfgain.String)*1000000;
     ydb(1:length(S)) = max(S)/2;
     ylabel('\muV');
 end
@@ -2266,7 +2276,7 @@ if length(str2num(handles.baseb.String)) == 1
         else
             win_n = str2double(handles.bb_win_num.String); %number of windows
             win = size(X,1)/win_n; %number of points per window
-              freqs = str2num(handles.bbvar.String);
+            freqs = str2num(handles.bbvar.String);
             if length(freqs) == 1
                 freqs2 = ones(win_n);
                 freqs = freqs2.*freqs;
@@ -2277,8 +2287,8 @@ if length(str2num(handles.baseb.String)) == 1
             elseif length(freqs) ~= win_n
                 errordlg('Number of baseband frequencies need to match number of windows')
                 return
-            end      
-          
+            end
+            
             if mod(win,win_n) ~= 0
                 win = floor(win);
                 win_ex = round(win_n*mod(win,win_n));
@@ -2335,7 +2345,7 @@ if length(str2num(handles.baseb.String)) == 1
             end
             
             X = S.*real(Xfilt);
-           
+            
             %   X = S.*envelope(real(X));
         end
         delete(b)
@@ -2435,11 +2445,11 @@ elseif length(str2num(handles.baseb.String)) == 3
 end
 
 
-    
-    
 
-        %
-        % else
+
+
+%
+% else
 %     Xfilt = evalin('base','X_c');
 %     param = evalin('base','param');
 %     X = Xfilt;
@@ -2447,7 +2457,7 @@ end
 %     X = circshift(X,str2double(handles.dshift.String),3);
 %     if str2double(handles.baseb.String) > 0
 %          X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz);
-%        
+%
 %         %X = baseband_russ3(Xfilt,param.daq.HFdaq.fs_MHz,str2double(handles.baseb.String));
 %         % p = squeeze(X(:,1,:,22));
 %        %  figure; plot(real(ifft(p)))
@@ -2456,9 +2466,9 @@ end
 %             dims = size(Xfilt);
 %             b = waitbar(0);
 %             for i = 1:dims(1)
-%                 for j = 1:dims(2)   
+%                 for j = 1:dims(2)
 %                     Xfilt(i,j,:,:) = envelope(real(squeeze(Xfilt(i,j,:,:))));
-%                    % X(i,j,:,:) = squeeze(S(i,j,:,:)).*envelope(squeeze(real(X(i,j,:,:))));      
+%                    % X(i,j,:,:) = squeeze(S(i,j,:,:)).*envelope(squeeze(real(X(i,j,:,:))));
 %                 end
 %                 waitbar(i/dims(1),b,'Finalzing');
 %             end
@@ -2472,7 +2482,7 @@ end
 %     end
 %     if handles.invertbox.Value == 1
 %         X = X*(-1);
-%     end 
+%     end
 %     assignin('base','X_c',X)
 % end
 
@@ -2652,16 +2662,16 @@ end
 if length(size(Xfilt)) == 3
     Y = squeeze(Xfilt(xInd,yInd,zInd));
 else
-q.t = 1:dims(4);
-tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
-Y = squeeze(Xfilt(xInd,yInd,zInd,tInd));
+    q.t = 1:dims(4);
+    tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+    Y = squeeze(Xfilt(xInd,yInd,zInd,tInd));
 end
 Y = circshift(Y,str2double(handles.dshift.String),2);
 
 if length(size(PEData)) == 3
-     P = squeeze(PEData(1:size(PEData,1),yInd,peInd));
+    P = squeeze(PEData(1:size(PEData,1),yInd,peInd));
 else
-
+    
     P = squeeze(PEData(1:size(PEData,1),yInd,peInd,tInd));
 end
 
@@ -2680,10 +2690,10 @@ end
 %     Y = medfilt2(Y,[3 3]);
 % end
 
-  [x, y] = meshgrid(1:size(Y,2),1:size(Y,1));
-   [xq, yq] = meshgrid(linspace(1,size(Y,2),size(P,2)),linspace(1,size(Y,1),size(P,1)));
-   Y2 = interp2(x,y,Y,xq,yq);
-   G = imfuse(Y2',P','ColorChannels',[1 0 2]);
+[x, y] = meshgrid(1:size(Y,2),1:size(Y,1));
+[xq, yq] = meshgrid(linspace(1,size(Y,2),size(P,2)),linspace(1,size(Y,1),size(P,1)));
+Y2 = interp2(x,y,Y,xq,yq);
+G = imfuse(Y2',P','ColorChannels',[1 0 2]);
 H = im2double(G);
 if handles.use_ext_fig.Value == 0
     axes(handles.axes1) % Plots AE
@@ -2797,49 +2807,49 @@ if handles.use_ext_fig.Value == 0
         handles.axes3.YLabel.String = 'Depth (mm)';
     end
     
-
-   axes(handles.axes4)
-  % H = 20*log10(H./max(max(max((H)))));
-   gmax1 = max(max(G(:,:,1)));
-   gmax2 = max(max(G(:,:,3)));
-   for i = 1:size(G,1)
-       for j = 1:size(G,2)
-           
-           if G(i,j,1) < gmax1*.5
-               G(i,j,1) = 0;
-           else
-               G(i,j,1) = G(i,j,1);
-           end
-           if G(i,j,3) < gmax2*.5
-               G(i,j,3) = 0;
-           else
-               G(i,j,3) = G(i,j,3);
-           end
-           
-       end
-   end
-                   
-   imagesc(ax.x(xInd),ax.depth(zInd),G);
-   handles.axes4.XLabel.String = 'Lateral (mm)';
-   handles.axes4.YLabel.String = 'Depth (mm)';
-   caxis(gca,[0.5 1])
-%    if ~isempty(aeR)
-%        caxis(aeR)
-%    end
-   
-%    hold off 
-%    plot(0)
-% 
-%    yim = image(Y');
-%    pim = image(P');
-%  
-%    imagesc(P')
-%       set(handles.axes4.Children,'AlphaData',0.5);
-%     hold on
-%    imagesc(Y');
-%    set(handles.axes4.Children,'AlphaData',0.5);
-%   % set(handles.axes4.Children,'AlphaData',0.5);
-       h=5;
+    
+    axes(handles.axes4)
+    % H = 20*log10(H./max(max(max((H)))));
+    gmax1 = max(max(G(:,:,1)));
+    gmax2 = max(max(G(:,:,3)));
+    for i = 1:size(G,1)
+        for j = 1:size(G,2)
+            
+            if G(i,j,1) < gmax1*.5
+                G(i,j,1) = 0;
+            else
+                G(i,j,1) = G(i,j,1);
+            end
+            if G(i,j,3) < gmax2*.5
+                G(i,j,3) = 0;
+            else
+                G(i,j,3) = G(i,j,3);
+            end
+            
+        end
+    end
+    
+    imagesc(ax.x(xInd),ax.depth(zInd),G);
+    handles.axes4.XLabel.String = 'Lateral (mm)';
+    handles.axes4.YLabel.String = 'Depth (mm)';
+    caxis(gca,[0.5 1])
+    %    if ~isempty(aeR)
+    %        caxis(aeR)
+    %    end
+    
+    %    hold off
+    %    plot(0)
+    %
+    %    yim = image(Y');
+    %    pim = image(P');
+    %
+    %    imagesc(P')
+    %       set(handles.axes4.Children,'AlphaData',0.5);
+    %     hold on
+    %    imagesc(Y');
+    %    set(handles.axes4.Children,'AlphaData',0.5);
+    %   % set(handles.axes4.Children,'AlphaData',0.5);
+    h=5;
     
     
     
@@ -2858,7 +2868,7 @@ end
 
 
 
-% 
+%
 % axes(handles.axes2)
 % imagesc(squeeze(X))
 % axes(handles.axes3)
@@ -3334,7 +3344,7 @@ elseif handles.bsq.Value == 1
     PEImage = multibandread(PEbsqFile,[dsize(1:2),prod(dsize(3:end))],...
         'single',nOffset,'bsq','ieee-le',{'Band','Direct',nScanPt});
     if bScanParm.ylen > 1
-            PEImage = reshape(PEImage,[dsize(1),dsize(2),bScanParm.XSteps,bScanParm.YSteps]);
+        PEImage = reshape(PEImage,[dsize(1),dsize(2),bScanParm.XSteps,bScanParm.YSteps]);
     end
     pedata = squeeze(mean(PEImage,3));
     wavlen = PData.Lambda;
@@ -3359,7 +3369,7 @@ elseif handles.bsq.Value == 1
     end
     
     %FOR PROCESSING CHIRP DATA VERASONICS DATA
-elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0 
+elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
     [f, p]  = uigetfile(fullfile(pwd,'*_PEParm.mat'));
     load([p f]);
     cd(p)
@@ -3397,30 +3407,40 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
         fh1 = find(fast_axis >= mean([f1,f2]),1);
         fh2 = N-fh1;
         
-        
-        for i = 1:sz(3)
-            Q{i} = fft(squeeze(PEMatrix(:,:,i)));
-        end
-        
-        %Insert FFT filter here
-        for i = 1:sz(3)
-            for j = 1:sz(2)
-                PE{i}(:,j) = Q{i}(:,j).*H2';
+        if length(sz) > 2
+            for i = 1:sz(3)
+                Q{i} = fft(squeeze(PEMatrix(:,:,i)));
             end
-            %  waitbar(i/size(PEMatrix,3),b,'Filtering')
-            multiWaitbar('Filtering',i/size(PEMatrix,3));
+            
+            
+            
+            
+            %Insert FFT filter here
+            for i = 1:sz(3)
+                for j = 1:sz(2)
+                    PE{i}(:,j) = Q{i}(:,j).*H2';
+                end
+                %  waitbar(i/size(PEMatrix,3),b,'Filtering')
+                multiWaitbar('Filtering',i/size(PEMatrix,3));
+            end
+            for i = 1:sz(3)
+                %  pe2{i} = real(flipud(ifft(PE{i})));
+                pe{i} = circshift(real(ifft(PE{i})),round(size(PE{i},1)/2));
+            end
+        else
+            Q = fft(PEMatrix);
+            for j = 1:sz(2)
+                PE(:,j) = Q(:,j).*H2';
+            end
+            pe = circshift(real(ifft(PE)),round(size(PE,1)/2));
         end
-        for i = 1:sz(3)
-          %  pe2{i} = real(flipud(ifft(PE{i})));
-            pe{i} = circshift(real(ifft(PE{i})),round(size(PE{i},1)/2));
-        end
- 
+        
         
     else
         FsAE = round(Rcv(1).decimSampleRate);
         FsUS = bScanParm.vsx_fs;
         t_delay = length(US)*(1/FsUS);
-       % US = interp1(linspace(0,100,length(US)),US,linspace(0,100,length(US)*2))';
+        % US = interp1(linspace(0,100,length(US)),US,linspace(0,100,length(US)*2))';
         if FsUS~=FsAE
             RefPulse       = resample(US,FsAE,FsUS);
         end
@@ -3435,46 +3455,54 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
             for j = 1:sz(2)
                 Q{i}(:,j) = conv(squeeze(PEMatrix(:,j,i)),RefPulse);
             end
-         %   Q{i} = Q{i}(1:round(size(Q{i},1)*.75),:); %scaling new data range
+            %   Q{i} = Q{i}(1:round(size(Q{i},1)*.75),:); %scaling new data range
             %  waitbar(i/sz(3),b,'Filtering');
             multiWaitbar('Filtering',i/sz(3));
         end
         
-%         for i = 1:sz(3)
-%             for j = 1:sz(2)
-%                 
-%                 pe{i}(:,j) = interp1(linspace(0,10,size(Q{1},1)),Q{i}(:,j),linspace(0,10,sz(1)));
-%                 
-%             end
-%             %   waitbar(i/sz(3),b,'Compressing Depth Axis');
-%             multiWaitbar('Compressing Depth Axis',i/sz(3));
-%         end
-pe = Q;
+        %         for i = 1:sz(3)
+        %             for j = 1:sz(2)
+        %
+        %                 pe{i}(:,j) = interp1(linspace(0,10,size(Q{1},1)),Q{i}(:,j),linspace(0,10,sz(1)));
+        %
+        %             end
+        %             %   waitbar(i/sz(3),b,'Compressing Depth Axis');
+        %             multiWaitbar('Compressing Depth Axis',i/sz(3));
+        %         end
+        pe = Q;
         
     end
     
-    
-    for i = 1:sz(3)
-        pdata(:,:,i) = pe{i};
+    if length(sz)>2
+        for i = 1:sz(3)
+            pdata(:,:,i) = pe{i};
+        end
+    else
+        pdata=pe;
     end
     sz = size(pdata);
+    
     pdata = permute(pdata,[3 1 2]);
     pdata = reshape(pdata,[bScanParm.XSteps bScanParm.YSteps sz(1) sz(2)]);
     fstele = find(TX.VDASApod,1)-1;
+    if length(TX.VDASApod) == size(pdata,4)
     for i = 1:length(TX.VDASApod)
-        if TX.VDASApod(i) == 1
-            pedata(:,:,:,i-fstele) = pdata(:,:,:,i);
+        if TX.VDASApod(i) == 1        
+            pedata(:,:,:,i-fstele) = pdata(:,:,:,i);              
         end
     end
-%     
-%     PEformed = mean(abs(pedata),4);
-%     figure;
-%     for i = 1:64
-%         imagesc(squeeze(pedata(:,1,:,i))')
-%         drawnow;
-%         pause(.1)
-%         title(num2str(i));
-%     end
+    else
+        pedata  = pdata;
+    end
+    %
+    %     PEformed = mean(abs(pedata),4);
+    %     figure;
+    %     for i = 1:64
+    %         imagesc(squeeze(pedata(:,1,:,i))')
+    %         drawnow;
+    %         pause(.1)
+    %         title(num2str(i));
+    %     end
     
     
     
@@ -3499,9 +3527,9 @@ pe = Q;
     delay.x = Trans.ElementPos(:,1)*PData.Lambda;
     %for i = 1:
     
-   
     
-        
+    
+    
     
     for i = 1:size(pedata,4) %Element
         for j = 1:size(pedata,1) %Lateral Position
@@ -3513,8 +3541,8 @@ pe = Q;
             end
         end
     end
-
-  
+    
+    
     
     % LETS DO SOME BEAM FORMING!!!
     for m = 1:size(pedata,2) %Elevational
@@ -3525,27 +3553,27 @@ pe = Q;
             if handles.match_box.Value == 1
                 D = real(squeeze(pedata(:,m,:,a)));
             else
-              %  D = squeeze(PEMatrix(:,a+32,:))'; %This is not currently using filtered data
+                %  D = squeeze(PEMatrix(:,a+32,:))'; %This is not currently using filtered data
                 D = real(squeeze(pedata(:,m,:,a)));
-            end  
+            end
             [grdx1, grdz1] = meshgrid(1:size(D,1),1:size(D,2));
             [grdx2, grdz2] = meshgrid(linspace(1,size(D,1),PData(1).Size(2)),linspace(1,size(D,2),PData(1).Size(1)));
-            Dint = interp2(grdx1, grdz1,D',grdx2, grdz2);   
-              
+            Dint = interp2(grdx1, grdz1,D',grdx2, grdz2);
+            
             clear D;
             D = Dint';
             
-            C = interp1(1:size(pedata,1),pex.theta(cent,:),linspace(1,size(pedata,1),size(D,1)));  % Adjust where Center is here   
-         %   C = pex.theta(cent,:);
+            C = interp1(1:size(pedata,1),pex.theta(cent,:),linspace(1,size(pedata,1),size(D,1)));  % Adjust where Center is here
+            %   C = pex.theta(cent,:);
             wavelen = PData.Lambda;
             %pex.x = (1:size(pedata,1))*wavlen*PData(1).PDelta(1).*(PData.Size(2)/size(pedata,1));
             pex.x = (1:size(D,1))*wavelen*PData(1).PDelta(1);
             pex.x = pex.x - mean(pex.x);
-          %  pex.depth = (1:size(pedata,3))*wavlen*PData(1).PDelta(3).*(PData.Size(1)/size(pedata,3));
+            %  pex.depth = (1:size(pedata,3))*wavlen*PData(1).PDelta(3).*(PData.Size(1)/size(pedata,3));
             pex.depth = (1:size(D,2))*wavelen*PData(1).PDelta(3); % + delay.x(1,1);
-     
+            
             t_delay = length(US)*(1/bScanParm.vsx_fs); %adjusts depth based on length of pulse
-            depth2 = pex.depth; % - t_delay; %Correcting 
+            depth2 = pex.depth; % - t_delay; %Correcting
             Qx = pex.depth.*sin(C');
             Qz = pex.depth.*cos(C');
             x2 = linspace(min(min(Qx)),max(max(Qx)),size(Qx,1));
@@ -3559,7 +3587,7 @@ pe = Q;
                     %   Qzind(i,j) = find(pex.depth+(TXArray(i).Delay(a)*PData.Lambda) >= Qz(i,j),1); %Experimental
                     if max(depth2) >= Qz(i,j)
                         Qzind(i,j) = find(depth2 >= Qz(i,j),1); %Pair with pex.depth = pex.depth-max(TX.Delay)*PData.Lambda
-                    else 
+                    else
                         Qzind(i,j) = length(depth2);
                     end
                     if Qzind(i,j) <= foc
@@ -3601,7 +3629,7 @@ pe = Q;
     multiWaitbar('CLOSEALL');
     bf = mean(BF,4);
     %pex.x = x2;
-   
+    
     %figure; imagesc(x2,pex.depth,bf2)
     
     if length(size(bf)) < 3
@@ -3614,7 +3642,7 @@ pe = Q;
     end
     clear pedata
     pedata = bf2;
-
+    
     assignin('base','PEdata',pedata);
     %pex.depth = pex.depth-max(TX.Delay)*PData.Lambda;
     %delete(b)
@@ -3632,51 +3660,53 @@ end
 
 
 % --- Executes on button press in loadpe. @021
-function loadpe_Callback(hObject, eventdata, handles) 
+function loadpe_Callback(hObject, eventdata, handles)
 [f,  p] = uigetfile(fullfile(pwd,'*4d_PE.mat'));
 cd(p)
 fprintf('Loading 4D Dataset...')
 load([p f]);
 %[~, ax] = make_axes(param,size(Xfilt),[1 2],1);
 if handles.onemhz.Value == 1
-set(handles.fname,'String',file);
-fprintf('Done\n')
-assignin('base','PEdata',PEdata);
-assignin('base','param',param);
-pex.depth = pex.depth - 2.6;
-ax = pex;
-assignin('base','pex',ax);
-set(handles.active_pe,'String',num2str(size(PEdata)))
-%assignin('base','PEparam',PE);
-%set(handles.LF_chan,'String',num2str(size(LF,2)));
-set(handles.tms,'String',num2str([ax.stime(1) ax.stime(end)]));
-set(handles.tsamp,'String',num2str([1 length(ax.stime)]));
-set(handles.xmm,'String',num2str([ax.x(1) ax.x(end)]));
-set(handles.xsamp,'String',num2str([1 length(ax.x)]));
-set(handles.ymm,'String',num2str([ax.y(1) ax.y(end)]));
-set(handles.ysamp,'String',num2str([1 length(ax.y)]));
-set(handles.zmm,'String',num2str([round(ax.depth(1)) round(ax.depth(end))]));
-set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
-
-if handles.reset_axes.Value == 1    
-set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
-set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
-set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
-set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
-end
-
+    set(handles.fname,'String',file);
+    fprintf('Done\n')
+    assignin('base','PEdata',PEdata);
+    assignin('base','param',param);
+    pex.depth = pex.depth - 2.6;
+    ax = pex;
+    assignin('base','pex',ax);
+    set(handles.active_pe,'String',num2str(size(PEdata)))
+    %assignin('base','PEparam',PE);
+    %set(handles.LF_chan,'String',num2str(size(LF,2)));
+    set(handles.tms,'String',num2str([ax.stime(1) ax.stime(end)]));
+    set(handles.tsamp,'String',num2str([1 length(ax.stime)]));
+    set(handles.xmm,'String',num2str([ax.x(1) ax.x(end)]));
+    set(handles.xsamp,'String',num2str([1 length(ax.x)]));
+    set(handles.ymm,'String',num2str([ax.y(1) ax.y(end)]));
+    set(handles.ysamp,'String',num2str([1 length(ax.y)]));
+    set(handles.zmm,'String',num2str([round(ax.depth(1)) round(ax.depth(end))]));
+    set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
+    
+    if handles.reset_axes.Value == 1
+        set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
+        set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
+        set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
+        set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+    end
+    
 else
     set(handles.fname,'String',file02);
-fprintf('Done\n')
-assignin('base','PEdata',pedata);
-assignin('base','pex',pex);
-assignin('base','param',bScanParm);
-assignin('base','Trans',Trans)
-assignin('base','PData',PData)
-assignin('base','TW',TW)
-assignin('base','TX',TX)
-assignin('base','TXArray',TXArray);
-set(handles.tP,'String','0');
+    fprintf('Done\n')
+    assignin('base','PEdata',pedata);
+    assignin('base','pex',pex);
+    assignin('base','param',bScanParm);
+    assignin('base','Trans',Trans)
+    assignin('base','PData',PData)
+    assignin('base','TW',TW)
+    assignin('base','TX',TX)
+    if exist('TXArray')
+    assignin('base','TXArray',TXArray);
+    end
+    set(handles.tP,'String','0');
 end
 
 
@@ -3686,8 +3716,8 @@ X = evalin('base','PEdata');
 ax = evalin('base','pex');
 
 if length(size(X)) < 4
-X(:,:,:,2) = X(:,:,:);
-ax.stime = [0 1];
+    X(:,:,:,2) = X(:,:,:);
+    ax.stime = [0 1];
 end
 assignin('base','Xfilt',X);
 assignin('base','ax',ax);
@@ -3701,7 +3731,7 @@ end
 function realize_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value == 0
     X = evalin('base','Xfilt');
-    param = evalin('base','param');   
+    param = evalin('base','param');
     X = real(X);
     %Xcom = imag(X);
     % assignin('base','X_complex',Xcom)
@@ -3740,12 +3770,12 @@ if ~isempty(handles.fignum.String)
         a = gca;
         a.Visible = 'off';
     end
-%     if fname(end-2:end) == 'png'
-%         fname = [fname ' -transparent'];
-%         figure(num)
-%         set(gca,'Color','none');
-%     else
-%     end
+    %     if fname(end-2:end) == 'png'
+    %         fname = [fname ' -transparent'];
+    %         figure(num)
+    %         set(gca,'Color','none');
+    %     else
+    %     end
     if ~isempty(handles.savefolder.String)
         pname = handles.savefolder.String;
         sname = [pname '\' fname];
@@ -3755,8 +3785,8 @@ if ~isempty(handles.fignum.String)
     
     figure(num)
     set(gca,'Color','none')
-  %  eval([ 'export_fig ' sname])
-  export_fig(sname,'-transparent');
+    %  eval([ 'export_fig ' sname])
+    export_fig(sname,'-transparent');
 else
     if ~isempty(handles.savefolder.String)
         pname = handles.savefolder.String;
@@ -3768,8 +3798,8 @@ else
     
     
 end
-    
-       
+
+
 
 
 
@@ -3860,11 +3890,11 @@ function large_box_Callback(hObject, eventdata, handles)
 
 
 % --- Executes on button press in tope. @024
-function tope_Callback(hObject, eventdata, handles) 
+function tope_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value == 1
     X = evalin('base','X_c');
     ax = evalin('base','ax_c');
-else 
+else
     X = evalin('base','Xfilt');
     ax = evalin('base','ax');
 end
@@ -3943,7 +3973,7 @@ end
 
 
 % --- Executes on button press in plot4. @025
-function plot4_Callback(hObject, eventdata, handles) 
+function plot4_Callback(hObject, eventdata, handles)
 param = evalin('base','param');
 if handles.use_chop.Value == 1
     Xfilt = evalin('base','X_c');
@@ -3978,12 +4008,12 @@ zR = str2num(handles.zR.String);
 if length(zR) == 1
     zR = [zR zR zR];
 else
-     zR = [zR(1) zR(2) zP];
+    zR = [zR(1) zR(2) zP];
 end
 tR = str2num(handles.tR.String);
 if length(tR) == 1
     tR = [tR tR tR];
-else 
+else
     tR = [tR(1) tR(2) tP];
 end
 aeR = str2num(handles.aeR.String);
@@ -3997,13 +4027,13 @@ q.x = 1:dims(1);
 q.y = 1:dims(2);
 q.z = 1:dims(3);
 if length(size(Xfilt)) > 3
-q.t = 1:dims(4);
+    q.t = 1:dims(4);
 end
 xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 if length(size(Xfilt)) > 3
-tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+    tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
 end
 if length(xR) < 3 || length(yR) < 3 || length(zR) <3 || length(tR) <3
     errordlg('All 4 dimensions need 3 values ([range1, range2, point])')
@@ -4013,7 +4043,7 @@ px = q.x(find(ax.x >=xR(3),1));
 py = q.y(find(ax.y >=yR(3),1));
 pz = q.z(find(ax.depth >=zR(3),1));
 if length(size(Xfilt)) > 3
-pt = q.t(find(ax.stime >=tR(3),1));
+    pt = q.t(find(ax.stime >=tR(3),1));
 end
 if length(size(Xfilt)) < 4
     Yxy = squeeze(Xfilt(xInd,yInd,pz));
@@ -4050,54 +4080,54 @@ if handles.use_ext_fig.Value == 0
     if size(Yxy,2) == 1
         Yxy = Yxy';
     end
-        imagesc(ax.x(xInd),ax.y(yInd),(Yxy'),'ButtonDownFcn',{@Plot4OnClickXY,handles})
-        colormap(gca,h)
-        if ~isempty(aeR)
-            caxis(aeR)
-        end
-        handles.axes2.XLabel.String = 'Lateral (mm)';
-        handles.axes2.YLabel.String = 'Elevational (mm)';
-
-axes(handles.axes1)
-if size(Yxz,2) == 1
-    Yxz = Yxz';
-end
-        imagesc(ax.x(xInd),ax.depth(zInd),(Yxz'),'ButtonDownFcn',{@Plot4OnClickXZ,handles})
-        colormap(gca,h)
-        if ~isempty(aeR)
-            caxis(aeR)
-        end
-        handles.axes1.XLabel.String = 'Lateral (mm)';
-        handles.axes1.YLabel.String = 'Depth (mm)';
-
-axes(handles.axes3)
-if size(Yyz,2) == 1
-    Yyz = Yyz';
-end
-        imagesc(ax.y(yInd),ax.depth(zInd),(Yyz'),'ButtonDownFcn',{@Plot4OnClickYZ,handles})
-        colormap(gca,h)
-        if ~isempty(aeR)
-            caxis(aeR)
-        end
-        handles.axes3.XLabel.String = 'Elevational (mm)';
-        handles.axes3.YLabel.String = 'Depth (mm)';
-
-  axes(handles.axes4)
-  if size(Yzt,2) == 1
-      Yzt = Yzt';
-  end
-        if length(size(Xfilt)) > 3
+    imagesc(ax.x(xInd),ax.y(yInd),(Yxy'),'ButtonDownFcn',{@Plot4OnClickXY,handles})
+    colormap(gca,h)
+    if ~isempty(aeR)
+        caxis(aeR)
+    end
+    handles.axes2.XLabel.String = 'Lateral (mm)';
+    handles.axes2.YLabel.String = 'Elevational (mm)';
+    
+    axes(handles.axes1)
+    if size(Yxz,2) == 1
+        Yxz = Yxz';
+    end
+    imagesc(ax.x(xInd),ax.depth(zInd),(Yxz'),'ButtonDownFcn',{@Plot4OnClickXZ,handles})
+    colormap(gca,h)
+    if ~isempty(aeR)
+        caxis(aeR)
+    end
+    handles.axes1.XLabel.String = 'Lateral (mm)';
+    handles.axes1.YLabel.String = 'Depth (mm)';
+    
+    axes(handles.axes3)
+    if size(Yyz,2) == 1
+        Yyz = Yyz';
+    end
+    imagesc(ax.y(yInd),ax.depth(zInd),(Yyz'),'ButtonDownFcn',{@Plot4OnClickYZ,handles})
+    colormap(gca,h)
+    if ~isempty(aeR)
+        caxis(aeR)
+    end
+    handles.axes3.XLabel.String = 'Elevational (mm)';
+    handles.axes3.YLabel.String = 'Depth (mm)';
+    
+    axes(handles.axes4)
+    if size(Yzt,2) == 1
+        Yzt = Yzt';
+    end
+    if length(size(Xfilt)) > 3
         imagesc(ax.stime(tInd),ax.depth(zInd),Yzt,'ButtonDownFcn',{@Plot4OnClickTZ,handles})
-        else
-            imagesc(1,ax.depth(zInd),Yzt,'ButtonDownFcn',{@Plot4OnClickTZ,handles})
-        end
-        colormap(gca,h)
-        if ~isempty(aeR)
-            caxis(aeR)
-        end
-        handles.axes4.XLabel.String = 'Time (ms)';
-        handles.axes4.YLabel.String = 'Depth (mm)';
-
+    else
+        imagesc(1,ax.depth(zInd),Yzt,'ButtonDownFcn',{@Plot4OnClickTZ,handles})
+    end
+    colormap(gca,h)
+    if ~isempty(aeR)
+        caxis(aeR)
+    end
+    handles.axes4.XLabel.String = 'Time (ms)';
+    handles.axes4.YLabel.String = 'Depth (mm)';
+    
 else
     figure(51)
     imshow(Yxz')
@@ -4105,25 +4135,25 @@ else
     if ~isempty(aeR)
         caxis(aeR)
     end
-   xlabel('Lateral (mm)');
-   ylabel('Depth (mm)');
-        figure(52)
+    xlabel('Lateral (mm)');
+    ylabel('Depth (mm)');
+    figure(52)
     imshow(Yyz)
     colormap(gca,h)
     if ~isempty(aeR)
         caxis(aeR)
     end
-       xlabel('Elevational (mm)');
-        ylabel('Depth (mm)');
-        figure(53)
+    xlabel('Elevational (mm)');
+    ylabel('Depth (mm)');
+    figure(53)
     imshow(Yxy')
     colormap(gca,h)
     if ~isempty(aeR)
         caxis(aeR)
     end
-         xlabel('Lateral (mm)');
-        ylabel('Elevational (mm)');
-        figure(54)
+    xlabel('Lateral (mm)');
+    ylabel('Elevational (mm)');
+    figure(54)
     imshow(Yzt)
     colormap(gca,h)
     if ~isempty(aeR)
@@ -4131,8 +4161,8 @@ else
     end
     xlim([tInd(1) tInd(end)])
     ylim([zInd(1) zInd(end)])
-      xlabel('Time (ms)');
-         ylabel('Depth (mm)');
+    xlabel('Time (ms)');
+    ylabel('Depth (mm)');
 end
 
 
@@ -4172,14 +4202,14 @@ end
 function MergeHF_Callback(hObject, eventdata, handles)
 n = str2double(handles.numhf.String);
 b = waitbar(0,'Loading');
- for i = 1:n
-[file, path] = uigetfile(fullfile(pwd,'*4d_data.mat'));
-
-load([path file]);
-%assignin('base',['X' num2str(i)],Xfilt)
-X{i} = Xfilt;
-waitbar(i/n,b,'Merging 4d datasets')
- end
+for i = 1:n
+    [file, path] = uigetfile(fullfile(pwd,'*4d_data.mat'));
+    
+    load([path file]);
+    %assignin('base',['X' num2str(i)],Xfilt)
+    X{i} = Xfilt;
+    waitbar(i/n,b,'Merging 4d datasets')
+end
 delete(b)
 assignin('base','Xmerged',X);
 assignin('base','fpath',[path file]);
@@ -4197,12 +4227,12 @@ set(handles.ysamp,'String',num2str([1 length(ax.y)]));
 set(handles.zmm,'String',num2str([ax.depth(1) round(ax.depth(end))]));
 set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
 
-if handles.reset_axes.Value == 1    
-set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
-set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
-set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
-set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
-
+if handles.reset_axes.Value == 1
+    set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
+    set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
+    set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
+    set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+    
 end
 
 
@@ -4684,13 +4714,13 @@ else
 end
 %set(hObject,'Value',str2double(handles.tP.String));
 val = get(hObject,'Value');
-if val < ax.stime(1) || val > ax.stime(end) 
+if val < ax.stime(1) || val > ax.stime(end)
     errordlg('T value outside of range');
     return
 end
 if length(ax.stime) > 1
-inc = ax.stime(2)-ax.stime(1);
-handles.tshifter.SliderStep = [inc/30, inc/3];   
+    inc = ax.stime(2)-ax.stime(1);
+    handles.tshifter.SliderStep = [inc/30, inc/3];
 end
 val = round(val,1);
 val = num2str(val);
@@ -4728,13 +4758,13 @@ else
 end
 %set(hObject,'Value',str2double(handles.zP.String));
 val = get(hObject,'Value');
-if val < ax.depth(1) || val > ax.depth(end) 
+if val < ax.depth(1) || val > ax.depth(end)
     errordlg('Z value outside of range');
     return
 end
 if length(ax.depth) > 1
-inc = ax.depth(2)-ax.depth(1);
-handles.zshifter.SliderStep = [inc/30, inc/3];  
+    inc = ax.depth(2)-ax.depth(1);
+    handles.zshifter.SliderStep = [inc/30, inc/3];
 end
 val = round(val,2);
 val = num2str(val);
@@ -4766,13 +4796,13 @@ else
     ax = evalin('base','ax');
 end
 val = get(hObject,'Value');
-if val < ax.y(1) || val > ax.y(end) 
+if val < ax.y(1) || val > ax.y(end)
     errordlg('Y value outside of range');
     return
 end
 if length(ax.y) > 1
-inc = ax.y(2)-ax.y(1);
-handles.y.SliderStep = [inc/10, inc];  
+    inc = ax.y(2)-ax.y(1);
+    handles.y.SliderStep = [inc/10, inc];
 end
 set(handles.yP,'String',num2str(val));
 set(hObject,'Max',ax.y(end));
@@ -4890,16 +4920,16 @@ if handles.trans.Value == 1
     set(handles.fast_cut1,'String',1);
     set(handles.fast_cut2,'String',4);
 elseif handles.trans.Value == 2
-     set(handles.fast_cut1,'String',2);
+    set(handles.fast_cut1,'String',2);
     set(handles.fast_cut2,'String',4);
 elseif handles.trans.Value == 3
-     set(handles.fast_cut1,'String',0.3);
+    set(handles.fast_cut1,'String',0.3);
     set(handles.fast_cut2,'String',0.9);
 elseif handles.trans.Value == 4
-     set(handles.fast_cut1,'String',0.6);
+    set(handles.fast_cut1,'String',0.6);
     set(handles.fast_cut2,'String',1.4);
 end
-            
+
 % Hints: contents = cellstr(get(hObject,'String')) returns trans contents as cell array
 %        contents{get(hObject,'Value')} returns selected item from trans
 
@@ -4915,3 +4945,12 @@ function trans_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in newaescan.
+function newaescan_Callback(hObject, eventdata, handles)
+% hObject    handle to newaescan (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of newaescan

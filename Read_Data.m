@@ -2,13 +2,13 @@
 %Inputs: fname is the name of the info.txt file
 %        n is the scan point number to grab
 
-function [LF, HF] = Read_Data(fname,ScanPt)
+function [HF, LF] = Read_Data(fname,ScanPt)
 
 if ~exist('ScanPt')
     ScanPt = 1;
 end
 
-froot = fname(1:end-4);
+froot = fname(1:end-9);
 fparam = [froot '_info.mat'];
 fLF = [froot '_LF_Avg.dat'];
 fHF = [froot '_HF_Avg.dat'];
@@ -32,6 +32,7 @@ if ScanPt ~= 0
     
     % Get HF Data
     HF = read_hfdata(fHF,ScanPt);
+    x = 1;
     
     %%%%%%%%%%%
     

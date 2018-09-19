@@ -131,6 +131,9 @@ if mode == 0
     if size(H,2) > size(H,1)
         H = H';
     end
+    if length(H) < size(HF{1,1},1)
+        H = padarray(H,size(HF{1,1},1)-length(H),'pre');
+    end
     
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)

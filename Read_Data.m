@@ -31,7 +31,8 @@ if ScanPt ~= 0
     %%%%%%%%%%%
     
     % Get HF Data
-    HF = read_hfdata(fHF,ScanPt);
+    m = ScanPt;
+    HF = read_hfdata(fHF,m);
     x = 1;
     
     %%%%%%%%%%%
@@ -85,7 +86,7 @@ switch(nver)
     case {140908,160714}
         [hfdata,param] = read_hfdata_v140908(fid);
     case {161108,170103}
-        [hfdata,param] = read_hfdata_v161108(fid,blk_idx);
+        [hfdata,param] = read_hfdata_v161108(fid,ScanPt);
     case 170427
         [hfdata,param] = read_hfdata_v170427(fid,ScanPt);
     otherwise

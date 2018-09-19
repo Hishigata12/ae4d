@@ -7,13 +7,13 @@
 
 function [HF, HF1] = full_signal(loc,param,a,one,new)
 k = param.velmex.XNStep*param.velmex.YNStep;
-if param.velmex.FastAxis == 'X'
+% if param.velmex.FastAxis == 'X'
     fL = param.velmex.XNStep; % gets fast direction scan points
-    sL = param.velmex.YNStep; %gets slow direction scan points
-else
-    fL = param.velmex.YNStep;
-    sL = param.velmex.XNStep;
-end
+    sL = param.velmex.YNStep; % gets slow direction scan points
+% else
+%     fL = param.velmex.YNStep;
+%     sL = param.velmex.XNStep;
+% end
 
 
 %b = waitbar(0);
@@ -48,7 +48,7 @@ else
     for j = 1:sL
         for i = 1:fL
             if new
-                [HF1{i,j}] = Read_Data(loc,(i-1)*sL+j); % Gets data sequentially
+                [HF1{i,j}] = Read_Data(loc,(i)+(fL*(j-1))); % Gets data sequentially
             else
                 [~,HF1{i,j}] = read_ucsdi_data(loc,(i)+(fL*(j-1))); % Gets data sequentially
             end

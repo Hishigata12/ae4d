@@ -85,7 +85,11 @@ if mode == 0
     H1 = padarray(wq,find(Hd == 1,1)-1,'pre');
     H2 = padarray(H1,length(Hd)-length(H1),'post');
     H2 = H2(1:end/2);
-    H2 = [H2; flipud(H2)];
+    H2 = [H2; flipud(H2)]; %cuz im a tricky motha fucka
+    if length(H2) < length(Hd)
+        zp = zeros(length(Hd) - length(H2),1);
+        H2 = [zp; H2];
+    end
     H = Hd.*H2';
     if mod(hsize,2) == 0
         m = 1;

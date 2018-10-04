@@ -175,6 +175,7 @@ elseif mode == 1
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
             y{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);   
+            Q{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);   
         end
     end
     
@@ -186,6 +187,21 @@ elseif mode == 1
         end
        % waitbar(i/HF_xy(1),b,'Slow Time Filtering')
        multiWaitbar('Slow Time Filtering',i/HF_xy(1));
+    end
+    %
+    %Removes DC components
+    Hfilt = ones(1,size(y{1,1},2));
+    Hfilt(1:2) = 0;
+    Hfilt(end-1:end) = 0;
+    for i = 1:HF_xy(1)
+        for j = 1:HF_xy(2)
+            for k = 1:size(y{1,1},1)
+                Q{i,j}(k,:) = fft(y{i,j}(k,:));
+                Q{i,j}(k,:) = Q{i,j}(k,:).*Hfilt;
+                y{i,j}(k,:) = ifft(Q{i,j}(k,:));
+            end
+        end
+         multiWaitbar('Removing DC',i/HF_xy(1));
     end
   %  delete(b)
   lf = LF;

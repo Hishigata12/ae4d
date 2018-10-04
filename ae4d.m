@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 05-Sep-2018 16:01:05
+% Last Modified by GUIDE v2.5 28-Sep-2018 16:53:10
 
 % Begin initialization code - DO NOT EDIT
 
@@ -565,7 +565,6 @@ hf_num = length(a_full);
 %**************************************************************************
 %Builds 4D Matrix***************~~~~~~~~~~~~~~~~**************
 
-
 if isempty(handles.hfchans.String)
     a = 2;
     hf_num = 1;
@@ -575,20 +574,31 @@ for p = 1:hf_num
         a = a_full(p);
     end
     
+    %Gets Raw Data into cell array
     [~, HF1] = full_signal([path file],param,a,handles.onemhz.Value,handles.newaescan.Value); %Gets the raw data
     
-    if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
-        [X, LF] = w_slow_filt2(param,HF1,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
-    elseif handles.slow_box.Value == 1
-        [X, LF] = w_slow_filt2(param, HF1,LF,handles.slow_box.Value);
-    end
-    if handles.match_box.Value == 1
-        X = w_ae_filt2(param,X,PE,1,handles); %Filters in fast time; 0 is match, 1 uses cutoffs
-    end
-    if handles.match_box.Value == 0
-        X = w_ae_filt2(param,X,1,0,handles,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
+    
+    %Filters in Fast Time
+    if handles.ft_on.Value == 1
+        if handles.match_box.Value == 1
+            X = w_ae_filt2(param,HF1,PE,1,handles); %Filters in fast time; 0 is match, 1 uses cutoffs
+        end
+        if handles.match_box.Value == 0
+            X = w_ae_filt2(param,HF1,1,0,handles,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
+        end
     end
     
+    
+      %Filters in Slow Time
+      if handles.st_on.Value == 1
+          if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
+              [X, LF] = w_slow_filt2(param,X,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
+          elseif handles.slow_box.Value == 1
+              [X, LF] = w_slow_filt2(param, X,LF,handles.slow_box.Value);
+          end
+      end
+      
+  
     %%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
     % b = waitbar(0,'Matrix Conversion');
     %    waitbar(0,b,'Enveloping and converting to 4D matrix')
@@ -4447,8 +4457,25 @@ pt = get(gca,'currentpoint');
 
 set(handles.xP,'String',pt(1,1))
 set(handles.zP,'String',pt(1,2))
-
-plot4_Callback(hObject, eventdata, handles);
+if handles.show_fft.Value == 1
+    param = evalin('base','param');
+    if handles.use_chop.Value == 1
+        ax = evalin('base','ax_c');
+    else
+        ax = evalin('base','ax');
+    end
+    yloc = find(ax.depth >= pt(1,2),1);
+    xloc = find(ax.x >= pt(1,1),1);
+    [X,xaxis,yaxis] = plot_fft(param,hObject.CData,1);
+    axes(handles.axes2)
+    plot(yaxis,X(1:length(yaxis),xloc));
+    xlabel('Depth Freq MHz')
+    axes(handles.axes3)
+    plot(xaxis,X(yloc,1:length(xaxis)))
+    xlabel('Lateral Spatial Freq kHz')
+else
+    plot4_Callback(hObject, eventdata, handles);
+end
 
 function Plot4OnClickYZ(hObject,eventdata,handles)
 pt = get(gca,'currentpoint');
@@ -4468,7 +4495,26 @@ function Plot4OnClickTZ(hObject,eventdata,handles)
 pt = get(gca,'currentpoint');
 set(handles.tP,'String',pt(1,1))
 set(handles.zP,'String',pt(1,2))
+if handles.show_fft.Value == 1
+    param = evalin('base','param');
+    if handles.use_chop.Value == 1
+        ax = evalin('base','ax_c');
+    else
+        ax = evalin('base','ax');
+    end
+    yloc = find(ax.depth >= pt(1,2),1);
+    xloc = find(ax.stime >= pt(1,1),1);
+    [X,xaxis,yaxis] = plot_fft(param,hObject.CData,4);
+    axes(handles.axes2)
+    plot(yaxis,X(1:length(yaxis),xloc));
+    xlabel('Depth Freq MHz')
+    axes(handles.axes3)
+    plot(xaxis,X(yloc,1:length(xaxis)))
+    xlabel('SlowTime Freq Hz')
+else
+
 plot4_Callback(hObject, eventdata, handles);
+end
 
 
 
@@ -4954,3 +5000,30 @@ function newaescan_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of newaescan
+
+
+% --- Executes on button press in ft_on.
+function ft_on_Callback(hObject, eventdata, handles)
+% hObject    handle to ft_on (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of ft_on
+
+
+% --- Executes on button press in st_on.
+function st_on_Callback(hObject, eventdata, handles)
+% hObject    handle to st_on (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of st_on
+
+
+% --- Executes on button press in show_fft.
+function show_fft_Callback(hObject, eventdata, handles)
+% hObject    handle to show_fft (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of show_fft

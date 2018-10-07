@@ -26,6 +26,7 @@ if ScanPt ~= 0
     
     nver = fread(fid,1,'int32');
     LF = read_lfdata_v161108(fid,ScanPt);
+    fclose(fid);
     
     
     %%%%%%%%%%%

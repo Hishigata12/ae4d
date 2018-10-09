@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 07-Oct-2018 16:03:02
+% Last Modified by GUIDE v2.5 08-Oct-2018 20:50:13
 
 % Begin initialization code - DO NOT EDIT
 
@@ -5081,17 +5081,23 @@ V = evalin('base','X_c');
 end
 sz = size(V);
 
+V = squeeze(V);
+
+    
 %Calculates J matrix
 if handles.J_mag.Value == 1 %taking only magnitude and not direction of pressure
+    if length(size(V)) == 2
+        P2 = envelope(Pressure);
+    else
     for i = 1:size(Pressure,3)
         P2(:,:,i) = envelope(Pressure(:,:,i)); % Gets env of pressure
+    end
     end
 else
     P2 = Pressure;
 end
 
 if handles.noleadfield.Value == 1 % assuming little variation in lead field matrix
-  
     J = deconvlucy(V,P2); %deconvolues pressure and AE voltage
     assignin('base','J',J);
 else
@@ -5109,3 +5115,16 @@ function calcJ_Callback(hObject, eventdata, handles)
 % hObject    handle to calcJ (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in useJ.
+function useJ_Callback(hObject, eventdata, handles)
+% hObject    handle to useJ (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+J = evalin('base','J');
+if handles.use_chop.Value == 1
+    assignin('base','X_c',J);
+else
+    assignin('base','Xfilt',J);
+end

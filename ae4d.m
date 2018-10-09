@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 28-Sep-2018 16:53:10
+% Last Modified by GUIDE v2.5 07-Oct-2018 16:03:02
 
 % Begin initialization code - DO NOT EDIT
 
@@ -2056,7 +2056,9 @@ else
     hold off
     ylabel('\muV')
     xlabel('mA')
-    axes(handles.axes3)
+    axes(handles.axes3);
+    hold off
+    plot(0)
     hold on
     plot(T_axis,Lnorm,'k')
     plot(T_axis,Snorm,'r')
@@ -2241,13 +2243,16 @@ function reset_button_Callback(hObject, eventdata, handles) %@015
 % handles    structure with handles and user data (see GUIDATA)
 axes(handles.axes2)
 hold off
-plot(0);
+%plot(0);
+cla reset;
 axes(handles.axes3)
 hold off
-plot(0)
+%plot(0);
+cla reset
 axes(handles.axes4)
 hold off
-plot(0)
+%plot(0)
+cla reset
 
 
 % --- Executes during object creation, after setting all properties.
@@ -4088,7 +4093,7 @@ end
 if handles.use_ext_fig.Value == 0
     axes(handles.axes2)
     if size(Yxy,2) == 1
-        Yxy = Yxy';
+        Yxy = Yxy;
     end
     imagesc(ax.x(xInd),ax.y(yInd),(Yxy'),'ButtonDownFcn',{@Plot4OnClickXY,handles})
     colormap(gca,h)
@@ -5027,3 +5032,80 @@ function show_fft_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of show_fft
+
+
+% --- Executes on button press in noleadfield.
+function noleadfield_Callback(hObject, eventdata, handles)
+% hObject    handle to noleadfield (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of noleadfield
+
+
+% --- Executes on button press in leadfield.
+function leadfield_Callback(hObject, eventdata, handles)
+% hObject    handle to leadfield (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in pressurefield.
+function pressurefield_Callback(hObject, eventdata, handles)
+% hObject    handle to pressurefield (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+[f,  p] = uigetfile(fullfile(pwd,'*.mat'));
+cd(p)
+fprintf('Loading 3D Pressure Field...')
+load([p f]);
+fprintf('Done\n')
+assignin('base','Pressure',Pressure);
+
+
+% --- Executes on button press in J_mag.
+function J_mag_Callback(hObject, eventdata, handles)
+% hObject    handle to J_mag (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if ~exist('base','Pressure')
+    errordlg('Need to load pressure matrix first');
+else
+Pressure = evalin('base','Pressure');
+end
+if handles.use_chop == 0
+V = evalin('base','Xfilt');
+else
+V = evalin('base','X_c');
+end
+sz = size(V);
+
+%Calculates J matrix
+if handles.J_mag.Value == 1 %taking only magnitude and not direction of pressure
+    for i = 1:size(Pressure,3)
+        P2(:,:,i) = envelope(Pressure(:,:,i)); % Gets env of pressure
+    end
+else
+    P2 = Pressure;
+end
+
+if handles.noleadfield.Value == 1 % assuming little variation in lead field matrix
+  
+    J = deconvlucy(V,P2); %deconvolues pressure and AE voltage
+    assignin('base','J',J);
+else
+    J1 = deconvlucy(V,P2);
+    L = evalin('base','L');
+    L1 = inv(L);
+    J = L1*J;
+    assignin('base','J',J)
+end
+% Hint: get(hObject,'Value') returns toggle state of J_mag
+
+
+% --- Executes on button press in calcJ.
+function calcJ_Callback(hObject, eventdata, handles)
+% hObject    handle to calcJ (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

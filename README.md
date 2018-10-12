@@ -2,6 +2,7 @@
 Used for up to 4 dimensional processing of acoustoelectric data
 
 %%%%% Basic Usage %%%%%
+
 ***Creating filtered 4D AE Matrix***
 Top left ==> Choosing filters
 In order to use a fast or slow time filter, check their corresponding On boxes.

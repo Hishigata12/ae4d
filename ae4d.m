@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 08-Oct-2018 20:50:13
+% Last Modified by GUIDE v2.5 12-Oct-2018 13:25:53
 
 % Begin initialization code - DO NOT EDIT
 
@@ -59,7 +59,7 @@ function varargout = ae4d(varargin)
 % @030 = T shift slider
 % @031 = Z shift slider
 % @032 = Y shift slider
-% @033 = Stich for fusing two images
+% @033 = Stitch for fusing two images
 
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
@@ -588,7 +588,7 @@ for p = 1:hf_num
         end
     end
     
-    
+    LF = padarray(LF,length(LF));
       %Filters in Slow Time
       if handles.st_on.Value == 1
           if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
@@ -596,6 +596,9 @@ for p = 1:hf_num
           elseif handles.slow_box.Value == 1
               [X, LF] = w_slow_filt2(param, X,LF,handles.slow_box.Value);
           end
+      end
+      if handles.st_on.Value == 0 & handles.ft_on.Value == 0
+          X = HF1;
       end
       
   
@@ -690,7 +693,7 @@ for p = 1:hf_num
         end
     end
     
-    if length(size(XF2)) <4
+    if length(size(XF2)) < 4
         HF = permute(XF2,[1 4 2 3]);
     else
         HF = XF2;
@@ -1922,7 +1925,13 @@ function sense_button_Callback(hObject, eventdata, handles) %@013
 % hObject    handle to sense_button (see GCBO)
 %datacursormode on
 %dcm = datacursormode(gcf);
-[x,y] = ginput(1);
+if handles.keep_box.Value == 0
+    [x,y] = ginput(1);
+else
+    x = str2double(get(handles.tP,'String'));
+    y = str2double(get(handles.zP,'String'));
+end
+    
 if handles.use_chop.Value == 0
     Xfilt = evalin('base','Xfilt');
     param = evalin('base','param');
@@ -2100,7 +2109,20 @@ p = 7;
 
 % --- Executes on button press in fwhm_button.
 function fwhm_button_Callback(hObject, eventdata, handles) %@014
+if handles.keep_box.Value == 0
 [x,y] = ginput(1);
+else
+    if handles.plotbox1.Value == 3
+        x = str2double(get(handles.xP,'String'));
+        y = str2double(get(handles.zP,'String'));
+    elseif handles.plotbox1.Value == 5
+         x = str2double(get(handles.yP,'String'));
+        y = str2double(get(handles.zP,'String'));
+    elseif handles.plotbox1.Value == 2
+         x = str2double(get(handles.xP,'String'));
+        y = str2double(get(handles.yP,'String'));
+    end
+end
 
 C = handles.axes1.Children.CData; %Gets image data, Y is dim 1, X is dim 2
 xax = handles.axes1.Children.XData;
@@ -5048,6 +5070,12 @@ function leadfield_Callback(hObject, eventdata, handles)
 % hObject    handle to leadfield (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+[f,  p] = uigetfile(fullfile(pwd,'*.mat'));
+cd(p)
+fprintf('Loading 3D Pressure Field...')
+load([p f]);
+fprintf('Done\n')
+assignin('base','L',LEAD_FIELD_Matrix);
 
 
 % --- Executes on button press in pressurefield.
@@ -5069,44 +5097,7 @@ function J_mag_Callback(hObject, eventdata, handles)
 % hObject    handle to J_mag (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-if ~exist('base','Pressure')
-    errordlg('Need to load pressure matrix first');
-else
-Pressure = evalin('base','Pressure');
-end
-if handles.use_chop == 0
-V = evalin('base','Xfilt');
-else
-V = evalin('base','X_c');
-end
-sz = size(V);
 
-V = squeeze(V);
-
-    
-%Calculates J matrix
-if handles.J_mag.Value == 1 %taking only magnitude and not direction of pressure
-    if length(size(V)) == 2
-        P2 = envelope(Pressure);
-    else
-    for i = 1:size(Pressure,3)
-        P2(:,:,i) = envelope(Pressure(:,:,i)); % Gets env of pressure
-    end
-    end
-else
-    P2 = Pressure;
-end
-
-if handles.noleadfield.Value == 1 % assuming little variation in lead field matrix
-    J = deconvlucy(V,P2); %deconvolues pressure and AE voltage
-    assignin('base','J',J);
-else
-    J1 = deconvlucy(V,P2);
-    L = evalin('base','L');
-    L1 = inv(L);
-    J = L1*J;
-    assignin('base','J',J)
-end
 % Hint: get(hObject,'Value') returns toggle state of J_mag
 
 
@@ -5115,6 +5106,93 @@ function calcJ_Callback(hObject, eventdata, handles)
 % hObject    handle to calcJ (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+% if ~exist('base','Pressure')
+%     errordlg('Need to load pressure matrix first');
+% else
+Pressure = evalin('base','Pressure');
+% end
+if handles.use_chop == 0
+V = evalin('base','Xfilt');
+ax = evalin('base','ax');
+else
+V = evalin('base','X_c');
+ax = evalin('base','ax_c');
+end
+sz = size(V);
+
+t = str2double(get(handles.tP,'String'));
+if length(ax.stime) > 1
+    t0 = find(ax.stime >= t,1);
+    V = V(:,:,:,t0);
+end
+    
+
+V = squeeze(V);
+Pressure = squeeze(Pressure);
+%Temp Code
+%Pressure = Pressure(:,:,:,467:734);
+%
+%Calculates J matrix
+dec = floor(size(Pressure,4)/size(Pressure,3));
+for i = 1:size(Pressure,3)
+    Pressure(:,:,i,1) = Pressure(:,:,i,i*dec);
+    multiWaitbar('Compressing Pressure Matrix',i/size(Pressure,3));
+end
+Pressure = Pressure(:,:,:,1);
+
+if handles.J_mag.Value == 1 %taking only magnitude and not direction of pressure
+    if length(size(V)) == 2
+        P2 = envelope(Pressure);
+    else
+        for i = 1:size(Pressure,3)
+            P2(:,:,i) = envelope(Pressure(:,:,i)); % Gets env of pressure
+        end
+    end
+else
+    P2 = Pressure;
+end
+
+% figure;
+% for i = 1:63
+%     imagesc(squeeze(Pressure(:,:,i)))
+%       title(i);
+%     drawnow;
+%     pause(0.1)
+% end
+    
+
+
+dims = size(P2);
+in = length(P2)/length(V);
+
+[x, y, z] = meshgrid(1:dims(2),1:dims(1),1:dims(3));
+[x2, y2, z2] = meshgrid(1:(1/in):dims(2),1:(1/in):dims(1),1:(1/in):dims(3));
+P2(:,:,:) = interp3(x,y,z,P2(:,:,:),x2,y2,z2);
+
+keep = find(max(max(P2)) ~= 0);
+P3 = P2(:,:,keep);
+
+
+J = zeros(size(V));
+if handles.noleadfield.Value == 1 % assuming little variation in lead field matrix
+%     for i = 1:size(V,3)
+%         if max(max(abs(P2(:,:,i)))) == 0
+%             J(:,:,i) = zeros(size(J,1),size(J,2));
+%         else
+        J(:,:,:) = deconvlucy(V(:,:,:),P3(:,:,:)); %deconvolues pressure and AE voltage
+       
+%         multiWaitbar('Deconvolving',i/size(Pressure,3));
+%     end
+   
+     assignin('base','J',J);
+      multiWaitbar('CLOSEALL');
+else
+    J1 = deconvlucy(V,P2);
+    L = evalin('base','L');
+    L1 = inv(L);
+    J = L1*J;
+    assignin('base','J',J)
+end
 
 
 % --- Executes on button press in useJ.
@@ -5123,8 +5201,20 @@ function useJ_Callback(hObject, eventdata, handles)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 J = evalin('base','J');
+if length(size(J)) == 2
+    J = permute(J,[1 3 2]);
+end
 if handles.use_chop.Value == 1
     assignin('base','X_c',J);
 else
     assignin('base','Xfilt',J);
 end
+
+
+% --- Executes on button press in keep_box.
+function keep_box_Callback(hObject, eventdata, handles)
+% hObject    handle to keep_box (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of keep_box

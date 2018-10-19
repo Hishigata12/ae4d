@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 12-Oct-2018 13:25:53
+% Last Modified by GUIDE v2.5 17-Oct-2018 23:19:31
 
 % Begin initialization code - DO NOT EDIT
 
@@ -588,7 +588,7 @@ for p = 1:hf_num
         end
     end
     
-    LF = padarray(LF,length(LF));
+    %LF = padarray(LF,length(LF));
       %Filters in Slow Time
       if handles.st_on.Value == 1
           if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
@@ -2348,7 +2348,7 @@ if length(str2num(handles.baseb.String)) == 1
             if length(size(squeeze(S))) < 4
                 for i = 1:size(S,4)
                     S = squeeze(S);
-                    S2(:,1,:,i) = medfilt2(S(:,:,i),[5 5]);
+                    S2(:,1,:,i) = medfilt2(S(:,:,i),[5 5]); %Smooths out signal
                     S2(:,1,:,i) = medfilt2(S(:,:,i),[3,3]);
                 end
                 S = S2;
@@ -4066,7 +4066,7 @@ q.z = 1:dims(3);
 if length(size(Xfilt)) > 3
     q.t = 1:dims(4);
 end
-xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
+xInd = find(ax.x >= xR(1)):find(ax.x >= xR(2));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
 zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 if length(size(Xfilt)) > 3
@@ -4244,7 +4244,7 @@ for i = 1:n
     
     load([path file]);
     %assignin('base',['X' num2str(i)],Xfilt)
-    X{i} = Xfilt;
+    X(:,:,:,:,i) = Xfilt;
     waitbar(i/n,b,'Merging 4d datasets')
 end
 delete(b)
@@ -4324,10 +4324,10 @@ end
 function usechan_Callback(hObject, eventdata, handles)
 m = str2double(handles.channel.String);
 Xmerged = evalin('base','Xmerged');
-if m > length(Xmerged)
+if m > size(Xmerged,5)
     errordlg('Your selected value exceeds the number of channels');
 end
-X = Xmerged{m};
+X = Xmerged(:,:,:,:,m);
 assignin('base','Xfilt',X)
 set(handles.active_xfilt,'String','AE');
 if ~isempty(handles.hfchans.String)
@@ -4381,7 +4381,7 @@ if length(tR) == 1
     LF_butt_Callback(hObject, eventdata, handles)
 else
     q.t = 1:param.daq.LFdaq.pts;
-    ax.lf = linspace(0,param.daq.duration_ms,param.daq.LFdaq.pts);
+    ax.lf = linspace(0,param.Scan.Duration_ms,param.daq.LFdaq.pts);
     tInd = q.t(find(ax.lf >= tR(1),1):find(ax.lf >= tR(2),1));
     b1 = min(LF); b2 = max(LF);
     b = param.daq.LFdaq.pts/param.daq.HFdaq.NoBurstTriggers;
@@ -4455,17 +4455,17 @@ else
 end
 
 
-% --- Executes on button press in pushbutton36.
+% --- Executes on button press in pushbutton36. %Returns xfilt to xmerged
 function pushbutton36_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value == 1
     X = evalin('base','X_c');
     Xmerged = evalin('base','Xmerged');
-    Xmerged{str2double(handles.channel.String)} = X;
+    Xmerged(:,:,:,:,str2double(handles.channel.String)) = X;
     assignin('base','Xmerged',Xmerged);
 else
     X = evalin('base','Xfilt');
     Xmerged = evalin('base','Xmerged');
-    Xmerged{str2double(handles.channel.String)} = X;
+    Xmerged(:,:,:,:,str2double(handles.channel.String)) = X;
     assignin('base','Xmerged',Xmerged);
 end
 
@@ -5072,10 +5072,10 @@ function leadfield_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 [f,  p] = uigetfile(fullfile(pwd,'*.mat'));
 cd(p)
-fprintf('Loading 3D Pressure Field...')
+fprintf('Loading 3D Lead Field...')
 load([p f]);
 fprintf('Done\n')
-assignin('base','L',LEAD_FIELD_Matrix);
+assignin('base','L',L);
 
 
 % --- Executes on button press in pressurefield.
@@ -5087,9 +5087,9 @@ function pressurefield_Callback(hObject, eventdata, handles)
 [f,  p] = uigetfile(fullfile(pwd,'*.mat'));
 cd(p)
 fprintf('Loading 3D Pressure Field...')
-load([p f]);
+load([p f],'USP_Mat_63_63_63_1201');
 fprintf('Done\n')
-assignin('base','Pressure',Pressure);
+assignin('base','Pressure',USP_Mat_63_63_63_1201);
 
 
 % --- Executes on button press in J_mag.
@@ -5109,89 +5109,378 @@ function calcJ_Callback(hObject, eventdata, handles)
 % if ~exist('base','Pressure')
 %     errordlg('Need to load pressure matrix first');
 % else
-Pressure = evalin('base','Pressure');
-% end
-if handles.use_chop == 0
-V = evalin('base','Xfilt');
-ax = evalin('base','ax');
-else
-V = evalin('base','X_c');
-ax = evalin('base','ax_c');
-end
-sz = size(V);
 
-t = str2double(get(handles.tP,'String'));
-if length(ax.stime) > 1
-    t0 = find(ax.stime >= t,1);
-    V = V(:,:,:,t0);
-end
-    
 
-V = squeeze(V);
+if handles.solve_v.Value == 1
+    L = evalin('base','L');
+    J = evalin('base','J');
+    Pressure = evalin('base','Pressure');
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%PRESSURE%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 Pressure = squeeze(Pressure);
-%Temp Code
-%Pressure = Pressure(:,:,:,467:734);
-%
-%Calculates J matrix
-dec = floor(size(Pressure,4)/size(Pressure,3));
-for i = 1:size(Pressure,3)
-    Pressure(:,:,i,1) = Pressure(:,:,i,i*dec);
-    multiWaitbar('Compressing Pressure Matrix',i/size(Pressure,3));
-end
-Pressure = Pressure(:,:,:,1);
 
+% dec = floor(size(Pressure,4)/size(Pressure,3));
+% for i = 1:size(Pressure,3)
+%     Pressure(:,:,i,1) = Pressure(:,:,i,i*dec);
+%     multiWaitbar('Compressing Pressure Matrix',i/size(Pressure,3));
+% end
+
+%Pressure = Pressure(:,:,:,650);
+Pressure = Pressure(:,:,32,600:700);
 if handles.J_mag.Value == 1 %taking only magnitude and not direction of pressure
-    if length(size(V)) == 2
-        P2 = envelope(Pressure);
-    else
-        for i = 1:size(Pressure,3)
-            P2(:,:,i) = envelope(Pressure(:,:,i)); % Gets env of pressure
-        end
+    for i = 1:size(Pressure,3)
+        P2(:,:,i) = envelope(Pressure(:,:,i)); % Gets env of pressure
     end
 else
     P2 = Pressure;
 end
 
+%P2 = squeeze(P2(:,:,1,20:30));
+P2 = squeeze(P2(:,:,1,linspace(10,40,11)));
 % figure;
-% for i = 1:63
-%     imagesc(squeeze(Pressure(:,:,i)))
+% for i = 20:30
+%     imagesc(squeeze(P2(:,:,i)))
 %       title(i);
 %     drawnow;
 %     pause(0.1)
 % end
+% 
+% 
+% 
+% dims = size(P2);
+% 
+
+% 
+% keep = find(max(max(P4)) ~= 0);
+% P3 = P4(:,:,keep);
+
+% Psize = round(size(P4)/3);
+% clear P4
+% P4 = P3(Psize(1):end-Psize(1),Psize(2):end-Psize(2),:);
+% clear P3
+%P3 = P4;
+vol = 5;
+Pmid = floor(size(P2,1)/2);
+Pmid3 = floor(size(P2,3)/2);
+P3 = P2(Pmid-vol:Pmid+vol,Pmid-vol:Pmid+vol,:);
+P2 = P3 - mean(mean(mean(P3)));
+clear P3
+[x, y, z] = meshgrid(1:size(P2,2),1:size(P2,1),1:size(P2,3));
+[x2, y2, z2] = meshgrid(linspace(1,size(P2,2),size(P2,2)),linspace(1,size(P2,1),size(P2,1)),linspace(1,size(P2,3),size(P2,3)*5));
+P3(:,:,:) = interp3(x,y,z,P2(:,:,:),x2,y2,z2);
+
+%%%%%%%% END PRESSURE %%%%%%%%%
+% figure
+% for i = 1:size(Pressure,3)
+%     imagesc(squeeze(Pressure(:,:,i,650)))
+%     title(i)
+%     drawnow;
+%     pause(0.1)
+% end
+[x, y, z] = meshgrid(1:size(L,2),1:size(L,1),1:size(L,3));
+[x2, y2, z2] = meshgrid(linspace(1,size(L,2),size(L,2)),linspace(1,size(L,1),size(L,1)),linspace(1,size(L,3),size(L,3)*5));
+for i = 1:size(L,4)
+    for j = 1:size(L,5)
+L2(:,:,:,i,j) = interp3(x,y,z,L(:,:,:,i,j),x2,y2,z2);
+J2(:,:,:,j) = interp3(x,y,z,J(:,:,:,j),x2,y2,z2);
+    end
+end
+clear L J P2
+L = L2;
+J = J2;
+clear L2 J2
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%Solving for V%%%%%%%%%
+h = vol;
+w = vol;
+l = 27;
+for i = 1:size(J,1)
+    for j = 1:size(J,2)
+        for k = 1:size(J,3)
+            for m = 1:size(L,5)
+                if i > h && j > w && k > l && i < size(J,1)-h && j < size(J,2)-w && k < size(J,3) - l
+                 %  temp = convn(dot(squeeze(J(i-h:i+h,j-w:j+w,k-l:k+l,:)),squeeze(L(i-h:i+h,j-w:j+w,k-l:k+l,:,m)),4),P3);
+                   temp = dot(squeeze(J(i-h:i+h,j-w:j+w,k-l:k+l,:)),squeeze(L(i-h:i+h,j-w:j+w,k-l:k+l,:,m)),4).*P3;
+                   N = numel(temp);
+                   V(i,j,k,m) = sum(reshape(temp,[N 1]));
+                    %V(i,j,k,m) = sum(convn(dot(squeeze(J(i-h:i+h,j-w:j+w,k-l:k+l,:)),squeeze(L(i-h:i+h,j-w:j+w,k-l:k+l,:,m)),4),P3),'all');
+                else
+                   % temp = convn(dot(squeeze(J(i-(h-(h-i+1)):i+(h-(h-i+1)),j-(w-(w-j+1)):j+(w-(w-j+1)),k-(l-(l-k+1)):k+(l-(l-k+1)),:)),squeeze(L(i-(h-(h-i+1)):i+(h-(h-i+1)),j-(w-(w-j+1)):j+(w-(w-j+1)),k-(l-(l-k+1)):k+(l-(l-k+1)),:,m)),4),P3);
+                     temp = dot(squeeze(J(i,j,k,:)),squeeze(L(i,j,k,:,m)));
+                    N = numel(temp);
+                    V(i,j,k,m) = sum(reshape(temp,[N 1]));
+                end
+            end
+        end
+    end
+    multiWaitbar('Calculating V',i/size(J,1));
+end
+assignin('base','V',V);
+multiWaitbar('CLOSEALL');
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+else %%%% SOLVING FOR J USING Vmeasured P and L    
+Pressure = evalin('base','Pressure');
+% end
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%Process Voltage Data%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+if handles.mergev.Value == 0
+    if handles.use_chop == 0
+        V = evalin('base','Xfilt');
+        ax = evalin('base','ax');
+    else
+        V = evalin('base','X_c');
+        ax = evalin('base','ax_c');
+    end
+    sz = size(V);
     
+    t = str2double(get(handles.tP,'String'));
+    if length(ax.stime) > 1
+        t0 = find(ax.stime >= t,1);
+        V = V(:,:,:,t0);
+    end
+    
+    V = squeeze(V);
+else
+    V5 = evalin('base','Xmerged');
+    ax = evalin('base','ax_c');
+    t = str2double(get(handles.tP,'String'));
+    if length(ax.stime) > 1
+        t0 = find(ax.stime >= t,1);
+        for i = 1:size(V5,5)
+            V(:,:,:,i) = squeeze(V5(:,:,:,t0,i));
+        end
+    else
+        V = squeeze(V5);
+    end
+end
+
+% T = 2^nextpow2(size(V,3));
+% v = fft(V,T,3);
+% % v = circshift(v,floor(T/2),3);
+% figure; plot(linspace(-10,10,T),squeeze(abs(v(1,1,:))))
+% v2 = 2*v;
+% v2(:,:,1) = v2(:,:,1)/2;
+% v2(:,:,ceil(T/2):end) = 0;
+% figure; plot(linspace(-10,10,T),squeeze(abs(v2(1,1,:))))
+% 
+% t1 = squeeze(V(1,1,:));
+% % figure; plot(t1);
+% t2 = hilbert(t1);
+% % figure; plot(real(t2))
+% % figure; plot(imag(t2))
+% t3 = t1+t2;
+% t = linspace(1,size(V,3),size(V,3))/20; %This is hard coded right now
+% % t4 = t3.*exp(-1j*2*pi.*t'*9);%str2double(handles.baseb.String));
+% % T1 = fft(t3);
+% % T2 = fft(t4);
+% % figure; plot(abs(T2));
+% Rp = (10^(0.01/20) - 1)/(10^(0.01/20) + 1);
+% Rst = 10^(-60/20);
+% F = firceqrip(40,2/(20/2),[Rp Rst],'passedge');
+% LP = dsp.FIRFilter('Numerator',F);
+% % p1 = hilbert(V);
+% % p2 = V+p1;
+% 
+% for i = 1:size(V,1)
+%     for j = 1:size(V,2)
+%         for k = 1:size(V,4)
+%             if handles.J_mag.Value == 0
+%             p1(i,j,:,k) = hilbert(V(i,j,:,k));
+%           %  p2(i,j,:,k) = p1(i,j,:,k) + V(i,j,:,k);
+%             p4(i,j,:,k) = squeeze(p1(i,j,:,k)).*exp(-1j*2*pi.*t'*str2double(handles.baseb.String));%str2double(handles.baseb.String));
+% %             P4(i,j,:,k) = fft(p4(i,j,:,k));
+%             p5(i,j,:,k) = LP(squeeze(p4(i,j,:,k)));
+%             phas(i,j,:,k) = atan(imag(p5(i,j,:,k))./real(p5(i,j,:,k)));
+%             if handles.signed_env.Value == 1
+%                 Penv(i,j,:,k) = envelope(squeeze(V(i,j,:,k)));
+%             end
+%             else
+%                  Penv(i,j,:,k) = envelope(squeeze(V(i,j,:,k)));
+%             end
+%         end
+%     end
+%     multiWaitbar('Getting envelope of V',i/size(V,1));
+% end
+% S = sign(phas);
+% %S = sign(imag(p4));
+% for i = size(S,4)
+%     S(:,:,:,i) = medfilt3(S(:,:,:,i),[5 5 5]);
+%     S(:,:,:,i) = medfilt3(S(:,:,:,i),[3 3 3]);
+% end
+% if handles.signed_env.Value == 1 & handles.J_mag.Value == 0;
+% V = Penv;
+% elseif handles.signed_env.Value == 0 & handles.J_mag.Value == 0;
+% V = p5;
+% end
+% clear p1 p2 P4
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %%%%%%%%%%PRESSURE%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Pressure = squeeze(Pressure);
+
+% dec = floor(size(Pressure,4)/size(Pressure,3));
+% for i = 1:size(Pressure,3)
+%     Pressure(:,:,i,1) = Pressure(:,:,i,i*dec);
+%     multiWaitbar('Compressing Pressure Matrix',i/size(Pressure,3));
+% end
+
+Pressure = Pressure(:,:,32,620:680);
 
 
-dims = size(P2);
-in = length(P2)/length(V);
 
-[x, y, z] = meshgrid(1:dims(2),1:dims(1),1:dims(3));
-[x2, y2, z2] = meshgrid(1:(1/in):dims(2),1:(1/in):dims(1),1:(1/in):dims(3));
-P2(:,:,:) = interp3(x,y,z,P2(:,:,:),x2,y2,z2);
+if handles.J_mag.Value == 1 %taking only magnitude and not direction of pressure
+if length(size(V)) == 2
+    P2 = envelope(Pressure);
+else
+    for i = 1:size(Pressure,3)
+        P3(:,:,i) = squeeze(envelope(Pressure(:,:,i))); % Gets env of pressure
+    end
+end
+else
+    P3 = squeeze(Pressure);
+end
 
-keep = find(max(max(P2)) ~= 0);
-P3 = P2(:,:,keep);
+% P2 = squeeze(P2(:,:,1,linspace(10,40,11)));
+% vol = 5;
+% Pmid = floor(size(P2,1)/2);
+% Pmid3 = floor(size(P2,3)/2);
+% P3 = P2(Pmid-vol:Pmid+vol,Pmid-vol:Pmid+vol,:);
+
+% dims = size(P2);
+% in = length(V)/length(P2);
+% 
+% [x, y, z] = meshgrid(1:dims(2),1:dims(1),1:dims(3));
+% [x2, y2, z2] = meshgrid(linspace(1,dims(2),size(V,2)),linspace(1,dims(1),size(V,1)),linspace(1,dims(3),size(V,3)));
+% P4(:,:,:) = interp3(x,y,z,P2(:,:,:),x2,y2,z2);
+% 
+% keep = find(max(max(P4)) ~= 0);
+% P3 = P4(:,:,keep);
+% 
+% Psize = size(P4)/4;
+% clear P4
+% P4 = P3(Psize(1):end-Psize(1),Psize(2):end-Psize(2),:);
+% P3 = P4;
+%%%%%%%% END PRESSURE %%%%%%%%%
 
 
 J = zeros(size(V));
 if handles.noleadfield.Value == 1 % assuming little variation in lead field matrix
-%     for i = 1:size(V,3)
-%         if max(max(abs(P2(:,:,i)))) == 0
-%             J(:,:,i) = zeros(size(J,1),size(J,2));
-%         else
-        J(:,:,:) = deconvlucy(V(:,:,:),P3(:,:,:)); %deconvolues pressure and AE voltage
-       
-%         multiWaitbar('Deconvolving',i/size(Pressure,3));
-%     end
-   
-     assignin('base','J',J);
-      multiWaitbar('CLOSEALL');
+    %     for i = 1:size(V,3)
+    %         if max(max(abs(P2(:,:,i)))) == 0
+    %             J(:,:,i) = zeros(size(J,1),size(J,2));
+    %         else
+    if handles.mergev.Value == 0
+        J(:,:,:) = deconvlucy(real(V(:,:,:)),P3(:,:,:)); %deconvolues pressure and AE voltage
+    else
+        for i = 1:size(V,4)
+            J(:,:,:,i) = deconvlucy(real(V(:,:,:,i)),P3(:,:,:));
+        end
+        J = mean(J,4);
+    end
+    
+    %         multiWaitbar('Deconvolving',i/size(Pressure,3));
+    %     end
+    %J = J+max(max(max(J)))/1e6; %This cancels the Infinity effect from using a magnitude pressure field
+%     J = p4;
+%     J = Penv;
+ %   J = 20*log10(J./max(max(max(J))));
+%    J = J.*S;
+    assignin('base','J',J);
+    multiWaitbar('CLOSEALL');
 else
-    J1 = deconvlucy(V,P2);
-    L = evalin('base','L');
-    L1 = inv(L);
-    J = L1*J;
+    L2 = evalin('base','L');
+    %Deconvolves P from V
+    %Interpolates L to fit J1
+    if handles.mergev.Value == 0
+        J1(:,:,:) = deconvlucy(real(V(:,:,:)),P3(:,:,:));
+        Jsize = size(J1);
+        Lsize = size(L2);
+        [x, y, z] = meshgrid(1:Lsize(2),1:Lsize(1),1:Lsize(3));
+        [x2, y2, z2] = meshgrid(linspace(1,Lsize(2),size(V,2)),linspace(1,Lsize(1),size(V,1)),linspace(1,Lsize(3),size(V,3)));
+        for i = 1:3
+            L(:,:,:,i) = interp3(x,y,z,L2(:,:,:,i),x2,y2,z2);
+            multiWaitbar('Interpolating Lead Field',i/3);
+        end
+    else
+        for i = 1:size(V,4)
+            J1(:,:,:,i) = deconvlucy(V(:,:,:,i),P3);
+            Lsize = size(L2);
+            [x, y, z] = meshgrid(1:Lsize(2),1:Lsize(1),1:Lsize(3));
+            [x2, y2, z2] = meshgrid(linspace(1,Lsize(2),size(V,2)),linspace(1,Lsize(1),size(V,1)),linspace(1,Lsize(3),size(V,3)));
+            for j = 1:3
+                L(:,:,:,j,i) = interp3(x,y,z,squeeze(L2(:,:,:,j,i)),x2,y2,z2);
+            end
+            multiWaitbar('Deconvolving',i/size(V,4));
+        end
+    end
+    % Inverts L and multiplies with J1 to get J(x,y,z)
+    if handles.mergev.Value == 0
+        for i = 1:3
+            for j = 1:size(L,3)
+                J(:,:,j,i) = (L(:,:,j,i))\J1(:,:,j);
+            end
+            multiWaitbar('Solving Current Density',i/3);
+        end
+%         if handles.J_mag.Value == 1
+%             for i = 1:size(J,1)
+%                 for j = 1:size(J,2)
+%                     for k = 1:size(J,3)
+%                         J2(i,j,k) = sqrt(J(i,j,k,1)^2+J(i,j,k,2)^2+J(i,j,k,3)^2);
+%                     end
+%                 end
+%                 multiWaitbar('Converting to Magnitude',i/size(J,1));
+%             end
+%             clear J;
+%             J = J2;
+%         end
+    else
+        for m = 1:size(J,1)
+            for j = 1:size(J,2)
+                for k = 1:size(J,3)
+                    J(m,j,k,:) = squeeze(L(m,j,k,:,:))\squeeze(J1(m,j,k,:));
+                end
+            end
+            multiWaitbar('Solving for J', m/size(J,1));
+        end
+        %         for i = 1:size(L,5)
+        %             Lx{i} = pinv(L(:,:,:,1,i));
+        %             Ly{i} = pinv(L(:,:,:,2,i));
+        %             Lz{i} = pinv(L(:,:,:,3,i));
+        %             Jx{i} = Lx{i}.*J1{i};
+        %             Jy{i} = Ly{i}.*J1{i};
+        %             Jz{i} = Lz{i}.*J1{i};
+        %             if handles.J_mag.Value == 1
+        %                 for m = 1:size(J,1)
+        %                     for j = 1:size(J,2)
+        %                         for k = 1:size(J,3)
+        %                             J{i}(m,j,k) = sqrt(J{i}(m,j,k,1)^2+J{i}(m,j,k,2)^2+J{i}(m,j,k,3)^2);
+        %                         end
+        %                     end
+        %                 end
+        %             end
+        %         end
+    end
+    
+    %     Lsize = size(Linv,1)/3;
+    %     L1 = reshape(Linv,[3,Lsize,size(L1,2)]);
+    %     J = L1.*J1;
+    J = real(J);
+%     J = J+max(max(max(max(J))))/1e6; 
+%     J = 20*log10(J./max(max(max(max(J)))));
+%     J = J.*S;
     assignin('base','J',J)
+    multiWaitbar('CLOSEALL');
+end
 end
 
 
@@ -5204,6 +5493,27 @@ J = evalin('base','J');
 if length(size(J)) == 2
     J = permute(J,[1 3 2]);
 end
+
+if handles.jx.Value == 1
+    J = J(:,:,:,1);
+elseif handles.jy.Value == 1
+    J = J(:,:,:,2);
+elseif handles.jz.Value == 1
+    J = J(:,:,:,3);
+else
+    for i = 1:size(J,1)
+        for j = 1:size(J,2)
+            for k = 1:size(J,3)
+                J2(i,j,k) = sqrt(J(i,j,k,1)^2+J(i,j,k,2)^2+J(i,j,k,3)^2);
+            end
+        end
+        multiWaitbar('Converting to Magnitude',i/size(J,1));
+    end
+    multiWaitbar('CLOSEALL');
+    clear J;
+    J = J2;
+end
+
 if handles.use_chop.Value == 1
     assignin('base','X_c',J);
 else
@@ -5218,3 +5528,48 @@ function keep_box_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of keep_box
+
+
+% --- Executes on button press in mergev.
+function mergev_Callback(hObject, eventdata, handles)
+% hObject    handle to mergev (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of mergev
+
+
+% --- Executes on button press in jx.
+function jx_Callback(hObject, eventdata, handles)
+% hObject    handle to jx (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of jx
+
+
+% --- Executes on button press in jy.
+function jy_Callback(hObject, eventdata, handles)
+% hObject    handle to jy (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of jy
+
+
+% --- Executes on button press in jz.
+function jz_Callback(hObject, eventdata, handles)
+% hObject    handle to jz (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of jz
+
+
+% --- Executes on button press in solve_v.
+function solve_v_Callback(hObject, eventdata, handles)
+% hObject    handle to solve_v (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of solve_v

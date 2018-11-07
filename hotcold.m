@@ -17,8 +17,8 @@ function h = hotcold(m)
 if nargin < 1, m = size(get(gcf,'colormap'),1); end
 n = fix(1/4*m);p=fix(1/4*m);
 
-r = [zeros(2*n,1);(1:n)'/n; ones(n,1)];
-g = [1-(1:n)'/n;zeros(2*n,1);(1:n)'/n];
-b = [ones(n,1);1-(1:n)'/n;zeros(2*n,1)];
+r = [zeros(2*n,1);0;(1:n)'/n; ones(n,1)];
+g = [1-(0:n-1)'/n;zeros(2*n,1);0;(1:n)'/n];
+b = [ones(n,1);1-(0:n-1)'/n;0;zeros(2*n,1)];
 
 h = [r g b];

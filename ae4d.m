@@ -20,7 +20,7 @@ function varargout = ae4d(varargin)
 %
 % See also: GUIDE, GUIDATA, GUIHANDLES
 
-% Edit the above text to modify the response to help ae4d
+% Edit the above text to modify the response to helpf ae4d
 
 % Last Modified by GUIDE v2.5 17-Oct-2018 23:19:31
 
@@ -363,7 +363,7 @@ end
 % end
 
 if handles.hotcold.Value == 1
-    h = hotcoldDB;
+    h = hotcold;
 elseif handles.graybox.Value == 1
     h = 'gray';
 else
@@ -5334,18 +5334,20 @@ Pressure = squeeze(Pressure);
 %     multiWaitbar('Compressing Pressure Matrix',i/size(Pressure,3));
 % end
 
-Pressure = Pressure(:,:,32,620:680);
 
+
+Pressure = Pressure(:,:,32,589:651);
+%Pressure = Pressure(:,:,:,630);
 
 
 if handles.J_mag.Value == 1 %taking only magnitude and not direction of pressure
-if length(size(V)) == 2
-    P2 = envelope(Pressure);
-else
-    for i = 1:size(Pressure,3)
-        P3(:,:,i) = squeeze(envelope(Pressure(:,:,i))); % Gets env of pressure
+    if length(size(V)) == 2
+        P2 = envelope(Pressure);
+    else
+        for i = 1:size(Pressure,3)
+            P3(:,:,i) = squeeze(envelope(Pressure(:,:,i))); % Gets env of pressure
+        end
     end
-end
 else
     P3 = squeeze(Pressure);
 end
@@ -5371,6 +5373,79 @@ end
 % P4 = P3(Psize(1):end-Psize(1),Psize(2):end-Psize(2),:);
 % P3 = P4;
 %%%%%%%% END PRESSURE %%%%%%%%%
+
+if handles.hold_box.Value == 1
+    clear P2 
+    P = squeeze(P3(:,round(size(P3,2)/2),:));
+    %P = P';
+    clear P3
+    noiseV = max(P(:))*.03;
+    noise = (rand(size(P))-.05)*noiseV;
+    P = noise+P;
+%        for i = 1:size(P,1)
+%            P2(i,:) = interp1(linspace(0,size(P,2),size(P,2)),P(i,:),linspace(0,size(P,2),size(V,2)));
+%        end
+%        for i = 1:size(P2,2)
+%            P3(:,i) = interp1(linspace(0,size(P,1),size(P,1)),P2(:,i),linspace(0,size(P,1),size(V,1)));
+%        end
+P(size(P,1)+1:size(V,1),size(P,2)+1:size(V,2)) = 0;
+
+    
+    V = squeeze(V);
+    J = zeros(size(V));
+    if handles.noleadfield.Value == 1
+        V = V(:,:,1);
+    else
+    L2 = evalin('base','L');
+    L2 = squeeze(L2(:,round(size(L2,2)/2),:,:,:));
+    Lsize = size(L2);
+     [x, y] = meshgrid(1:Lsize(2),1:Lsize(1));
+        [x2, y2] = meshgrid(linspace(1,Lsize(2),size(V,2)),linspace(1,Lsize(1),size(V,1)));
+        for i = 1:size(V,3)
+            for j = 1:size(L2,3)
+            L(:,:,j,i) = interp2(x,y,L2(:,:,j,i),x2,y2);
+            multiWaitbar('Interpolating Lead Field',i/3);
+            end
+        end
+    end
+     
+       
+    
+    for j = 1:size(V,3)
+        %J1(:,:,i) = deconvlucy(real(V(:,:,i)),P(:,:));
+        for i = 1:size(V,1)
+            J1(i,:,j) = real(ifft(fft(V(i,:,j))./fft(P(i,:))));
+        end
+
+% J1(:,:,j) = real(ifft2(fft2(V(:,:,j))./fft2(P)));
+        
+        
+        
+    end
+    if handles.noleadfield.Value == 1
+        J = J1;
+    else
+       for m = 1:size(J,1)
+            for j = 1:size(J,2)
+                
+                   J(m,j,:) = squeeze(L(m,j,:,:))\squeeze(V(m,j,:));
+                %   J(m,j,:) = pinv(squeeze(L(m,j,:,:))).*squeeze(V(m,j,:))';
+            end
+            multiWaitbar('Solving for J', m/size(J,1));
+       end
+    end
+    J = permute(J,[1 4 2 3]);
+        multiWaitbar('CLOSEALL')
+        assignin('base','J',J)
+        
+    
+    
+    
+else
+    
+   
+
+
 
 
 J = zeros(size(V));
@@ -5413,7 +5488,7 @@ else
         end
     else
         for i = 1:size(V,4)
-            J1(:,:,:,i) = deconvlucy(V(:,:,:,i),P3);
+%            J1(:,:,:,i) = deconvlucy(V(:,:,:,i),P3);
             Lsize = size(L2);
             [x, y, z] = meshgrid(1:Lsize(2),1:Lsize(1),1:Lsize(3));
             [x2, y2, z2] = meshgrid(linspace(1,Lsize(2),size(V,2)),linspace(1,Lsize(1),size(V,1)),linspace(1,Lsize(3),size(V,3)));
@@ -5444,10 +5519,12 @@ else
 %             J = J2;
 %         end
     else
+       % L = permute(L,[1 2 3 5 4]);
         for m = 1:size(J,1)
             for j = 1:size(J,2)
                 for k = 1:size(J,3)
-                    J(m,j,k,:) = squeeze(L(m,j,k,:,:))\squeeze(J1(m,j,k,:));
+                   J(m,j,k,:) = squeeze(L(m,j,k,:,:))\squeeze(V(m,j,k,:));
+%                      J(m,j,k,:) = squeeze(V(m,j,k,:))\squeeze(L(m,j,k,:,:));
                 end
             end
             multiWaitbar('Solving for J', m/size(J,1));
@@ -5478,8 +5555,10 @@ else
 %     J = J+max(max(max(max(J))))/1e6; 
 %     J = 20*log10(J./max(max(max(max(J)))));
 %     J = J.*S;
+
     assignin('base','J',J)
     multiWaitbar('CLOSEALL');
+end
 end
 end
 

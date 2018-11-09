@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to helpf ae4d
 
-% Last Modified by GUIDE v2.5 17-Oct-2018 23:19:31
+% Last Modified by GUIDE v2.5 07-Nov-2018 11:11:59
 
 % Begin initialization code - DO NOT EDIT
 
@@ -644,11 +644,11 @@ for p = 1:hf_num
     
     
     %%%%%%%%
-    if isempty(num2str(handles.depR.String))
+%     if isempty(num2str(handles.depR.String))
         qq = [10 round(1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz-10)];
-    else
-        qq = str2num(handles.depR.String);
-    end
+%     else
+%         qq = str2num(handles.depR.String);
+%     end
     
     dims = size(HF);
     [~, ax] = make_axes(param,dims,t_delay,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
@@ -670,7 +670,7 @@ for p = 1:hf_num
     
     if handles.tc.Value
         tc_params = evalin('base','tc_params');
-        dep_sub = tc_params.thickness/1.48 - tc_params.thickness/tc_params.speed;
+        dep_sub = tc_params.thickness/1.485 - tc_params.thickness/tc_params.speed;
         ax.depth = ax.depth-dep_sub;
     end
     %     if ~isempty('PE')
@@ -847,7 +847,11 @@ else
     figure(1);
 end
 if handles.hotcold.Value == 1
+    if handles.bbdb.Value == 1
     h = hotcoldDB;
+    else
+        h = hotcold;
+    end
 elseif handles.graybox.Value == 1
     h = 'gray';
 else
@@ -1365,6 +1369,7 @@ if handles.active_xfilt.String == 'PE'
 else
     set(handles.active_ae,'String',num2str(size(X)))
 end
+set(handles.use_chop,'Value',1);
 assignin('base','ax_c',ax);
 assignin('base','X_c',X);
 
@@ -1748,16 +1753,21 @@ else
     ax = evalin('base','ax_c');
 end
 U = length(ax.depth);
-if isempty(num2str(handles.depR.String))
+% if isempty(num2str(handles.depR.String))
+if handles.use_chop.Value == 0
     qq = [ax.depth(floor(U./5)) ax.depth(floor(U.*0.9))];
-else
-    qq = str2num(handles.depR.String);
+else 
+    qq = [ax.depth(1) ax.depth(end)];
 end
+% else
+%     qq = str2num(handles.depR.String);
+% end
 dims = (size(HF));
 q.z = 1:size(HF,3);
 zInd =  q.z(find(ax.depth >= qq(1)):find(ax.depth >= qq(2)));
 HFdB = 20*log10(HF./(max(max(max(max(HF(:,:,zInd,:)))))));
 fprintf('Finished converting to dB\n');
+set(handles.bbdb,'Value',1);
 if handles.use_chop.Value == 0
     assignin('base','Xfilt',HFdB);
 else
@@ -2401,7 +2411,11 @@ if length(str2num(handles.baseb.String)) == 1
     
 elseif length(str2num(handles.baseb.String)) == 3
     axes(handles.axes4)
+     if handles.bbdb.Value == 1
     h = hotcoldDB;
+    else
+        h = hotcold;
+    end
     cfreq = str2num(handles.baseb.String);
     rfreq = cfreq(1):cfreq(3):cfreq(2);
     
@@ -2689,7 +2703,11 @@ peInd = q.pe(find(ax.pe >= zR(1)):find(ax.pe >= zR(2)));
 %peInd = zInd*2;
 
 if handles.hotcold.Value == 1
+     if handles.bbdb.Value == 1
     h = hotcoldDB;
+    else
+        h = hotcold;
+    end
 elseif handles.graybox.Value == 1
     h = 'gray';
 else
@@ -4095,7 +4113,11 @@ else
 end
 
 if handles.hotcold.Value == 1
+     if handles.bbdb.Value == 1
     h = hotcoldDB;
+    else
+        h = hotcold;
+    end
 elseif handles.graybox.Value == 1
     h = 'gray';
 else
@@ -5652,3 +5674,11 @@ function solve_v_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of solve_v
+
+
+% --- Executes on button press in beautify.
+function beautify_Callback(hObject, eventdata, handles)
+beautify;
+% hObject    handle to beautify (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

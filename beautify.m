@@ -22,7 +22,7 @@ function varargout = beautify(varargin)
 
 % Edit the above text to modify the response to help beautify
 
-% Last Modified by GUIDE v2.5 09-Nov-2018 10:53:23
+% Last Modified by GUIDE v2.5 10-Nov-2018 18:01:31
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -140,7 +140,11 @@ set(handles.cmin,'String',min(X(:)));
 set(handles.xmax,'String',S(1));
 set(handles.ymax,'String',S(2));
 set(handles.zmax,'String',S(3));
+if length(S) >= 4
 set(handles.tmax,'String',S(4));
+else 
+    set(handles.tmax,'String',1);
+end
 set(handles.cmax,'String',max(X(:)));
 
 
@@ -247,7 +251,7 @@ colormap(h)
 c = [str2double(get(handles.cmin,'String')) str2double(get(handles.cmax,'String'))];
 if isnan(c)
 else
-    caxis(c)
+    caxis(c);
 end
 
 
@@ -669,11 +673,11 @@ else
 end
 for i = t
 imagesc(imag(:,:,i)')
-colormap(h)
+colormap(h);
 c = [str2double(get(handles.cmin,'String')) str2double(get(handles.cmax,'String'))];
 if isnan(c)
 else
-    caxis(c)
+    caxis(c);
 end
 title(i);
 drawnow;
@@ -698,18 +702,18 @@ function holdmods_Callback(hObject, eventdata, handles)
 
 
 
-function xmean_Callback(hObject, eventdata, handles)
-% hObject    handle to xmean (see GCBO)
+function med_x_Callback(hObject, eventdata, handles)
+% hObject    handle to med_x (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of xmean as text
-%        str2double(get(hObject,'String')) returns contents of xmean as a double
+% Hints: get(hObject,'String') returns contents of med_x as text
+%        str2double(get(hObject,'String')) returns contents of med_x as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function xmean_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to xmean (see GCBO)
+function med_x_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to med_x (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -721,18 +725,18 @@ end
 
 
 
-function ymean_Callback(hObject, eventdata, handles)
-% hObject    handle to ymean (see GCBO)
+function med_y_Callback(hObject, eventdata, handles)
+% hObject    handle to med_y (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of ymean as text
-%        str2double(get(hObject,'String')) returns contents of ymean as a double
+% Hints: get(hObject,'String') returns contents of med_y as text
+%        str2double(get(hObject,'String')) returns contents of med_y as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function ymean_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to ymean (see GCBO)
+function med_y_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to med_y (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -744,18 +748,18 @@ end
 
 
 
-function zmean_Callback(hObject, eventdata, handles)
-% hObject    handle to zmean (see GCBO)
+function med_z_Callback(hObject, eventdata, handles)
+% hObject    handle to med_z (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-% Hints: get(hObject,'String') returns contents of zmean as text
-%        str2double(get(hObject,'String')) returns contents of zmean as a double
+% Hints: get(hObject,'String') returns contents of med_z as text
+%        str2double(get(hObject,'String')) returns contents of med_z as a double
 
 
 % --- Executes during object creation, after setting all properties.
-function zmean_CreateFcn(hObject, eventdata, handles)
-% hObject    handle to zmean (see GCBO)
+function med_z_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to med_z (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 
@@ -811,7 +815,7 @@ t = [str2double(get(handles.tmin,'String')) str2double(get(handles.tmax,'String'
 
 %Xmod = X(x(1):x(2),y(1):y(2),z(1):z(2),t(1):t(2));
 
-box = [str2double(get(handles.xmean,'String')) str2double(get(handles.ymean,'String')) str2double(get(handles.zmean,'String'))];
+box = [str2double(get(handles.med_x,'String')) str2double(get(handles.med_y,'String')) str2double(get(handles.med_z,'String'))];
 
 if handles.allt.Value == 1
     n = t(1):t(2);
@@ -826,7 +830,24 @@ X(x(1):x(2),y(1):y(2),z(1):z(2),n) = Xtemp(:,:,:,n);
 
 assignin('base','Xnew',X);
 
+if handles.holdmods.Value
+    X = evalin('base','Xnew');
+else
+    X = evalin('base','X');
+end
+x = [str2double(get(handles.xmin,'String')) str2double(get(handles.xmax,'String')) str2double(get(handles.xpt,'String'))];
+y = [str2double(get(handles.ymin,'String')) str2double(get(handles.ymax,'String')) str2double(get(handles.ypt,'String'))];
+z = [str2double(get(handles.zmin,'String')) str2double(get(handles.zmax,'String')) str2double(get(handles.zpt,'String'))];
+t = [str2double(get(handles.tmin,'String')) str2double(get(handles.tmax,'String')) str2double(get(handles.tpt,'String'))];
+    m = [1 str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
+    n = [1 str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) 0];% get(handles.squarify_box,'Value')];
+    o = [1 str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
+    Xtemp = X(x(1):x(2),y(1):y(2),z(1):z(2),t(1):t(2));
+    X2 = filts3D(Xtemp,m,n,o);
+    X(x(1):round(x(2)*o(1)),y(1):round(y(2)*o(2)),z(1):round(z(2)*o(3)),t(1):t(2)) = X2;
+    assignin('base','Xnew',X)
 
+    
 % --- Executes on button press in allt.
 function allt_Callback(hObject, eventdata, handles)
 % hObject    handle to allt (see GCBO)
@@ -937,3 +958,141 @@ else
     %Xnew = abs(X);
 end
 assignin('base','Xnew',Xnew);
+
+
+
+function mean_x_Callback(hObject, eventdata, handles)
+% hObject    handle to mean_x (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of mean_x as text
+%        str2double(get(hObject,'String')) returns contents of mean_x as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function mean_x_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to mean_x (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function mean_y_Callback(hObject, eventdata, handles)
+% hObject    handle to mean_y (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of mean_y as text
+%        str2double(get(hObject,'String')) returns contents of mean_y as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function mean_y_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to mean_y (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function mean_z_Callback(hObject, eventdata, handles)
+% hObject    handle to mean_z (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of mean_z as text
+%        str2double(get(hObject,'String')) returns contents of mean_z as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function mean_z_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to mean_z (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function int_x_Callback(hObject, eventdata, handles)
+% hObject    handle to int_x (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of int_x as text
+%        str2double(get(hObject,'String')) returns contents of int_x as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function int_x_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to int_x (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function int_y_Callback(hObject, eventdata, handles)
+% hObject    handle to int_y (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of int_y as text
+%        str2double(get(hObject,'String')) returns contents of int_y as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function int_y_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to int_y (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function int_z_Callback(hObject, eventdata, handles)
+% hObject    handle to int_z (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of int_z as text
+%        str2double(get(hObject,'String')) returns contents of int_z as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function int_z_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to int_z (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

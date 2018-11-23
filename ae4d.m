@@ -2352,7 +2352,7 @@ if length(str2num(handles.baseb.String)) == 1
             
         end
         
-        b = waitbar(0);
+%         b = waitbar(0);
         if handles.signed_env.Value == 1
             S = sign(imag(X));
             if length(size(squeeze(S))) < 4
@@ -2369,12 +2369,13 @@ if length(str2num(handles.baseb.String)) == 1
                 end
             end
             dims = size(Xfilt);
-            b = waitbar(0);
+%             b = waitbar(0);
             for i = 1:dims(1)
                 for j = 1:dims(2)
                     Xfilt(i,j,:,:) = envelope(squeeze(real(Xfilt(i,j,:,:))));
                 end
-                waitbar(i/dims(1),b,'Basebanding');
+%                 waitbar(i/dims(1),b,'Basebanding');
+                multiWaitbar('Basebanding',i/dims(1));
             end
             if handles.bbdb.Value == 1
                 Xfilt = 20*log10(Xfilt./max(max(max(max(abs(Xfilt))))));
@@ -2395,7 +2396,7 @@ if length(str2num(handles.baseb.String)) == 1
             
             %   X = S.*envelope(real(X));
         end
-        delete(b)
+%         delete(b)
     end
     
     if handles.invertbox.Value == 1
@@ -2421,22 +2422,25 @@ elseif length(str2num(handles.baseb.String)) == 3
     
     for n  = 1:length(rfreq)
         R = Xfilt;
-        X = baseband2(R,rfreq(n),param.daq.HFdaq.fs_MHz,wc1,wc2);
+        yp = str2double(handles.yP.String);
+        yloc = find(ax.y >= yp,1);
+        X = baseband2(squeeze(R(:,yloc,:,:)),rfreq(n),param.daq.HFdaq.fs_MHz,wc1,wc2);
         
         if handles.signed_env.Value == 1
             S = sign(imag(X));
             dims = size(R);
-            b = waitbar(0);
+            b = waitbar(0);   
             for i = 1:dims(1)
-                for j = 1:dims(2)
-                    R(i,j,:,:) = envelope(squeeze(real(R(i,j,:,:))));
-                end
-                waitbar(i/dims(1),b,'Basebanding');
+%                 for j = 1:dims(2)
+                    R2(i,:,:) = envelope(squeeze(real(R(i,yloc,:,:))));
+%                 end
+%                 waitbar(i/dims(1),b,'Basebanding');
+multiWaitbar('Basebanding',i/dims(1));
             end
             if handles.bbdb.Value == 1
-                R = 20*log10(R./max(max(max(max(R)))));
+                R2 = 20*log10(R2./max(R2(:)));
             end
-            X = S.*abs(R);
+            X = S.*abs(R2);
             %   X = S.*envelope(real(X));
         end
         
@@ -2459,20 +2463,23 @@ elseif length(str2num(handles.baseb.String)) == 3
         aeR = str2num(handles.aeR.String);
         dims = size(X);
         %[~,ax] = make_axes(param,dims,[1 2],1);
-        q.x = 1:dims(1);
-        q.y = 1:dims(2);
-        q.z = 1:dims(3);
+%         q.x = 1:dims(1);
+%         q.y = 1:dims(2);
+%         q.z = 1:dims(3);
         
-        xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
-        yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
-        zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
-        
+        xInd = find(ax.x >= xR(1)):find(ax.x >= xR(2));
+        yInd = find(ax.y >= yR(1)):find(ax.y >= yR(2));
+        zInd = find(ax.depth >= zR(1)):find(ax.depth >= zR(2));
+        if length(size(X)) > 2
         if length(size(X)) == 3
             Y = squeeze(X(xInd,yInd,zInd));
         else
             q.t = 1:dims(4);
             tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
             Y = squeeze(X(xInd,yInd,zInd,tInd));
+        end
+        else 
+            Y = X(xInd,zInd);
         end
         
         if length(size(Y)) > 2
@@ -2482,7 +2489,7 @@ elseif length(str2num(handles.baseb.String)) == 3
         %         if handles.med_box.Value == 1
         %             Y = medfilt2(Y,[3 3]);
         %         end
-        delete(b)
+%         delete(b)
         axes(handles.axes4)
         imagesc(ax.x(xInd),ax.depth(zInd),real(Y'))
         if ~isempty(aeR)
@@ -2494,6 +2501,7 @@ elseif length(str2num(handles.baseb.String)) == 3
         text(mean(ax.x(xInd)),ax.depth(zInd(12)),['wc = ' num2str(rfreq(n))],'Color','white');
     end
 end
+multiWaitbar('CLOSEALL');
 
 
 
@@ -3395,25 +3403,40 @@ elseif handles.bsq.Value == 1
     dsize = fread(fid,[1,n],'int32');
     nOffset = (n+1)*4;
     fclose(fid);
-    
-    PEImage = multibandread(PEbsqFile,[dsize(1:2),prod(dsize(3:end))],...
-        'single',nOffset,'bsq','ieee-le',{'Band','Direct',nScanPt});
-    if bScanParm.ylen > 1
-        PEImage = reshape(PEImage,[dsize(1),dsize(2),bScanParm.XSteps,bScanParm.YSteps]);
+    if Trans.name(1:4) ~= 'H235'
+        PEImage = multibandread(PEbsqFile,[dsize(1:2),prod(dsize(3:end))],...
+            'single',nOffset,'bsq','ieee-le',{'Band','Direct',nScanPt});
+        
+        
+        if bScanParm.ylen > 1
+            PEImage = reshape(PEImage,[dsize(1),dsize(2),bScanParm.XSteps,bScanParm.YSteps]);
+        end
+        pedata = squeeze(mean(PEImage,3));
+        
+    else %H235
+        PEImage = multibandread(PEbsqFile,[dsize(1:2),prod(dsize(3:end))],...
+            'single',nOffset,'bsq','ieee-le',{'Band','Direct',1:dsize(3)});
+        pedata = PEImage;
     end
-    pedata = squeeze(mean(PEImage,3));
+    
     wavlen = PData.Lambda;
     x_mm = ((1:dsize(2))*wavlen*PData(1).PDelta(1));
     x_mm = x_mm - mean(x_mm);
     z_mm = (1:dsize(1))*wavlen*PData(1).PDelta(3);
     pex.x = x_mm;
     pex.depth = z_mm;
-    if bScanParm.ylen == 0
-        pex.y = 1;
+    if Trans.name(1:4) ~= 'H235'
+        if bScanParm.ylen == 0
+            pex.y = 1;
+        else
+            pex.y = linspace(-bScanParm.ylen/2,bScanParm.ylen/2,bScanParm.YSteps);
+            pedata = permute(pedata,[2 3 1]);
+        end
     else
-        pex.y = linspace(-bScanParm.ylen/2,bScanParm.ylen/2,bScanParm.YSteps);
+        y_mm = ((1:dsize(2))*wavlen*PData(1).PDelta(2));
+        pex.y = y_mm-mean(y_mm);
     end
-    pedata = permute(pedata,[2 3 1]);
+      
     if handles.save_4d.Value == 1
         clearvars -except f bScanParm pedata PData Trans TW TX pex TXArray
         f = f(1:end-10);

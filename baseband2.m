@@ -32,25 +32,38 @@ f_ax = fs/2*linspace(0,1,NFFT/2);
 % t_ax = linspace(0,length(X)/fs,length(X));
 % x_bb = ifft(X_bb1);
 % f_ax = f;
+if length(size(X)) > 2
+    mode = 1;
+else
+    mode = 2;
+end
 
 %Gets analytic signal from Hilbert Transform xa = x+jxh
 m = 1j;
 dims = size(X);
-t = (1:dims(3)) /fs;
+%t = (1:dims(3)) /fs;
 if length(dims) < 4
     dims(4) = 1;
 end
 
 % h = 1./(pi.*t);
-b = waitbar(0,'Basebanding');
-for i = 1:dims(1)
-    for j = 1:dims(2)
-        for k = 1:dims(4)     
-%             H(i,j,:,k) = conv(squeeze(X(i,j,:,k)),h');
-            x(i,j,:,k) = fft(X(i,j,:,k));
+% b = waitbar(0,'Basebanding');
+if mode == 1
+    for i = 1:dims(1)
+        for j = 1:dims(2)
+            for k = 1:dims(4)
+                %             H(i,j,:,k) = conv(squeeze(X(i,j,:,k)),h');
+                x(i,j,:,k) = fft(X(i,j,:,k));
+            end
         end
+%         waitbar(i/dims(1)/4,b,'Computing FFT')
+multiWaitbar('Computing FFT',i/dims(1));
     end
-    waitbar(i/dims(1)/4,b,'Computing FFT')
+elseif mode  == 2
+    for i = 1:dims(1)
+        x(i,:) = fft(X(i,:));
+        multiWaitbar('Computing FFT',i/dims(1));
+    end
 end
 % S = -m*sign(x);
 % xh = x+S;
@@ -68,15 +81,27 @@ end
 
 
 
-
-x2 = 2*x(:,:,1:end/2,:);
-f_axis = linspace(0,fs/2,size(x2,3));
-wlow = find(f_axis > wc1,1)-1;
-whigh = find(f_axis >= wc2,1);
-hamlen = whigh-wlow;
-Hwin = hamming(hamlen);
-Hwin = padarray(Hwin,wlow-1,0,'pre');
-Hwin = padarray(Hwin,size(x2,3)-whigh+1,0,'post');
+if mode == 1
+    x2 = 2*x(:,:,1:end/2,:);
+    f_axis = linspace(0,fs/2,size(x2,3));
+    wlow = find(f_axis > wc1,1)-1;
+    whigh = find(f_axis >= wc2,1);
+    hamlen = whigh-wlow;
+    Hwin = hamming(hamlen);
+    Hwin = padarray(Hwin,wlow-1,0,'pre');
+    Hwin = padarray(Hwin,size(x2,3)-whigh+1,0,'post');
+    f_ax = fs/2*linspace(0,1,dims(3)/2);
+elseif mode == 2
+    x2 = 2*x(:,1:end/2);
+    f_axis = linspace(0,fs/2,size(x2,2));
+    wlow = find(f_axis > wc1,1)-1;
+    whigh = find(f_axis >= wc2,1);
+    hamlen = whigh-wlow;
+    Hwin = hamming(hamlen);
+    Hwin = padarray(Hwin,wlow-1,0,'pre');
+    Hwin = padarray(Hwin,size(x2,2)-whigh+1,0,'post');
+    f_ax = fs/2*linspace(0,1,dims(2)/2);
+end
 
 %x2(:,:,1:2,:) = 0;
 
@@ -84,7 +109,7 @@ Hwin = padarray(Hwin,size(x2,3)-whigh+1,0,'post');
 
 % for i = 1:dims(1)
 %     for j = 1:dims(2)
-%         for k = 1:dims(4)     
+%         for k = 1:dims(4)
 %             x3(i,j,:,k) = fft(H(i,j,:,k));
 %         end
 %     end
@@ -94,7 +119,7 @@ Hwin = padarray(Hwin,size(x2,3)-whigh+1,0,'post');
 % a = squeeze(x1(15,1,:,21));
 % a2 = squeeze(x2(15,1,:,21));
 % a3 = squeeze(x3(15,1,:,21));
-f_ax = fs/2*linspace(0,1,dims(3)/2);
+
 % figure; plot(abs(a))
 %figure; plot(f_ax,abs(a2));
 % figure; plot(abs(a3))
@@ -109,36 +134,70 @@ pk = zeros(size(x2,1),size(x2,2));
 
 
 
-for i = 1:dims(1)
-    for j = 1:dims(2)
-        for k = 1:dims(4)
-            x2(i,j,:,k) = Hwin.*squeeze(x2(i,j,:,k));
-            X2(i,j,:,k) = ifft(x2(i,j,:,k));
-            pk(i,j,k) = f_ax(find(abs(x2(i,j,:,k)) == max(abs(x2(i,j,:,k)))));
+
+if mode == 1
+    for i = 1:dims(1)
+        for j = 1:dims(2)
+            for k = 1:dims(4)
+                x2(i,j,:,k) = Hwin.*squeeze(x2(i,j,:,k));
+                X2(i,j,:,k) = ifft(x2(i,j,:,k));
+                if max(x2(i,j,:,k)) ~= 0
+                    pk(i,j,k) = f_ax(find(abs(x2(i,j,:,k)) == max(abs(x2(i,j,:,k)))));
+                else
+                    pk(i,j,k) = 0;
+                end
+            end
+            
         end
-        
+%         waitbar(.25 + i/dims(1)/4,b,'Filtering')
+multiWaitbar('Filtering',i/dims(1));
     end
-     waitbar(.25 + i/dims(1)/4,b,'Filtering')
+elseif mode == 2
+    for i = 1:dims(1)
+        x2(i,:) = Hwin'.*squeeze(x2(i,:));
+        X2(i,:) = ifft(x2(i,:));
+        if max(x2(i,:)) ~=0
+            pk(i) = f_ax(find(abs(x2(i,:)) == max(abs(x2(i,:)))));
+        else
+            pk(i) = 0;
+        end
+%         waitbar(.25 + i/dims(1)/4,b,'Filtering')
+multiWaitbar('Computing FFT',i/dims(1));
+    end
+    
 end
+
 
 if fc == 0
     fc = pk;
-else 
+else
     fc2 = ones(size(pk));
     fc = fc2.*fc;
 end
 
-t = (1:dims(3)) /fs;
-for i = 1:dims(1)
-    for j = 1:dims(2)
-        for k = 1:dims(4)
-            xdemod2(i,j,:,k) = squeeze(X2(i,j,:,k)).*exp(-m*2*pi*fc(i,j,k)*t');
-             %xdemod2(i,j,:,k) = squeeze(X(i,j,:,k)).*exp(-m*2*pi*fc*t');
-                      xdemod3(i,j,:,k) = interp1(linspace(0,1,dims(3)),squeeze(xdemod2(i,j,:,k)),linspace(0,1,size(X,3)));
+if mode == 1
+    t = (1:dims(3)) /fs;
+    for i = 1:dims(1)
+        for j = 1:dims(2)
+            for k = 1:dims(4)
+                xdemod2(i,j,:,k) = squeeze(X2(i,j,:,k)).*exp(-m*2*pi*fc(i,j,k)*t');
+                %xdemod2(i,j,:,k) = squeeze(X(i,j,:,k)).*exp(-m*2*pi*fc*t');
+                xdemod3(i,j,:,k) = interp1(linspace(0,1,dims(3)),squeeze(xdemod2(i,j,:,k)),linspace(0,1,size(X,3)));
+            end
         end
+%         waitbar(.5 + i/dims(1)/2,b,'Demodulating')
+multiWaitbar('Demodulating',i/dims(1));
     end
-       waitbar(.5 + i/dims(1)/2,b,'Demodulating')
+elseif mode == 2
+    t = (1:dims(2))/fs;
+    for i = 1:dims(1)
+        xdemod2(i,:) = squeeze(X2(i,:))'.*exp(-m*2*pi*fc(i)*t');
+        xdemod3(i,:) = interp1(linspace(0,1,dims(2)),xdemod2(i,:),linspace(0,1,size(X,2)));
+%         waitbar(.5 + i/dims(1)/2,b,'Demodulating')
+        multiWaitbar('Demodulating',i/dims(1));
+    end
 end
+
 % for i = 1:dims(1)
 %     for j = 1:dims(2)
 %         for k = 1:dims(4)
@@ -148,10 +207,10 @@ end
 %     waitbar(.75 + i/dims(1)/4,b,'Interpolating')
 % end
 
-delete(b)
+% delete(b)
 %figure; imagesc(real(squeeze(xdemod3(:,1,:,21))));
 % figure; imagesc(real(squeeze(xdemod(:,1,:,21))));
-% 
+%
 % for i = 1:dims(1)
 %     for j = 1:dims(2)
 %         for k = 1:dims(4)

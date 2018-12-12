@@ -120,7 +120,9 @@ function pushbutton5_Callback(hObject, eventdata, handles) %Inverse
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 V = evalin('base','V');
+if handles.useleadfield.Value
 L = evalin('base','L');
+end
 %P = evalin('base','Pressure');
 if handles.usepressure.Value
     Pressure = evalin('base','Pressure');
@@ -132,19 +134,23 @@ if handles.usepressure.Value
     if handles.deconvmethod.Value == 3
         Vs = size(V);
         Ps = size(Pressure);
+        if sum(Vs) ~= sum(Ps)
         [x,y,z] = meshgrid(linspace(1,Ps(1),Ps(1)),linspace(1,Ps(2),Ps(2)),linspace(1,Ps(3),Ps(3)));
         [x1,y1,z1] = meshgrid(linspace(1,Ps(1),Vs(1)),linspace(1,Ps(2),Vs(2)),linspace(1,Ps(3),Vs(3)));
         P2 = interp3(x,y,z,Pressure,x1,y1,z1);
-        HPF(1:101) = linspace(1,0,101);
-        HPF(102:201) = linspace(0,1,100);
+        else
+            P2 = Pressure;
+        end
+        HPF(1:51) = linspace(1,0,51);
+        HPF(52:101) = linspace(0,1,50);
         bpFilt = designfilt('bandpassfir','FilterOrder',20, ...
             'CutoffFrequency1',2000,'CutoffFrequency2',4000, ...
             'SampleRate',20000);
         for m = 1%1:size(V,4)
             for i = 1:size(V,1)
                 for j = 1:size(V,2)
-                    Vf = fft2(squeeze(V(i,j,:,m)));
-                    Pf = fft2(squeeze(P2(101,101,:)))+1e5;
+                    Vf = fft(squeeze(V(i,j,:,m)));
+                    Pf = fft(squeeze(P2(ceil(size(P2,1)/2),ceil(size(P2,2)/2),:)))+1e5;
                     %Pf2 =
                     %interp1(linspace(1,length(Pf),length(Pf)),Pf,linspace(1,length(Pf),length(Vf)));
                     T1 = ifft(Vf./Pf);
@@ -159,15 +165,20 @@ if handles.usepressure.Value
                 multiWaitbar(['Solving for Vae: Channel ' num2str(m) ' of ' num2str(size(V,4))],i/(size(V,1)));
             end
         end
-        cut = round(size(X,3)*.12);
+        cut = round(size(V,3)*.12);
         J1(:,:,1:cut,:) = 0;
-        J1(:,:,size(X,3)-cut:size(X,3),:) = 0;
+        J1(:,:,size(V,3)-cut:size(V,3),:) = 0;
         
         %Method 2 Limits size of Pressure then manually deconvolves in space
     elseif handles.deconvmethod.Value == 2
         dimsP = round(size(Pressure)/2);
         q = round(str2double(get(handles.psize,'String'))/2);
-        P = Pressure(dimsP(1)-q:dimsP(1)+q,dimsP(2)-q:dimsP(2)+q,dimsP(2)-q:dimsP(2)+q);
+        if handles.three.Value
+        P = Pressure(dimsP(1)-q:dimsP(1)+q,dimsP(2)-q:dimsP(2)+q,dimsP(3)-q:dimsP(3)+q);
+        else
+            P = squeeze(Pressure(dimsP(1)-q:dimsP(1)+q,ceil(dimsP(2)/2),dimsP(3)-q:dimsP(3)+q));
+        end
+        clear Pressure
         Pressure = P;
         %%%%%%%%%%%%
         dimsP = size(Pressure);
@@ -198,18 +209,36 @@ if handles.usepressure.Value
                 multiWaitbar(['Solving for Vae: Channel ' num2str(m) ' of ' num2str(size(V,4))],i/(dimsJ(1)-dimsP(1)));
             end
         end
-        J1(dimsJ(1)-dimsP(1)+1:dimsJ(1),dimsJ(2)-dimsP(2)+1:dimsJ(2),dimsJ(3)-dimsP(3)+1:dimsJ(3),1:size(V,4)) = 0;
+        %J1(dimsJ(1)-dimsP(1)+1:dimsJ(1),dimsJ(2)-dimsP(2)+1:dimsJ(2),dimsJ(3)-dimsP(3)+1:dimsJ(3),1:size(V,4)) = 0;
         
         
         %Method 1 built in deconv
     elseif handles.deconvmethod.Value == 1
-        if length(size(V)) == 3
+        V = squeeze(V);
+        if length(size(V)) == 2
+            S = sign(V);
+                         P = abs(hilbert(squeeze(Pressure(101,101,:))));
+                v = abs(V);
+            for i = 1:size(V,1)
+
+                J1(i,:)= deconvlucy(v(i,:),P');
+               % J2(i,:) = deconvlucy(V(i,:),P2');               
+            end
+           J1 = J1.*S;
+           
+%             ploc = ceil(size(Pressure,2)/2);
+%             P = squeeze(Pressure(:,ploc,:));
+%             J1 = deconvlucy(V,P);
+        elseif length(size(V)) == 3
             J1 = deconvlucy(V,Pressure);
         elseif length(size(V)) == 4
+             Pressure = abs(hilbert(Pressure));
+                S = sign(V);
             for i = 1:size(V,4)
-                J1(:,:,:,i) = deconvlucy(V(:,:,:,i),Pressure);
+                J1(:,:,:,i) = deconvlucy(abs(V(:,:,:,i)),Pressure);
                 multiWaitbar('Deconvolving Pressure',i/size(V,4));
             end
+            J1 = J1.*S;
         elseif length(size(V)) == 5
             for i = 1:size(V,4)
                 for j = 1:size(V,5)
@@ -226,17 +255,20 @@ if handles.usepressure.Value
         Pf = fft(squeeze(Pressure(p1,p2,:)));
         [val,loc] = max(Pf);
         wc = loc/str2double(handles.ws.String);
-        if isempty(handles.wc.String)
-            J2 = baseband2(V(:,:,:,1),wc,str2double(handles.ws.String),2,4); %change bandpass for other Trans
-        else
-            J2 = baseband2(V(:,:,:,1),str2double(handles.wc.String),str2double(handles.ws.String),2,4);
-            %Need to scale this by pressure
+        for i = 1:size(V,4)
+            if isempty(handles.wc.String)
+                J2(:,:,:,i) = baseband2(V(:,:,:,i),wc,str2double(handles.ws.String),2,4); %change bandpass for other Trans
+            else
+                J2(:,:,:,i) = baseband2(V(:,:,:,i),str2double(handles.wc.String),str2double(handles.ws.String),2,4);
+                %Need to scale this by pressure
+            end
         end
-        P = abs(hilbert(Pressure));
-        for i = 1:size(J2,4)
-            J3(:,:,:,i) = deconvlucy(real(J2(:,:,:,i)),P);
-        end
-        J1 = real(J3);
+%         P = abs(hilbert(Pressure));
+%         for i = 1:size(J2,4)
+%             J3(:,:,:,i) = deconvlucy(real(J2(:,:,:,i)),P(:,51,:));
+%         end
+%         J1 = real(J3);
+J1 = real(J2);
     end
 else
     J1 = V;
@@ -272,6 +304,9 @@ else
 end
 
 multiWaitbar('CLOSEALL');
+if length(size(J)) == 2
+    J = permute(J,[1 3 2]);
+end
 assignin('base','Jrecon',J);
 
 

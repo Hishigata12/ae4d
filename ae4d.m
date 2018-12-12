@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to helpf ae4d
 
-% Last Modified by GUIDE v2.5 07-Nov-2018 11:11:59
+% Last Modified by GUIDE v2.5 29-Nov-2018 17:17:36
 
 % Begin initialization code - DO NOT EDIT
 
@@ -322,7 +322,7 @@ if handles.plotbox1.Value == 2
 end
 
 if handles.plotbox1.Value == 3
-    tR(:) = tR(3);
+%     tR(:) = tR(3);
     yR(:) = yR(3);
 end
 
@@ -345,12 +345,24 @@ end
 xInd = find(ax.x >= xR(1)):find(ax.x >= xR(2));
 yInd = find(ax.y >= yR(1)):find(ax.y >= yR(2));
 zInd = find(ax.depth >= zR(1)):find(ax.depth >= zR(2));
-
-if length(size(Xfilt)) < 4
-    Y = squeeze(Xfilt(xInd,yInd,zInd));
+if tR(1)-tR(2) == 0
+    if yR(1) == yR(2)
+        Y = squeeze(Xfilt(xInd,zInd));
+    elseif xR(1) == xR(2)
+        Y = squeeze(Xfilt(yInd,zInd));
+    elseif zR(1) == zR(2)
+        Y = squeeze(Xfilt(xInd,yInd));
+    else
+        Y = squeeze(Xfilt(xInd,yInd,zInd));
+    end
 else
     q.t = 1:dims(4);
+    box = handles.plotbox1.Value;
+    if box == 1 || box ==  4 ||  box == 6
     tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+    else
+        tInd = q.t(find(ax.stime >= tR(3),1));
+    end
     Y = squeeze(Xfilt(xInd,yInd,zInd,tInd));
 end
 
@@ -363,7 +375,11 @@ end
 % end
 
 if handles.hotcold.Value == 1
+    if handles.bbdb.Value == 1
+        h = hotcoldDB;
+    else
     h = hotcold;
+    end
 elseif handles.graybox.Value == 1
     h = 'gray';
 else
@@ -1269,7 +1285,9 @@ else
     n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) get(handles.squarify_box,'Value')];
     o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
     Xfilt = filts3D(Xfilt,m,n,o,param);
-    
+    if length(ax.y) == 1 & size(Xfilt,2) ~= 1
+        Xfilt = permute(Xfilt,[1 3 2]);
+    end
     dims = size(Xfilt);
     xR = [ax.x(1) ax.x(end)];
     yR = [ax.y(1) ax.y(end)];
@@ -1335,7 +1353,7 @@ else
 end
 xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
 yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
-zInd = q.z(find(ax.depth >= zR(1),1):find(ax.depth >= zR(2),1));
+zInd = find(ax.depth >= zR(1),1):find(ax.depth >= zR(2),1);
 
 X = Xfilt(xInd,yInd,zInd,tInd);
 if length(tInd) == 1
@@ -2427,15 +2445,15 @@ elseif length(str2num(handles.baseb.String)) == 3
         X = baseband2(squeeze(R(:,yloc,:,:)),rfreq(n),param.daq.HFdaq.fs_MHz,wc1,wc2);
         
         if handles.signed_env.Value == 1
-            S = sign(imag(X));
+            S = sign(imag(X));         
             dims = size(R);
-            b = waitbar(0);   
+          %  b = waitbar(0);   
             for i = 1:dims(1)
 %                 for j = 1:dims(2)
                     R2(i,:,:) = envelope(squeeze(real(R(i,yloc,:,:))));
 %                 end
 %                 waitbar(i/dims(1),b,'Basebanding');
-multiWaitbar('Basebanding',i/dims(1));
+            multiWaitbar('Basebanding',i/dims(1));
             end
             if handles.bbdb.Value == 1
                 R2 = 20*log10(R2./max(R2(:)));
@@ -4289,7 +4307,7 @@ for i = 1:n
     
     load([path file]);
     %assignin('base',['X' num2str(i)],Xfilt)
-    X(:,:,:,:,i) = Xfilt;
+    X{i} = Xfilt;
     waitbar(i/n,b,'Merging 4d datasets')
 end
 delete(b)
@@ -4368,16 +4386,36 @@ end
 % --- Executes on button press in usechan. @027
 function usechan_Callback(hObject, eventdata, handles)
 m = str2double(handles.channel.String);
-Xmerged = evalin('base','Xmerged');
-if m > size(Xmerged,5)
-    errordlg('Your selected value exceeds the number of channels');
+if handles.catHF.Value == 0
+    Xmerged = evalin('base','Xmerged');
+    if m > length(Xmerged)
+        errordlg('Your selected value exceeds the number of channels');
+    end
+    X = Xmerged{m};
+    assignin('base','Xfilt',X)
+    set(handles.active_xfilt,'String','AE');
+    if ~isempty(handles.hfchans.String)
+        set(handles.active_chan,'String',handles.hfchans.String);
+    end
+else
+    Xcat = evalin('base','Xcat');
+    if m > size(Xcat,ndims(Xcat))
+        errordlg('Your selected value exceeds the number of channels');
+    end
+    d = ndims(Xcat);
+    if d == 2
+        X = Xcat;
+    elseif d == 3
+        X = Xcat(:,:,m);
+    elseif d == 4
+        X = Xcat(:,:,:,m);
+    elseif d == 5
+        X = Xcat(:,:,:,:,m);
+    end
+    assignin('base','X_c',X);
+    set(handles.active_xfilt,'String','AE');
 end
-X = Xmerged(:,:,:,:,m);
-assignin('base','Xfilt',X)
-set(handles.active_xfilt,'String','AE');
-if ~isempty(handles.hfchans.String)
-    set(handles.active_chan,'String',handles.hfchans.String);
-end
+        
 
 
 
@@ -4500,19 +4538,45 @@ else
 end
 
 
-% --- Executes on button press in pushbutton36. %Returns xfilt to xmerged
-function pushbutton36_Callback(hObject, eventdata, handles)
-if handles.use_chop.Value == 1
-    X = evalin('base','X_c');
-    Xmerged = evalin('base','Xmerged');
-    Xmerged(:,:,:,:,str2double(handles.channel.String)) = X;
-    assignin('base','Xmerged',Xmerged);
+% --- Executes on button press in returntomerge. %Returns xfilt to xmerged
+function returntomerge_Callback(hObject, eventdata, handles)
+if handles.catHF.Value == 0
+    if handles.use_chop.Value == 1
+        X = evalin('base','X_c');
+        Xmerged = evalin('base','Xmerged');
+        Xmerged{str2double(handles.channel.String)} = X;
+        assignin('base','Xmerged',Xmerged);
+    else
+        X = evalin('base','Xfilt');
+        Xmerged = evalin('base','Xmerged');
+        Xmerged{str2double(handles.channel.String)} = X;
+        assignin('base','Xmerged',Xmerged);
+    end
 else
-    X = evalin('base','Xfilt');
-    Xmerged = evalin('base','Xmerged');
-    Xmerged(:,:,:,:,str2double(handles.channel.String)) = X;
-    assignin('base','Xmerged',Xmerged);
+    
+    if handles.use_chop.Value == 1
+        X2 = evalin('base','X_c');
+    else
+        X2 = evalin('base','Xfilt');
+    end
+    d = ndims(X2);
+    m = str2double(handles.channel.String);
+    if m == 0
+        Xcat = X2;
+    else
+        Xcat = evalin('base','Xcat');
+        if d == 2
+            Xcat(:,:,m) = X2;
+        elseif d == 3
+             Xcat(:,:,:,m) = X2;
+        elseif d == 4
+             Xcat(:,:,:,:,m) = X2;
+        end
+       
+    end
+     assignin('base','Xcat',Xcat);
 end
+   
 
 
 % --- Executes on button press in showlf.
@@ -5703,5 +5767,125 @@ function solve_v_Callback(hObject, eventdata, handles)
 function beautify_Callback(hObject, eventdata, handles)
 beautify;
 % hObject    handle to beautify (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in jay.
+function jay_Callback(hObject, eventdata, handles)
+Jay;
+% hObject    handle to jay (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in fastrecon.
+function fastrecon_Callback(hObject, eventdata, handles)
+X = evalin('base','Xcat');
+d = ndims(X);
+% for i = 2:size(X,d)
+%     test1 = squeeze(X(10,1,:,15,1));
+%     test2 = squeeze(X(10,1,:,15,i));
+%     for j = 1:length(test2)
+%         test3 = circshift(test2,j-1);
+%         c(i,j) = corr(test1,test3);
+%     end
+%     e = envelope(c(i,:));
+%     f(i) = find(e >= max(e),1);
+%     X = circshift(X,f(i),3);
+%     multiWaitbar('Reconstructing',i/size(X,d));
+% end
+% multiWaitbar('CLOSEALL');
+X_c = mean(X,d);
+assignin('base','X_c',X_c);
+
+% hObject    handle to fastrecon (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+
+function multipulse_Callback(hObject, eventdata, handles)
+% hObject    handle to multipulse (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of multipulse as text
+%        str2double(get(hObject,'String')) returns contents of multipulse as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function multipulse_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to multipulse (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function multileadchan_Callback(hObject, eventdata, handles)
+% hObject    handle to multileadchan (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of multileadchan as text
+%        str2double(get(hObject,'String')) returns contents of multileadchan as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function multileadchan_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to multileadchan (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in ConcatHF.
+function ConcatHF_Callback(hObject, eventdata, handles)
+% hObject    handle to ConcatHF (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in catHF.
+function catHF_Callback(hObject, eventdata, handles)
+% hObject    handle to catHF (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of catHF
+function auto_recon_Callback(hObject, eventdata, handles)
+
+% --- Executes on button press in auto_recon.
+Xmerged = evalin('base','Xmerged');
+for i = 1:length(Xmerged)
+    set(handles.catHF,'Value',0)
+    set(handles.channel,'String',i)
+    usechan_Callback(hObject, eventdata, handles);
+    chop_Callback(hObject, eventdata, handles);
+    
+    set(handles.catHF,'Value',1)
+    if i == 1
+        set(handles.channel,'String',0)
+    else
+        set(handles.channel,'String',i)
+    end
+   % env_button_Callback(hObject, eventdata, handles);
+    modify_button_Callback(hObject, eventdata, handles)
+    Enhance_Sig_Callback(hObject, eventdata, handles)
+    plot4_Callback(hObject, eventdata, handles);
+    returntomerge_Callback(hObject, eventdata, handles);
+end
+% hObject    handle to auto_recon (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)

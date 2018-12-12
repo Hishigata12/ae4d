@@ -259,6 +259,29 @@ end
 % imagesc(m,Ax,abs(xdemod2));
 % center_axis(abs(xdemod2),Ax,'HF',[45 65],'lin');
 
-%Design LP filter
+% Design LP filter
+if length(size(xdemod3)) == 2
+    xdemod3 = permute(xdemod3,[1 3 2]);
+end
+
+
+hd = designfilt('lowpassfir','PassbandFrequency',0.15, ...
+         'StopbandFrequency',0.2,'PassbandRipple',0.5, ...
+         'StopbandAttenuation',30,'DesignMethod','kaiserwin');
+     for i = 1:size(xdemod3,1)
+         for j = 1:size(xdemod3,2)
+             for k = 1:size(xdemod3,4)
+                 xdemod(i,j,:,k) = interp1(linspace(0,1,size(xdemod3,3)),squeeze(xdemod3(i,j,:,k)),linspace(0,1,size(xdemod3,3)*2));
+        xdemod4(i,j,:,k) = filtfilt(hd,squeeze(xdemod(i,j,:,k)));
+        xdemod1(i,j,:,k) = interp1(linspace(0,1,size(xdemod3,3)),squeeze(xdemod3(i,j,:,k)),linspace(0,1,size(xdemod,3)/2));
+        snips = round(size(xdemod1,3)*0.15);
+        trunct = xdemod1(i,j,snips:(size(xdemod1,3)-snips),k);
+        padded = padarray(squeeze(trunct),snips,'symmetric','both');
+        xdemod5(i,j,:,k) = padded(1:size(xdemod1,3));
+        multiWaitbar('LPF',i/size(xdemod3,1));
+             end
+         end
+     end
+     xdemod3 = xdemod5;
 
 end

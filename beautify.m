@@ -22,7 +22,7 @@ function varargout = beautify(varargin)
 
 % Edit the above text to modify the response to help beautify
 
-% Last Modified by GUIDE v2.5 10-Nov-2018 18:01:31
+% Last Modified by GUIDE v2.5 04-Dec-2018 03:18:14
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -55,9 +55,13 @@ function beautify_OpeningFcn(hObject, eventdata, handles, varargin)
 % Choose default command line output for beautify
 handles.output = hObject;
 set(handles.xpt,'String',1);
+set(handles.xslide,'Min',0);
 set(handles.ypt,'String',1);
+set(handles.yslide,'Min',0);
 set(handles.zpt,'String',1);
+set(handles.zslide,'Min',0);
 set(handles.tpt,'String',1);
+set(handles.tslide,'Min',0);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -166,15 +170,29 @@ function load_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value
     X = evalin('base','X_c');
 else
-    X = evalin('base','Xfilt');
+    X = evalin('base','Jrecon');
 end
 assignin('base','X',X);
 s = size(X);
 % Writes number of points in each dimension
 set(handles.xtext,'String',s(1));
+set(handles.xslide,'Max',s(1))
+set(handles.xslide,'SliderStep',[1/s(1) 5/s(1)]);
 set(handles.ytext,'String',s(2));
+set(handles.yslide,'Max',s(2))
+set(handles.yslide,'SliderStep',[1/s(2) 5/s(2)]);
 set(handles.ztext,'String',s(3));
+set(handles.zslide,'Max',s(3))
+set(handles.zslide,'SliderStep',[1/s(3) 5/s(3)]);
+if length(s) == 4
 set(handles.ttext,'String',s(4));
+set(handles.tslide,'Max',s(4))
+set(handles.tslide,'SliderStep',[1/s(4) 5/s(4)]);
+else 
+    set(handles.ttext,'String',1);
+end
+
+
 % Sets ranges for each dimension
 max_range_Callback(hObject, eventdata, handles)
 
@@ -844,8 +862,8 @@ t = [str2double(get(handles.tmin,'String')) str2double(get(handles.tmax,'String'
     o = [1 str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
     Xtemp = X(x(1):x(2),y(1):y(2),z(1):z(2),t(1):t(2));
     X2 = filts3D(Xtemp,m,n,o);
-    X(x(1):round(x(2)*o(1)),y(1):round(y(2)*o(2)),z(1):round(z(2)*o(3)),t(1):t(2)) = X2;
-    assignin('base','Xnew',X)
+%    X(x(1):round(x(2)*o(1)),y(1):round(y(2)*o(2)),z(1):round(z(2)*o(3)),t(1):t(2)) = X2;
+    assignin('base','Xnew',X2)
 
     
 % --- Executes on button press in allt.
@@ -1096,3 +1114,173 @@ function int_z_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in pushbutton12.
+function pushbutton12_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton12 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+X = evalin('base','Xnew');
+assignin('base','X_c',X);
+
+
+% --- Executes on slider movement.
+function xslide_Callback(hObject, eventdata, handles)
+% hObject    handle to xslide (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+val = round(get(hObject,'Value'));
+t = [str2double(handles.xmin.String) str2double(handles.xmax.String)];
+if val > t(2)
+    val = t(2)-1;
+end
+if val < t(1)
+    val = t(1)+1;
+end
+    handles.xslide.Max = t(2);
+    handles.xslide.Min = t(1);   
+set(handles.xslide,'SliderStep',[1/t(2) 5/t(2)]);
+set(handles.xpt,'String',val);
+set(handles.xslide,'Value',val);
+plotorig_Callback(hObject, eventdata, handles)
+
+    
+%handles.xslide.SliderStep = [1 10];
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+
+
+% --- Executes during object creation, after setting all properties.
+function xslide_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to xslide (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+% --- Executes on slider movement.
+function yslide_Callback(hObject, eventdata, handles)
+% hObject    handle to yslide (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+val = round(get(hObject,'Value'));
+t = [str2double(handles.ymin.String) str2double(handles.ymax.String)];
+if val > t(2)
+    val = t(2)-1;
+end
+if val < t(1)
+    val = t(1)+1;
+end
+    handles.yslide.Max = t(2);
+     handles.yslide.Min = t(1); 
+set(handles.yslide,'SliderStep',[1/t(2) 5/t(2)]);
+set(handles.ypt,'String',val);
+set(handles.yslide,'Value',val);
+plotorig_Callback(hObject, eventdata, handles)
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+
+
+% --- Executes during object creation, after setting all properties.
+function yslide_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to yslide (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+% --- Executes on slider movement.
+function zslide_Callback(hObject, eventdata, handles)
+% hObject    handle to zslide (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+val = round(get(hObject,'Value'));
+t = [str2double(handles.zmin.String) str2double(handles.zmax.String)];
+if val > t(2)
+    val = t(2)-1;
+end
+if val < t(1)
+    val = t(1)+1;
+end
+    handles.zslide.Max = t(2);
+     handles.zslide.Min = t(1); 
+set(handles.zslide,'SliderStep',[1/t(2) 5/t(2)]);
+set(handles.zpt,'String',val);
+set(handles.zslide,'Value',val);
+plotorig_Callback(hObject, eventdata, handles)
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+
+
+% --- Executes during object creation, after setting all properties.
+function zslide_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to zslide (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+% --- Executes on slider movement.
+function tslide_Callback(hObject, eventdata, handles)
+% hObject    handle to tslide (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+val = round(get(hObject,'Value'));
+t = [str2double(handles.tmin.String) str2double(handles.tmax.String)];
+if val > t(2)
+    val = t(2)-1;
+end
+if val < t(1)
+    val = t(1)+1;
+end
+    handles.tslide.Max = t(2);
+     handles.tslide.Min = t(1); 
+set(handles.tslide,'SliderStep',[1/t(2) 5/t(2)]);
+set(handles.tpt,'String',val);
+set(handles.tslide,'Value',val);
+plotorig_Callback(hObject, eventdata, handles)
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+
+
+% --- Executes during object creation, after setting all properties.
+function tslide_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to tslide (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+% --- Executes on button press in TodB.
+function TodB_Callback(hObject, eventdata, handles)
+% hObject    handle to TodB (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if handles.holdmods.Value
+    X = evalin('base','Xnew');
+else
+    X = evalin('base','X');
+end
+S = sign(X).*-1;
+D = abs(X);
+B = 20*log10(D./max(D(:)));
+C  = B.*S;
+assignin('base','Xnew',C);

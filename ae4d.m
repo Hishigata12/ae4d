@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to helpf ae4d
 
-% Last Modified by GUIDE v2.5 29-Nov-2018 17:17:36
+% Last Modified by GUIDE v2.5 17-Dec-2018 15:27:07
 
 % Begin initialization code - DO NOT EDIT
 
@@ -262,7 +262,7 @@ function plot_ae_Callback(hObject, eventdata, handles) % @002
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 
-param = evalin('base','param');
+% param = evalin('base','param');
 if handles.use_chop.Value == 1
     Xfilt = evalin('base','X_c');
     ax = evalin('base','ax_c');
@@ -667,7 +667,7 @@ for p = 1:hf_num
 %     end
     
     dims = size(HF);
-    [~, ax] = make_axes(param,dims,t_delay,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
+    [~, ax] = make_axes(param,dims,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
     % XdB = real(20*log10(real(HF)./max(max(max(max(real(HF(:,:,M.xT,:))))))));
     % Xfilt = filts2D(XdB,[0 1 12],[0 2 2]);
     
@@ -675,9 +675,9 @@ for p = 1:hf_num
     if handles.onemhz.Value == 0
         lensDelay = PE.Trans.lensCorrection.*PE.PData.Lambda/1.49; %modified to 1.49
         RefPulseOneWay = PE.TW.Wvfm1Wy;
-        RefPulse       = resample(RefPulseOneWay,PE.bScanParm.HFSamplingRate,PE.bScanParm.vsx_fs);
+        RefPulse       = resample(RefPulseOneWay,PE.bScanParm.daq.HFdaq.fs_MHz,PE.bScanParm.vsx_fs);
         [~,b]          = max(abs(hilbert(RefPulse-mean(RefPulse))));
-        RefPulseT      = (0:size(RefPulse,1)-1)/PE.bScanParm.HFSamplingRate;
+        RefPulseT      = (0:size(RefPulse,1)-1)/PE.bScanParm.daq.HFdaq.fs_MHz;
         peakDelay       = RefPulseT(b);
         z_delay = (lensDelay + peakDelay).*1.485;
         ax.depth = ax.depth - z_delay;
@@ -793,11 +793,11 @@ function movie_button_Callback(hObject, eventdata, handles) %@005
 % hObject    handle to movie_button (see GCBO)
 if handles.use_chop.Value == 0
     Xfilt = evalin('base','Xfilt');
-    param = evalin('base','param');
+    %  param = evalin('base','param');
     ax = evalin('base','ax');
 else
     Xfilt = evalin('base','X_c');
-    param = evalin('base','param');
+    %    param = evalin('base','param');
     ax = evalin('base','ax_c');
 end
 
@@ -864,7 +864,7 @@ else
 end
 if handles.hotcold.Value == 1
     if handles.bbdb.Value == 1
-    h = hotcoldDB;
+        h = hotcoldDB;
     else
         h = hotcold;
     end
@@ -873,8 +873,9 @@ elseif handles.graybox.Value == 1
 else
     h = 'hot';
 end
-if handles.plotbox2.Value == 1 && handles.all_movie.Value == 0
-    if handles.save_fig.Value == 0
+if handles.save_fig.Value == 0
+    if handles.plotbox2.Value == 1 && handles.all_movie.Value == 0
+        %     if handles.save_fig.Value == 0
         for k = tInd %Mod loop
             %             if handles.med_box.Value == 1
             %                 J = medfilt2((squeeze(Xfilt(xInd,ypoint,zInd,k)))',[5 5]);
@@ -907,12 +908,12 @@ if handles.plotbox2.Value == 1 && handles.all_movie.Value == 0
             handles.axes2.YLabel.String = 'Depth (mm)';
             drawnow
         end
-    elseif handles.save_fig.Value == 1
-        vidwrite(param,ax,Xfilt,handles)
-    end
-    
-elseif handles.plotbox2.Value == 2 && handles.all_movie.Value == 0
-    if handles.save_fig.Value == 0
+        %     elseif handles.save_fig.Value == 1
+        %         vidwrite(ax,Xfilt,handles)
+        %     end
+        
+    elseif handles.plotbox2.Value == 2 && handles.all_movie.Value == 0
+        
         for k = tInd %Mod loop
             %             if handles.med_box.Value == 1
             %                 J = medfilt2((squeeze(Xfilt(xpoint,yInd,zInd,k)))',[5 5]);
@@ -948,12 +949,12 @@ elseif handles.plotbox2.Value == 2 && handles.all_movie.Value == 0
         end
         
         
-    elseif handles.save_fig.Value == 1
-        vidwrite(param,ax,Xfilt,handles)
-    end
-    
-elseif handles.plotbox2.Value == 4 && handles.all_movie.Value == 0
-    if handles.save_fig.Value == 0
+        %     elseif handles.save_fig.Value == 1
+        %         vidwrite(ax,Xfilt,handles)
+        %     end
+        
+    elseif handles.plotbox2.Value == 4 && handles.all_movie.Value == 0
+        
         for k = tInd %Mod loop
             %             if handles.med_box.Value == 1
             %                 J = medfilt2((squeeze(Xfilt(xInd,yInd,zpoint,k)))',[5 5]);
@@ -989,13 +990,26 @@ elseif handles.plotbox2.Value == 4 && handles.all_movie.Value == 0
         end
         
         
-    elseif handles.save_fig.Value == 1
-        vidwrite(param,ax,Xfilt,handles)
-    end
+%     elseif handles.save_fig.Value == 1
+%         if handles.plotbox2.Value == 1
+%             X = squeeze(Xfilt(xInd,ypoint,zInd,tInd));
+%             X = permute(X,[2 1 3]);
+%         elseif handles.plotbox2.Value == 2
+%             X = squeeze(Xfilt(xpoint,yInd,zInd,tInd));
+%             X = permute(X,[2 1 3]);
+%         elseif handles.plotbox2.Value == 3
+%             X = squeeze(Xfilt(xInd,yInd,zInd,tpoint));
+%             X = permute(X,[2 1 3]);
+%         elseif handles.plotbox2.Value == 4
+%             X = squeeze(Xfilt(xInd,yInd,zpoint,tInd));
+%             X = permute(X,[2 1 3]);
+%         end
+%         vidwrite(X,handles)
+%     end
     
     
-elseif handles.plotbox2.Value == 3 && handles.all_movie.Value == 0
-    if handles.save_fig.Value == 0
+    elseif handles.plotbox2.Value == 3 && handles.all_movie.Value == 0
+        
         for k = zInd %Mod loop
             %             if handles.med_box.Value == 1
             %                 J = medfilt2((squeeze(Xfilt(xInd,yInd,k,tpoint)))',[5 5]);
@@ -1020,40 +1034,63 @@ elseif handles.plotbox2.Value == 3 && handles.all_movie.Value == 0
             handles.axes2.YLabel.String = 'Elevational (mm)';
             drawnow
         end
-        
-        
-    elseif handles.save_fig.Value == 1
-        vidwrite(param,ax,Xfilt,handles)
+    
+    
+    %     elseif handles.save_fig.Value == 1
+    %         vidwrite(ax,Xfilt,handles)
+    %     end
     end
+elseif handles.save_fig.Value == 1
+    if handles.plotbox2.Value == 1
+        X = squeeze(Xfilt(xInd,ypoint,zInd,tInd));
+%         X = permute(X,[2 1 3]);
+    elseif handles.plotbox2.Value == 2
+        X = squeeze(Xfilt(xpoint,yInd,zInd,tInd));
+%         X = permute(X,[2 1 3]);
+    elseif handles.plotbox2.Value == 3
+        X = squeeze(Xfilt(xInd,yInd,zInd,tpoint));
+%         X = permute(X,[2 1 3]);
+    elseif handles.plotbox2.Value == 4
+        X = squeeze(Xfilt(xInd,yInd,zpoint,tInd));
+%         X = permute(X,[2 1 3]);
+    end
+    vidwrite(X,handles,aeR,h)
 end
 if handles.all_movie.Value == 1
     
     for k = tInd
+        
         J1 = squeeze(Xfilt(xInd,ypoint,zInd,k))';
         J2 = squeeze(Xfilt(xpoint,yInd,zInd,k))';
         J3 = squeeze(Xfilt(xInd,yInd,zpoint,k))';
-        
-        axes(handles.axes1)
-        imagesc(ax.x(xInd),ax.depth(zInd),J1) % mod plots
-        colormap(h)
-        if ~isempty(aeR)
-            caxis(aeR)
+        if k == tInd(1)
+            axes(handles.axes1)
+            imagesc(ax.x(xInd),ax.depth(zInd),J1) % mod plots
+            colormap(h)
+            if ~isempty(aeR)
+                caxis(aeR)
+            end
+            
+            axes(handles.axes3)
+            imagesc(ax.y(yInd),ax.depth(zInd),J2)
+            colormap(h)
+            if ~isempty(aeR)
+                caxis(aeR)
+            end
+            
+            axes(handles.axes2)
+            imagesc(ax.x(xInd),ax.y(yInd),J3)
+            colormap(h)
+            if ~isempty(aeR)
+                caxis(aeR)
+            end
+            drawnow
+        else
+            handles.axes1.Children.CData = J1;
+            handles.axes2.Children.CData = J3;
+            handles.axes3.Children.CData = J2;
+            drawnow;
         end
-        
-        axes(handles.axes3)
-        imagesc(ax.y(yInd),ax.depth(zInd),J2)
-        colormap(h)
-        if ~isempty(aeR)
-            caxis(aeR)
-        end
-        
-        axes(handles.axes2)
-        imagesc(ax.x(xInd),ax.y(yInd),J3)
-        colormap(h)
-        if ~isempty(aeR)
-            caxis(aeR)
-        end
-        drawnow
         %                     handles.axes1.XLabel.String = 'Lateral (mm)'; %Mod Axes
         %             handles.axes1.YLabel.String = 'Depth (mm)';
         %                         handles.axes3.XLabel.String = 'Elevational (mm)'; %Mod Axes
@@ -4070,7 +4107,7 @@ end
 
 % --- Executes on button press in plot4. @025
 function plot4_Callback(hObject, eventdata, handles)
-param = evalin('base','param');
+% param = evalin('base','param');
 if handles.use_chop.Value == 1
     Xfilt = evalin('base','X_c');
     ax = evalin('base','ax_c');
@@ -5796,8 +5833,110 @@ d = ndims(X);
 %     multiWaitbar('Reconstructing',i/size(X,d));
 % end
 % multiWaitbar('CLOSEALL');
-X_c = mean(X,d);
-assignin('base','X_c',X_c);
+if handles.fastchan.Value
+if handles.fastmed.Value
+    X_c = median(X,d);
+    X = X_c;
+else
+    X_c = mean(X,d);
+    X = X_c;
+end
+else
+    X_c = X;
+end
+if handles.fastdecim.Value
+    d = size(X_c);
+    n = length(d);
+    for i = 1:d(1)
+        for j = 1:d(2)
+            for k = 1:d(3)
+                for t = 1:d(n)
+                    if mod(t,2) == 0 && t < d(n)
+                        %                         Y(i,j,k,t/4) = mean(X(i,j,k,t-2:t+2));
+                        T = find(max(abs(X(i,j,k,t-1:t+1))));
+                        R = max(X(i,j,k,t-1:t+1))-min(X(i,j,k,t-1:t+1));
+                        Y(i,j,k,t/2) = X(i,j,k,t-1+T)*R;
+                    else
+                        %  Y(i,j,k,t) = X(i,j,k,t);
+                    end
+                end
+            end
+        end
+        multiWaitbar('decimating and averaging along stime',i/d(1));
+    end
+    ax = evalin('base','ax_c');
+    ax.stime = linspace(0,max(ax.stime),size(Y,4));
+%     ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
+clear X;
+    X = Y;
+    assignin('base','ax_c',ax);
+end
+if handles.fastdecz.Value
+    d = size(X);
+    n = length(d);
+       for i = 1:d(1)
+        for j = 1:d(2)
+            for k = 1:d(3)
+                for t = 1:d(n)
+                    if mod(k,2) == 0 && k < d(3)
+                    T = find(max(abs(X(i,j,k-1:k+1,t))));
+                    R = max(X(i,j,k-1:k+1,t))-min(X(i,j,k-1:k+1,t));
+                    Z(i,j,k/2,t) = X(i,j,k-1+T)*R;
+                    end
+                end
+            end
+        end
+        multiWaitbar('decimating and averaging along depth',i/d(1));
+       end
+    ax = evalin('base','ax_c');
+%     ax.stime = linspace(0,max(ax.stime),size(Y,4));
+    ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
+    clear X;
+    X = Z;
+    assignin('base','ax_c',ax);
+end
+if handles.fastpulse.Value
+    d = size(X);
+    n = length(d);
+    clear Y;
+   ax = evalin('base','ax_c');
+   z = str2num(handles.zP.String);
+   zstart = find(ax.depth >= z,1);
+   param = evalin('base','param');
+   Fs = param.daq.HFdaq.fs_MHz;
+   c = 1.485;
+   samps = param.Fast.delay*Fs;
+   for i = 1:param.Fast.reps
+   jump(i) = zstart+samps*(i-1);
+   end
+   area = 2*Fs;
+   for i = 1:d(1)
+       for j = 1:d(2)
+               for t = 1:d(4)
+                   for k = 1:param.Fast.reps
+                    Y(i,j,:,t,k) = X(i,j,jump(k)-area:jump(k)+area,t,k);
+                   end
+               end
+       end
+       multiWaitbar('Building pulse segments',i/d(1));
+   end
+   if handles.fastmed.Value
+       Y2 = median(Y,5);
+   else
+       Y2 = mean(Y,5);
+   end
+   clear X;
+   for i = 1:d(1)
+       for j = 1:d(2)
+           for t = 1:d(4)
+                X(i,j,zstart-area:area+zstart,t) = Y2(i,j,:,t);
+           end
+       end
+       multiWaitbar('Reconstructing',i/d(1));
+   end
+end
+multiWaitbar('CLOSEALL');
+   assignin('base','X_c',X);
 
 % hObject    handle to fastrecon (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -5880,8 +6019,11 @@ for i = 1:length(Xmerged)
     else
         set(handles.channel,'String',i)
     end
-   % env_button_Callback(hObject, eventdata, handles);
+    if handles.fastenv.Value
+           env_button_Callback(hObject, eventdata, handles);
+    elseif handles.fastbb.Value
     modify_button_Callback(hObject, eventdata, handles)
+    end
     Enhance_Sig_Callback(hObject, eventdata, handles)
     plot4_Callback(hObject, eventdata, handles);
     returntomerge_Callback(hObject, eventdata, handles);
@@ -5889,3 +6031,66 @@ end
 % hObject    handle to auto_recon (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in fastenv.
+function fastenv_Callback(hObject, eventdata, handles)
+% hObject    handle to fastenv (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of fastenv
+
+
+% --- Executes on button press in fastchan.
+function fastchan_Callback(hObject, eventdata, handles)
+% hObject    handle to fastchan (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of fastchan
+
+
+% --- Executes on button press in fastdecim.
+function fastdecim_Callback(hObject, eventdata, handles)
+% hObject    handle to fastdecim (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of fastdecim
+
+
+% --- Executes on button press in fastpulse.
+function fastpulse_Callback(hObject, eventdata, handles)
+% hObject    handle to fastpulse (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of fastpulse
+
+
+% --- Executes on button press in fastbb.
+function fastbb_Callback(hObject, eventdata, handles)
+% hObject    handle to fastbb (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of fastbb
+
+
+% --- Executes on button press in fastmed.
+function fastmed_Callback(hObject, eventdata, handles)
+% hObject    handle to fastmed (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of fastmed
+
+
+% --- Executes on button press in fastdecz.
+function fastdecz_Callback(hObject, eventdata, handles)
+% hObject    handle to fastdecz (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of fastdecz

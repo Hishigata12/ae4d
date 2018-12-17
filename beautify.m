@@ -22,16 +22,16 @@ function varargout = beautify(varargin)
 
 % Edit the above text to modify the response to help beautify
 
-% Last Modified by GUIDE v2.5 04-Dec-2018 03:18:14
+% Last Modified by GUIDE v2.5 12-Dec-2018 17:57:52
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
-                   'gui_Singleton',  gui_Singleton, ...
-                   'gui_OpeningFcn', @beautify_OpeningFcn, ...
-                   'gui_OutputFcn',  @beautify_OutputFcn, ...
-                   'gui_LayoutFcn',  [] , ...
-                   'gui_Callback',   []);
+    'gui_Singleton',  gui_Singleton, ...
+    'gui_OpeningFcn', @beautify_OpeningFcn, ...
+    'gui_OutputFcn',  @beautify_OutputFcn, ...
+    'gui_LayoutFcn',  [] , ...
+    'gui_Callback',   []);
 if nargin && ischar(varargin{1})
     gui_State.gui_Callback = str2func(varargin{1});
 end
@@ -71,7 +71,7 @@ guidata(hObject, handles);
 
 
 % --- Outputs from this function are returned to the command line.
-function varargout = beautify_OutputFcn(hObject, eventdata, handles) 
+function varargout = beautify_OutputFcn(hObject, eventdata, handles)
 % varargout  cell array for returning output args (see VARARGOUT);
 % hObject    handle to figure
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -132,7 +132,11 @@ function max_range_Callback(hObject, eventdata, handles)
 % hObject    handle to max_range (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-X = evalin('base','X');
+if handles.plotmod.Value == 1
+    X = evalin('base','Xnew');
+else
+    X = evalin('base','X');
+end
 S = size(X);
 %Sets min ranges to 1
 set(handles.xmin,'String',1);
@@ -140,13 +144,13 @@ set(handles.ymin,'String',1);
 set(handles.zmin,'String',1);
 set(handles.tmin,'String',1);
 set(handles.cmin,'String',min(X(:)));
-%Sets max ranges 
+%Sets max ranges
 set(handles.xmax,'String',S(1));
 set(handles.ymax,'String',S(2));
 set(handles.zmax,'String',S(3));
 if length(S) >= 4
-set(handles.tmax,'String',S(4));
-else 
+    set(handles.tmax,'String',S(4));
+else
     set(handles.tmax,'String',1);
 end
 set(handles.cmax,'String',max(X(:)));
@@ -185,10 +189,10 @@ set(handles.ztext,'String',s(3));
 set(handles.zslide,'Max',s(3))
 set(handles.zslide,'SliderStep',[1/s(3) 5/s(3)]);
 if length(s) == 4
-set(handles.ttext,'String',s(4));
-set(handles.tslide,'Max',s(4))
-set(handles.tslide,'SliderStep',[1/s(4) 5/s(4)]);
-else 
+    set(handles.ttext,'String',s(4));
+    set(handles.tslide,'Max',s(4))
+    set(handles.tslide,'SliderStep',[1/s(4) 5/s(4)]);
+else
     set(handles.ttext,'String',1);
 end
 
@@ -210,7 +214,7 @@ function plotorig_Callback(hObject, eventdata, handles)
 if handles.plotmod.Value
     X = evalin('base','Xnew');
 else
-X = evalin('base','X');
+    X = evalin('base','X');
 end
 N = get(handles.plot2d,'Value');
 if N == 1 %XZ
@@ -226,7 +230,7 @@ elseif N == 2 %YZ
     y = str2double(get(handles.zmin,'String')):str2double(get(handles.zmax,'String'));
     imag = squeeze(X(p1,x,y,p2))';
 elseif N == 3 %XY
-       p1 = str2double(get(handles.zpt,'String'));
+    p1 = str2double(get(handles.zpt,'String'));
     p2 = str2double(get(handles.tpt,'String'));
     x = str2double(get(handles.xmin,'String')):str2double(get(handles.xmax,'String'));
     y = str2double(get(handles.ymin,'String')):str2double(get(handles.ymax,'String'));
@@ -238,7 +242,7 @@ elseif N == 4 %TX
     y = str2double(get(handles.tmin,'String')):str2double(get(handles.tmax,'String'));
     imag = squeeze(X(x,p1,p2,y));
 elseif N == 5 %TY
-       p1 = str2double(get(handles.xpt,'String'));
+    p1 = str2double(get(handles.xpt,'String'));
     p2 = str2double(get(handles.zpt,'String'));
     x = str2double(get(handles.ymin,'String')):str2double(get(handles.ymax,'String'));
     y = str2double(get(handles.tmin,'String')):str2double(get(handles.tmax,'String'));
@@ -256,7 +260,7 @@ if get(handles.cmapmenu,'Value') == 4
     clear h
     h = hotcoldDB;
 elseif get(handles.cmapmenu,'Value') == 3
-      clear h
+    clear h
     h = hotcold;
 end
 if handles.plotmod.Value
@@ -625,17 +629,19 @@ if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgr
 end
 
 
-% --- Executes on button press in pushbutton4.
-function pushbutton4_Callback(hObject, eventdata, handles)
-% hObject    handle to pushbutton4 (see GCBO)
+% --- Executes on button press in moviebutton.
+function moviebutton_Callback(hObject, eventdata, handles)
+% hObject    handle to moviebutton (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
 if handles.plotmod.Value
     X = evalin('base','Xnew');
 else
-X = evalin('base','X');
+    X = evalin('base','X');
 end
 N = get(handles.plot3d,'Value');
+
+
 if N == 1 %XZt
     p = str2double(get(handles.ypt,'String'));
     x = str2double(get(handles.xmin,'String')):str2double(get(handles.xmax,'String'));
@@ -649,58 +655,74 @@ elseif N == 2 %YZt
     t = str2double(get(handles.tmin,'String')):str2double(get(handles.tmax,'String'));
     imag = squeeze(X(p,x,y,:));
 elseif N == 3 %XYt
-   p = str2double(get(handles.zpt,'String'));
+    p = str2double(get(handles.zpt,'String'));
     x = str2double(get(handles.xmin,'String')):str2double(get(handles.xmax,'String'));
     y = str2double(get(handles.ymin,'String')):str2double(get(handles.ymax,'String'));
     t = str2double(get(handles.tmin,'String')):str2double(get(handles.tmax,'String'));
     imag = squeeze(X(x,y,p,:));
 elseif N == 4 %XYz
-   p = str2double(get(handles.tpt,'String'));
+    p = str2double(get(handles.tpt,'String'));
     x = str2double(get(handles.xmin,'String')):str2double(get(handles.xmax,'String'));
     y = str2double(get(handles.ymin,'String')):str2double(get(handles.ymax,'String'));
     t = str2double(get(handles.zmin,'String')):str2double(get(handles.zmax,'String'));
     imag = squeeze(X(x,y,:,p));
 elseif N == 5 %XZy
-   p = str2double(get(handles.tpt,'String'));
+    p = str2double(get(handles.tpt,'String'));
     x = str2double(get(handles.xmin,'String')):str2double(get(handles.xmax,'String'));
     y = str2double(get(handles.zmin,'String')):str2double(get(handles.zmax,'String'));
     t = str2double(get(handles.ymin,'String')):str2double(get(handles.ymax,'String'));
     imag = squeeze(X(x,:,y,p));
     imag = permute(imag,[1 3 2]);
 elseif N == 6 %YZx
-   p = str2double(get(handles.tpt,'String'));
+    p = str2double(get(handles.tpt,'String'));
     x = str2double(get(handles.ymin,'String')):str2double(get(handles.ymax,'String'));
     y = str2double(get(handles.zmin,'String')):str2double(get(handles.zmax,'String'));
     t = str2double(get(handles.xmin,'String')):str2double(get(handles.xmax,'String'));
     imag = squeeze(X(:,x,y,p));
     imag = permute(imag,[2 3 1]);
 end
+c = [str2double(get(handles.cmin,'String')) str2double(get(handles.cmax,'String'))];
+
 hmap = get(handles.cmapmenu,'String');
 h = hmap{get(handles.cmapmenu,'Value')};
 if get(handles.cmapmenu,'Value') == 4
     clear h
     h = hotcoldDB;
 elseif get(handles.cmapmenu,'Value') == 3
-      clear h
+    clear h
     h = hotcold;
 end
-if handles.plotmod.Value
-    axes(handles.axes3)
+if handles.savebox.Value
+    figure;
+    vidwrite(imag(:,:,t),handles,c,h);
 else
-    axes(handles.axes1)
+    if handles.plotmod.Value
+        axes(handles.axes3)
+    else
+        axes(handles.axes1)
+    end
+    for i = t
+        if i == t(1)
+                imagesc(imag(:,:,i)');
+        else
+            if handles.plotmod.Value
+                handles.axes3.Children.CData  = imag(:,:,i)';
+            else
+                handles.axes1.Children.CData  = imag(:,:,i)';
+            end
+        end
+        colormap(h);
+        
+        if isnan(c)
+        else
+            caxis(c);
+        end
+        title(i);
+        %drawnow;
+        pause(str2double(handles.pausems.String)/1e3);
+    end
 end
-for i = t
-imagesc(imag(:,:,i)')
-colormap(h);
-c = [str2double(get(handles.cmin,'String')) str2double(get(handles.cmax,'String'))];
-if isnan(c)
-else
-    caxis(c);
-end
-title(i);
-drawnow;
- pause(str2double(handles.pausems.String)/1e3);
-end
+
 
 
 % --- Executes on button press in pushbutton5.
@@ -857,15 +879,31 @@ x = [str2double(get(handles.xmin,'String')) str2double(get(handles.xmax,'String'
 y = [str2double(get(handles.ymin,'String')) str2double(get(handles.ymax,'String')) str2double(get(handles.ypt,'String'))];
 z = [str2double(get(handles.zmin,'String')) str2double(get(handles.zmax,'String')) str2double(get(handles.zpt,'String'))];
 t = [str2double(get(handles.tmin,'String')) str2double(get(handles.tmax,'String')) str2double(get(handles.tpt,'String'))];
-    m = [1 str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
-    n = [1 str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) 0];% get(handles.squarify_box,'Value')];
-    o = [1 str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
-    Xtemp = X(x(1):x(2),y(1):y(2),z(1):z(2),t(1):t(2));
-    X2 = filts3D(Xtemp,m,n,o);
-%    X(x(1):round(x(2)*o(1)),y(1):round(y(2)*o(2)),z(1):round(z(2)*o(3)),t(1):t(2)) = X2;
-    assignin('base','Xnew',X2)
 
-    
+m1 = [str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
+n1 = [str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) 0];% get(handles.squarify_box,'Value')];
+o1 = [str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
+if sum(m1) ~= 3
+    m = [1 m1];
+else
+    m = [0 m1];
+end
+if sum(n1) ~= 3
+    n = [1 n1];
+else
+    n = [0 n1];
+end
+if sum(o1) ~= 3
+    o = [1 o1];
+else
+    o = [0 o1];
+end
+Xtemp = X(x(1):x(2),y(1):y(2),z(1):z(2),t(1):t(2));
+X2 = filts3D(Xtemp,m,n,o);
+%    X(x(1):round(x(2)*o(1)),y(1):round(y(2)*o(2)),z(1):round(z(2)*o(3)),t(1):t(2)) = X2;
+assignin('base','Xnew',X2)
+
+
 % --- Executes on button press in allt.
 function allt_Callback(hObject, eventdata, handles)
 % hObject    handle to allt (see GCBO)
@@ -917,8 +955,8 @@ if isnan(s.c)
     set(handles.cmin,'String',s.c);
     set(handles.cmax,'String',s.c);
 else
-set(handles.cmin,'String',s.c(1));
-set(handles.cmax,'String',s.c(2));
+    set(handles.cmin,'String',s.c(1));
+    set(handles.cmax,'String',s.c(2));
 end
 
 
@@ -971,7 +1009,7 @@ z = [str2double(get(handles.zmin,'String')) str2double(get(handles.zmax,'String'
 t = [str2double(get(handles.tmin,'String')) str2double(get(handles.tmax,'String')) str2double(get(handles.tpt,'String'))];
 if handles.allt.Value
     Xnew = abs(hilbert(X(x(1):x(2),y(1):y(2),z(1):z(2),:)));
-else  
+else
     Xnew = abs(hilbert(X(x(1):x(2),y(1):y(2),z(1):z(2),t(1):t(2))));
     %Xnew = abs(X);
 end
@@ -1121,7 +1159,16 @@ function pushbutton12_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton12 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-X = evalin('base','Xnew');
+if handles.plotmod.Value
+    X = evalin('base','Xnew');
+else
+    X = evalin('base','X');
+end
+x = str2num(handles.xmin.String):str2num(handles.xmax.String);
+y = str2num(handles.ymin.String):str2num(handles.ymax.String);
+z = str2num(handles.zmin.String):str2num(handles.zmax.String);
+t = str2num(handles.tmin.String):str2num(handles.tmax.String);
+X = X(x,y,z,t);
 assignin('base','X_c',X);
 
 
@@ -1138,14 +1185,14 @@ end
 if val < t(1)
     val = t(1)+1;
 end
-    handles.xslide.Max = t(2);
-    handles.xslide.Min = t(1);   
+handles.xslide.Max = t(2);
+handles.xslide.Min = t(1);
 set(handles.xslide,'SliderStep',[1/t(2) 5/t(2)]);
 set(handles.xpt,'String',val);
 set(handles.xslide,'Value',val);
 plotorig_Callback(hObject, eventdata, handles)
 
-    
+
 %handles.xslide.SliderStep = [1 10];
 
 % Hints: get(hObject,'Value') returns position of slider
@@ -1177,8 +1224,8 @@ end
 if val < t(1)
     val = t(1)+1;
 end
-    handles.yslide.Max = t(2);
-     handles.yslide.Min = t(1); 
+handles.yslide.Max = t(2);
+handles.yslide.Min = t(1);
 set(handles.yslide,'SliderStep',[1/t(2) 5/t(2)]);
 set(handles.ypt,'String',val);
 set(handles.yslide,'Value',val);
@@ -1212,8 +1259,8 @@ end
 if val < t(1)
     val = t(1)+1;
 end
-    handles.zslide.Max = t(2);
-     handles.zslide.Min = t(1); 
+handles.zslide.Max = t(2);
+handles.zslide.Min = t(1);
 set(handles.zslide,'SliderStep',[1/t(2) 5/t(2)]);
 set(handles.zpt,'String',val);
 set(handles.zslide,'Value',val);
@@ -1247,8 +1294,8 @@ end
 if val < t(1)
     val = t(1)+1;
 end
-    handles.tslide.Max = t(2);
-     handles.tslide.Min = t(1); 
+handles.tslide.Max = t(2);
+handles.tslide.Min = t(1);
 set(handles.tslide,'SliderStep',[1/t(2) 5/t(2)]);
 set(handles.tpt,'String',val);
 set(handles.tslide,'Value',val);
@@ -1284,3 +1331,133 @@ D = abs(X);
 B = 20*log10(D./max(D(:)));
 C  = B.*S;
 assignin('base','Xnew',C);
+
+
+% --- Executes on button press in pushbutton14.
+function pushbutton14_Callback(hObject, eventdata, handles)
+% hObject    handle to pushbutton14 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if handles.plotmod.Value
+    X = evalin('base','Xnew');
+else
+    X = evalin('base','X');
+end
+d = size(X);
+if ndims(X) == 3
+    if handles.vol.Value
+        d = [d 1];
+    else
+        d = [d(1) 1 d(2) d(3)];
+    end
+elseif ndims(X) == 2
+    d = [d(1) 1 d(2) 1];
+end
+x = str2num(handles.xmin.String):str2num(handles.xmax.String);
+y = str2num(handles.ymin.String):str2num(handles.ymax.String);
+z = str2num(handles.zmin.String):str2num(handles.zmax.String);
+t = str2num(handles.tmin.String):str2num(handles.tmax.String);
+a.x = x;
+a.y = y;
+a.depth = z;
+a.stime = t;
+ax_c.x = 1:d(1);
+ax_c.y = 1:d(2);
+ax_c.depth = 1:d(3);
+ax_c.stime = 1:d(4);
+assignin('base','ax_c',a);
+
+
+% --- Executes on button press in vol.
+function vol_Callback(hObject, eventdata, handles)
+% hObject    handle to vol (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of vol
+
+
+% --- Executes on button press in savebox.
+function savebox_Callback(hObject, eventdata, handles)
+% hObject    handle to savebox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of savebox
+
+
+
+function savefolder_Callback(hObject, eventdata, handles)
+% hObject    handle to savefolder (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of savefolder as text
+%        str2double(get(hObject,'String')) returns contents of savefolder as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function savefolder_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to savefolder (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function savefigname_Callback(hObject, eventdata, handles)
+% hObject    handle to savefigname (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of savefigname as text
+%        str2double(get(hObject,'String')) returns contents of savefigname as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function savefigname_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to savefigname (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in thisfold.
+function thisfold_Callback(hObject, eventdata, handles)
+% hObject    handle to thisfold (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+set(handles.savefolder,'String',pwd);
+
+
+
+function framerate_Callback(hObject, eventdata, handles)
+% hObject    handle to framerate (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of framerate as text
+%        str2double(get(hObject,'String')) returns contents of framerate as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function framerate_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to framerate (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

@@ -1,4 +1,4 @@
-function [M, ax] = make_axes(param,dims,delay,D,t)
+function [M, ax] = make_axes(param,dims,D,t)
 if ~exist('delay','var')
     delay = 5.2;
 end

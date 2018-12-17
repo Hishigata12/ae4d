@@ -1,11 +1,21 @@
 function SendToImageJ(handles,overlay) 
     
     %Reducing the 4D image based on range
-    param = evalin('base','param');
+%     param = evalin('base','param');
     
     %Checks if the data set is PE or AE
     if handles.PE_4dbox.Value == 0
-        colorMap = 'MagnitudeColorMap';  
+        if handles.hotcold.Value == 1
+            if handles.bbdb.Value == 1
+                h = hotcoldDB;
+            else
+                h = 'HotAndCold';
+            end
+        else
+            h = 'MagnitudeColorMap';
+        end
+        colorMap = h;
+    %    colorMap = 'MagnitudeColorMap';  
     else
         colorMap = 'grayscale';  
     end
@@ -48,8 +58,12 @@ function SendToImageJ(handles,overlay)
     yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
     zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 
-    q.t = 1:dims(4);
-    tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+    if length(dims) == 4
+        q.t = 1:dims(4);
+        tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+    else
+        tInd = 1;
+    end
     
     %Selects the data in the specified range
     mainSet = Xfilt(xInd,yInd,zInd,tInd);
@@ -67,6 +81,7 @@ function SendToImageJ(handles,overlay)
     location = checkMijConnection;
     
     sizeData = size(mainSet);
+    if ndims(mainSet) == 4
     %Sends each 3D figure to imageJ
     for timePoint = 1:sizeData(4)
         %Creates the ImagePlus by changing the orientation of the data
@@ -83,6 +98,10 @@ function SendToImageJ(handles,overlay)
         mainSetPartition(end,end,1) = dBRng(2);
         mainSetPartition(end,1,1) = dBRng(2);
         
+        MIJ.createImage(mainSetPartition);
+    end
+    else 
+        mainSetPartition = single(mainSet);
         MIJ.createImage(mainSetPartition);
     end
     

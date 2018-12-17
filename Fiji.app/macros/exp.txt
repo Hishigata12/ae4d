@@ -1,9 +1,9 @@
-MagnitudeColorMap
--9
-0
+HotAndCold
+-1000000
+1000000
 AE
 saveFalse
-C:\Users\Swag\Documents\ae4d_.tif
-1.0667
-0.37037
-0.036765
+C:\Users\Hishigata\Documents\MATLAB\Chet\ae4d-master_.tif
+0.98795
+0.97619
+0.98795

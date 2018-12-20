@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to helpf ae4d
 
-% Last Modified by GUIDE v2.5 17-Dec-2018 15:27:07
+% Last Modified by GUIDE v2.5 19-Dec-2018 15:04:44
 
 % Begin initialization code - DO NOT EDIT
 
@@ -675,9 +675,15 @@ for p = 1:hf_num
     if handles.onemhz.Value == 0
         lensDelay = PE.Trans.lensCorrection.*PE.PData.Lambda/1.49; %modified to 1.49
         RefPulseOneWay = PE.TW.Wvfm1Wy;
-        RefPulse       = resample(RefPulseOneWay,PE.bScanParm.daq.HFdaq.fs_MHz,PE.bScanParm.vsx_fs);
-        [~,b]          = max(abs(hilbert(RefPulse-mean(RefPulse))));
-        RefPulseT      = (0:size(RefPulse,1)-1)/PE.bScanParm.daq.HFdaq.fs_MHz;
+        if handles.newaescan.Value
+            RefPulse       = resample(RefPulseOneWay,PE.bScanParm.daq.HFdaq.fs_MHz,PE.bScanParm.vsx_fs);
+            [~,b]          = max(abs(hilbert(RefPulse-mean(RefPulse))));
+            RefPulseT      = (0:size(RefPulse,1)-1)/PE.bScanParm.daq.HFdaq.fs_MHz;
+        else
+            RefPulse = resample(RefPulseOneWay,PE.bScanParm.HFSamplingRate,PE.bScanParm.vsx_fs);
+            [~,b] = max(abs(hilbert(RefPulse-mean(RefPulse))));
+            RefPulseT = (0:size(RefPulse,1)-1)/PE.bScanParm.HFSamplingRate;
+        end
         peakDelay       = RefPulseT(b);
         z_delay = (lensDelay + peakDelay).*1.485;
         ax.depth = ax.depth - z_delay;
@@ -713,6 +719,12 @@ for p = 1:hf_num
         HF = permute(XF2,[1 4 2 3]);
     else
         HF = XF2;
+    end
+    
+    if length(ax.y) > 1 && length(ax.x) == 1
+        ax.x = ax.y;
+        ax.y = 1;
+        HF = permute(HF,[2 1 3 4]);
     end
     % for m = 1:size(HF,4)
     %     Pfin = zeros(length(pXind),length(pZind));
@@ -3828,7 +3840,7 @@ if handles.onemhz.Value == 1
     
 else
     set(handles.fname,'String',file02);
-    fprintf('Done\n')
+    fprintf('Done\n') 
     assignin('base','PEdata',pedata);
     assignin('base','pex',pex);
     assignin('base','param',bScanParm);
@@ -3848,9 +3860,19 @@ function usepe_Callback(hObject, eventdata, handles)
 X = evalin('base','PEdata');
 ax = evalin('base','pex');
 
+%Checks to see if the PE data is only 2 dimensions. If so, will assume verasonics 
+% beamformed data and reorder X, Y and Z dims after duplication in T
+if ndims(X) == 2
+    K = 1;
+else
+    K = 0;
+end
 if length(size(X)) < 4
     X(:,:,:,2) = X(:,:,:);
     ax.stime = [0 1];
+end
+if K
+    X = permute(X,[2 3 1 4]);
 end
 assignin('base','Xfilt',X);
 assignin('base','ax',ax);
@@ -5834,28 +5856,33 @@ d = ndims(X);
 % end
 % multiWaitbar('CLOSEALL');
 if handles.fastchan.Value
-if handles.fastmed.Value
-    X_c = median(X,d);
-    X = X_c;
-else
-    X_c = mean(X,d);
-    X = X_c;
-end
+    if handles.fastmed.Value
+        X_c = median(X,d);
+        X = X_c;
+    else
+        X_c = mean(X,d);
+        X = X_c;
+    end
+    ax = evalin('base','ax_c');
+    ax.depth = linspace(ax.depth(1),ax.depth(end),size(X,3));
+    ax.stime = linspace(ax.stime(1),ax.stime(end),size(X,4));
+    assignin('base','ax_c','ax');
 else
     X_c = X;
 end
 if handles.fastdecim.Value
     d = size(X_c);
     n = length(d);
+    S = str2double(get(handles.dectN,'String'));
     for i = 1:d(1)
         for j = 1:d(2)
             for k = 1:d(3)
                 for t = 1:d(n)
-                    if mod(t,2) == 0 && t < d(n)
+                    if mod(t,2*S) == 0 && t < (d(n)-S-1)
                         %                         Y(i,j,k,t/4) = mean(X(i,j,k,t-2:t+2));
-                        T = find(max(abs(X(i,j,k,t-1:t+1))));
-                        R = max(X(i,j,k,t-1:t+1))-min(X(i,j,k,t-1:t+1));
-                        Y(i,j,k,t/2) = X(i,j,k,t-1+T)*R;
+                        T = find(max(abs(X(i,j,k,t-S:t+S))));
+                        R = max(abs(X(i,j,k,t-S:t+S)))-min(abs(X(i,j,k,t-S:t+S)));
+                        Y(i,j,k,t/(S*2)) = X(i,j,k,t-S+T)*R;
                     else
                         %  Y(i,j,k,t) = X(i,j,k,t);
                     end
@@ -5865,7 +5892,7 @@ if handles.fastdecim.Value
         multiWaitbar('decimating and averaging along stime',i/d(1));
     end
     ax = evalin('base','ax_c');
-    ax.stime = linspace(0,max(ax.stime),size(Y,4));
+    ax.stime = linspace(ax.stime(1),max(ax.stime),size(Y,4));
 %     ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
 clear X;
     X = Y;
@@ -5899,25 +5926,25 @@ if handles.fastpulse.Value
     d = size(X);
     n = length(d);
     clear Y;
-   ax = evalin('base','ax_c');
-   z = str2num(handles.zP.String);
-   zstart = find(ax.depth >= z,1);
-   param = evalin('base','param');
-   Fs = param.daq.HFdaq.fs_MHz;
-   c = 1.485;
-   samps = param.Fast.delay*Fs;
-   for i = 1:param.Fast.reps
-   jump(i) = zstart+samps*(i-1);
-   end
-   area = 2*Fs;
-   for i = 1:d(1)
-       for j = 1:d(2)
-               for t = 1:d(4)
-                   for k = 1:param.Fast.reps
-                    Y(i,j,:,t,k) = X(i,j,jump(k)-area:jump(k)+area,t,k);
-                   end
-               end
-       end
+    ax = evalin('base','ax_c');
+    z = str2num(handles.zP.String);
+    zstart = find(ax.depth >= z,1);
+    param = evalin('base','param');
+    Fs = param.daq.HFdaq.fs_MHz;
+    c = 1.485;
+    samps = param.Fast.delay*Fs;
+    for i = 1:param.Fast.reps
+        jump(i) = zstart+samps*(i-1);
+    end
+    area = str2double(get(handles.pulsearea,'String'))*Fs;
+    for i = 1:d(1)
+        for j = 1:d(2)
+            for t = 1:d(4)
+                for k = 1:param.Fast.reps
+                    Y(i,j,:,t,k) = X(i,j,jump(k)-area:jump(k)+area,t);
+                end
+            end
+        end
        multiWaitbar('Building pulse segments',i/d(1));
    end
    if handles.fastmed.Value
@@ -5925,7 +5952,6 @@ if handles.fastpulse.Value
    else
        Y2 = mean(Y,5);
    end
-   clear X;
    for i = 1:d(1)
        for j = 1:d(2)
            for t = 1:d(4)
@@ -6094,3 +6120,72 @@ function fastdecz_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of fastdecz
+
+
+
+function dectN_Callback(hObject, eventdata, handles)
+% hObject    handle to dectN (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of dectN as text
+%        str2double(get(hObject,'String')) returns contents of dectN as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function dectN_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to dectN (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function deczN_Callback(hObject, eventdata, handles)
+% hObject    handle to deczN (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of deczN as text
+%        str2double(get(hObject,'String')) returns contents of deczN as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function deczN_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to deczN (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function pulsearea_Callback(hObject, eventdata, handles)
+% hObject    handle to pulsearea (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of pulsearea as text
+%        str2double(get(hObject,'String')) returns contents of pulsearea as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function pulsearea_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to pulsearea (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end

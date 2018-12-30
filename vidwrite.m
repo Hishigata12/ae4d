@@ -1,4 +1,4 @@
-function vidwrite(param,ax,Xfilt,handles)
+function vidwrite(Xfilt,handles,aeR,h)
 file = handles.savefigname.String;
 path = handles.savefolder.String;
 % v = VideoWriter([path file]);
@@ -6,88 +6,106 @@ v = VideoWriter(file);
 v.FrameRate = str2double(handles.framerate.String);
 open(v);
 
-
-xR = str2num(handles.xR.String);
-if length(xR) == 1
-    xR = [xR xR];
-end
-yR = str2num(handles.yR.String);
-if length(yR) == 1
-    yR = [yR yR];
-end
-zR = str2num(handles.zR.String);
-if length(zR) == 1
-    zR = [zR zR];
-end
-tR = str2num(handles.tR.String);
-if length(tR) == 1
-    tR = [tR tR];
-end
-aeR = str2num(handles.aeR.String);
-dims = size(Xfilt);
-
-q.x = 1:dims(1);
-q.y = 1:dims(2);
-q.z = 1:dims(3);
-if length(dims) == 4
-    q.t = 1:dims(4);
-else
-    q.t = 1;
-end
-xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
-yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
-zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
-tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
-  xP = str2double(handles.xP.String);
-    yP = str2double(handles.yP.String);
-    zP = str2double(handles.zP.String);
-    tP = str2double(handles.tP.String);
-    xpoint = find(ax.x >= xP,1);
-    ypoint = find(ax.y >= yP,1);
-    zpoint = find(ax.depth >= zP,1);
-    tpoint = find(ax.stime >= tP,1);
-
-
-Xfilt = squeeze(Xfilt(xInd,yInd,zInd,tInd));
-
-if handles.plotbox2.Value == 1
-    n = length(tInd);
-    p = 't';
-     Ind = tInd;
-     Xfilt = squeeze(Xfilt(xInd,ypoint,zInd,tInd));
-elseif handles.plotbox2.Value == 2
-    n = length(tInd);
-    p = 't';
-     Ind = tInd;
-     Xfilt = squeeze(Xfilt(xpoint,yInd,zInd,tInd));
-elseif handles.plotbox2.Value == 3
-    n = length(zInd);
-    p = 'z';
-    Ind = zInd;
-    Xfilt = squeeze(Xfilt(xInd,yInd,zInd,tpoint));
-elseif handles.plotbox2.Value == 4
-      n = length(tInd);
-    p = 't';
-     Ind = tInd;
-     Xfilt = squeeze(Xfilt(xInd,yInd,zpoint,tInd));
-end
+% 
+% xR = str2num(handles.xR.String);
+% if length(xR) == 1
+%     xR = [xR xR];
+% end
+% yR = str2num(handles.yR.String);
+% if length(yR) == 1
+%     yR = [yR yR];
+% end
+% zR = str2num(handles.zR.String);
+% if length(zR) == 1
+%     zR = [zR zR];
+% end
+% tR = str2num(handles.tR.String);
+% if length(tR) == 1
+%     tR = [tR tR];
+% end
+% if exist('handles.aeR','var')
+% aeR = str2num(handles.aeR.String);
+% elseif exist('handles.cmin')
+%     aeR = [str2num(handles.cmin.String) str2num(handles.cmax.String)];
+% end
+% dims = size(Xfilt);
+% 
+% q.x = 1:dims(1);
+% q.y = 1:dims(2);
+% q.z = 1:dims(3);
+% if length(dims) == 4
+%     q.t = 1:dims(4);
+% else
+%     q.t = 1;
+% end
+% xInd = q.x(find(ax.x >= xR(1)):find(ax.x >= xR(2)));
+% yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
+% zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
+% tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+%   xP = str2double(handles.xP.String);
+%     yP = str2double(handles.yP.String);
+%     zP = str2double(handles.zP.String);
+%     tP = str2double(handles.tP.String);
+%     xpoint = find(ax.x >= xP,1);
+%     ypoint = find(ax.y >= yP,1);
+%     zpoint = find(ax.depth >= zP,1);
+%     tpoint = find(ax.stime >= tP,1);
 
 
-if handles.hotcold.Value == 1
-    h = hotcoldDB;
-elseif handles.graybox.Value == 1
-    h = 'gray';
-else
-    h = 'hot';
-end
+% Xfilt = squeeze(Xfilt(xInd,yInd,zInd,tInd));
+n = size(Xfilt,3);
+p = 'n';
+
+
+% if handles.plotbox2.Value == 1
+%     n = length(tInd);
+%     p = 't';
+%      Ind = tInd;
+%      Xfilt = squeeze(Xfilt(xInd,ypoint,zInd,tInd));
+% elseif handles.plotbox2.Value == 2
+%     n = length(tInd);
+%     p = 't';
+%      Ind = tInd;
+%      Xfilt = squeeze(Xfilt(xpoint,yInd,zInd,tInd));
+% elseif handles.plotbox2.Value == 3
+%     n = length(zInd);
+%     p = 'z';
+%     Ind = zInd;
+%     Xfilt = squeeze(Xfilt(xInd,yInd,zInd,tpoint));
+% elseif handles.plotbox2.Value == 4
+%       n = length(tInd);
+%     p = 't';
+%      Ind = tInd;
+%      Xfilt = squeeze(Xfilt(xInd,yInd,zpoint,tInd));
+% end
+
+
+% if handles.hotcold.Value == 1
+%     if handles.bbdb.Value == 1
+%         h = hotcoldDB;
+%     else
+%         h = hotcold;
+%     end
+% elseif handles.graybox.Value == 1
+%     h = 'gray';
+% else
+%     h = 'hot';
+% end
 
 for i = 1:n
-    if handles.use_ext_fig.Value == 1
-        imshow(squeeze(Xfilt(:,:,i))')
-    else
-    imagesc(squeeze(Xfilt(:,:,i))')
-    end
-    title([p ' = ' num2str(Ind(i))])   
+    %     if handles.use_ext_fig.Value == 1
+%     if i == 1
+%         g = axes;
+        imshow(Xfilt(:,:,i)');
+%     else
+%         figure(145)
+%         squeeze(Xfilt(:,:,i))';
+%         %  pic.CData = squeeze(Xfilt(:,:,i))';
+%     end
+    %     else
+    %     imagesc(squeeze(Xfilt(:,:,i))')
+    %     end
+    title([p ' = ' num2str(i)])
     colormap(h);
     if ~isempty(aeR)
         caxis(aeR)

@@ -742,6 +742,12 @@ for p = 1:hf_num
     %
     % end
     
+     if length(ax.y) > 1 && length(ax.x) == 1
+        ax.x = ax.y;
+        ax.y = 1;
+        HF = permute(HF,[2 1 3 4]);
+    end
+    
     %%%%%
     Xfilt = HF;
     multiWaitbar('CLOSEALL');
@@ -3663,7 +3669,7 @@ elseif handles.onemhz.Value == 0 && handles.bsq.Value == 0
         pex.y = 1;
     end
     pex.element = Trans.ElementPos(:,1)*PData.Lambda;
-    pex.element = pex.element.*TX.Apod';
+    pex.element = pex.element.*Rcv(1).Apod';
     pex.element = pex.element(pex.element~=0);
     cent = round(length(pex.element)/2);
     pex.depth = linspace(0,bScanParm.depth,size(pedata,3));
@@ -4185,10 +4191,10 @@ if length(size(Xfilt)) > 3
     q.t = 1:dims(4);
 end
 xInd = find(ax.x >= xR(1)):find(ax.x >= xR(2));
-yInd = q.y(find(ax.y >= yR(1)):find(ax.y >= yR(2)));
-zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
+yInd = find(ax.y >= yR(1)):find(ax.y >= yR(2));
+zInd = find(ax.depth >= zR(1)):find(ax.depth >= zR(2));
 if length(size(Xfilt)) > 3
-    tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+    tInd = find(ax.stime >= tR(1)):find(ax.stime >= tR(2));
 end
 if length(xR) < 3 || length(yR) < 3 || length(zR) <3 || length(tR) <3
     errordlg('All 4 dimensions need 3 values ([range1, range2, point])')

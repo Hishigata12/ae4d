@@ -22,7 +22,7 @@ function varargout = beautify(varargin)
 
 % Edit the above text to modify the response to help beautify
 
-% Last Modified by GUIDE v2.5 12-Dec-2018 17:57:52
+% Last Modified by GUIDE v2.5 15-Jan-2019 15:39:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -847,7 +847,11 @@ function pushbutton6_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton6 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-X = evalin('base','X');
+if handles.holdmods.Value
+    X = evalin('base','Xnew');
+else
+    X = evalin('base','X');
+end
 x = [str2double(get(handles.xmin,'String')) str2double(get(handles.xmax,'String')) str2double(get(handles.xpt,'String'))];
 y = [str2double(get(handles.ymin,'String')) str2double(get(handles.ymax,'String')) str2double(get(handles.ypt,'String'))];
 z = [str2double(get(handles.zmin,'String')) str2double(get(handles.zmax,'String')) str2double(get(handles.zpt,'String'))];
@@ -1002,7 +1006,11 @@ function pushbutton11_Callback(hObject, eventdata, handles)
 % hObject    handle to pushbutton11 (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-X = evalin('base','X');
+if handles.holdmods.Value
+    X = evalin('base','Xnew');
+else
+    X = evalin('base','X');
+end
 x = [str2double(get(handles.xmin,'String')) str2double(get(handles.xmax,'String')) str2double(get(handles.xpt,'String'))];
 y = [str2double(get(handles.ymin,'String')) str2double(get(handles.ymax,'String')) str2double(get(handles.ypt,'String'))];
 z = [str2double(get(handles.zmin,'String')) str2double(get(handles.zmax,'String')) str2double(get(handles.zpt,'String'))];
@@ -1326,7 +1334,7 @@ if handles.holdmods.Value
 else
     X = evalin('base','X');
 end
-S = sign(X).*-1;
+S = sign(X);
 D = abs(X);
 B = 20*log10(D./max(D(:)));
 C  = B.*S;
@@ -1461,3 +1469,52 @@ function framerate_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in pushbutton16.
+function pushbutton16_Callback(hObject, eventdata, handles)
+X = evalin('base','X');
+D = size(X);
+if length(D) == 2
+    D(3:4) = 1;
+elseif length(D) == 3
+    D(4) = 1;
+end
+m1 = [str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
+n1 = [str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) 0];% get(handles.squarify_box,'Value')];
+o1 = [str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
+if sum(m1) ~= 3
+    m = [1 m1];
+else
+    m = [0 m1];
+end
+if sum(n1) ~= 3
+    n = [1 n1];
+else
+    n = [0 n1];
+end
+if sum(o1) ~= 3
+    o = [1 o1];
+else
+    o = [0 o1];
+end
+n2 = [0 n1];
+X2 = filts3D(X,m,n2,o);
+S = sign(X2);
+X2 = X2.^2;
+X2 = X2.*S;
+X3 = filts3D(X2,m,n,o);
+
+assignin('base','Xnew',X3);
+max_range_Callback(hObject, eventdata, handles)
+pushbutton11_Callback(hObject, eventdata, handles)
+X = evalin('base','Xnew');
+X4 = filts3D(X,m,n2,o);
+assignin('base','Xnew',X4);
+max_range_Callback(hObject, eventdata, handles)
+a = 3;
+
+% hObject    handle to pushbutton16 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+    

@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to helpf ae4d
 
-% Last Modified by GUIDE v2.5 19-Dec-2018 15:04:44
+% Last Modified by GUIDE v2.5 21-Jan-2019 13:53:14
 
 % Begin initialization code - DO NOT EDIT
 
@@ -525,10 +525,11 @@ set(handles.zmm,'String',num2str([round(ax.depth(1)) round(ax.depth(end))]));
 set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
 
 if handles.reset_axes.Value == 1
-    set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
-    set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
-    set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
-    set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+    maxrange_Callback(hObject, eventdata, handles)
+%     set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
+%     set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
+%     set(handles.zR,'String', num2str([ax.depth(1) floor(ax.depth(end))]));
+%     set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
     
 end
 
@@ -704,22 +705,52 @@ for p = 1:hf_num
     %     end
     
     %%%%% Cyl to Cart %%% This is very rough draft
-    ptheta = atan((ax.x-mean(ax.x))./PE.TX.focus*PE.PData.Lambda);
-    px = ax.x.*cos(ptheta);
-    pz = ax.depth.*cos(ptheta)';
-    for i = 1:length(ax.x)
-        pXind(i) = find(ax.x >= px(i),1);
-        XF2(i,:,:,:) = circshift(HF(i,:,:,:),abs(round(length(ax.x)/2)-i)*-1,3);
-        for j = 1:length(ax.depth)
-            pZind(i,j) = find(ax.depth >= pz(i,j),1);
-        end
+% if handles.onemhz.Value == 0
+%     ptheta = atan((ax.x-mean(ax.x))./PE.TX.focus*PE.PData.Lambda);
+%     px = ax.x.*cos(ptheta);
+%     pz = ax.depth.*cos(ptheta)';
+%     for i = 1:length(ax.x)
+%         pXind(i) = find(ax.x >= px(i),1);
+%        XF2(i,:,:,:) = circshift(HF(i,:,:,:),abs(round(length(ax.x)/2)-i)*-1,3);
+% %        step = sqrt((PE.TX.focus*PE.PData.Lambda)^2+ax.x(i)^2)-PE.TX.focus*PE.PData.Lambda;
+% % step = sqrt((ax.depth(end))^2+ax.x(i)^2)-ax.depth(end);
+% %        mindist = ax.depth(2)-ax.depth(1);
+% %        shift = ceil(step/mindist)*2;
+% %        XF2(i,:,:,:) = circshift(HF(i,:,:,:),-shift,3);
+%         for j = 1:length(ax.depth)
+%             pZind(i,j) = find(ax.depth >= pz(i,j),1);
+%         end
+%     end
+%     
+%     if length(size(XF2)) < 4
+%         HF = permute(XF2,[1 4 2 3]);
+%     else
+%         HF = XF2;
+%     end
+% end
+%xstep = param.velmex.XDist/(param.velmex.XNStep-1);
+if strcmp(PE.Trans.name(1:4),'P4-2') | strcmp(PE.Trans.name(1:4),'P4-1')
+    zstep = ax.depth(11)-ax.depth(10);
+    z = PE.TX.focus;
+    x = linspace(-param.velmex.XDist/2,param.velmex.XDist/2,param.velmex.XNStep);
+    for i = 1:param.velmex.XNStep
+        r = sqrt(z^2+x(i)^2);
+        rstep = z-r;
+        sampstep(i) = round(rstep/zstep,2)*4;
+        X2(i,:,:,:) = circshift(HF(i,:,:,:),round(sampstep(i)),3);
+        multiWaitbar('Converting to Cartesian',i/param.velmex.XNStep);
     end
-    
-    if length(size(XF2)) < 4
-        HF = permute(XF2,[1 4 2 3]);
+    clear HF
+    if ndims(X2) == 3
+        HF = permute(X2,[1 4 2 3]);
     else
-        HF = XF2;
+        HF = X2;
     end
+end
+
+
+
+
     
     if length(ax.y) > 1 && length(ax.x) == 1
         ax.x = ax.y;
@@ -4144,6 +4175,8 @@ else
     ax = evalin('base','ax');
 end
 
+% reset_button_Callback(hObject, eventdata, handles);
+
 Xfilt = real(Xfilt);
 %set(handles.axes1,'ButtonDownFcn',@Plot4OnClickXZ)
 
@@ -5848,6 +5881,7 @@ Jay;
 function fastrecon_Callback(hObject, eventdata, handles)
 X = evalin('base','Xcat');
 d = ndims(X);
+    ax = evalin('base','ax_c');
 % for i = 2:size(X,d)
 %     test1 = squeeze(X(10,1,:,15,1));
 %     test2 = squeeze(X(10,1,:,15,i));
@@ -5869,13 +5903,49 @@ if handles.fastchan.Value
         X_c = mean(X,d);
         X = X_c;
     end
-    ax = evalin('base','ax_c');
+
     ax.depth = linspace(ax.depth(1),ax.depth(end),size(X,3));
     ax.stime = linspace(ax.stime(1),ax.stime(end),size(X,4));
     assignin('base','ax_c','ax');
 else
     X_c = X;
 end
+
+if handles.stime_compress.Value
+    param = evalin('base','PEparam.bScanParm');
+    cyc = param.Cycles;
+    freq = param.Frequency;
+    pulserate = param.PulseRate;
+    dur = param.Duration;
+    perT = 1000/freq;
+    perS = pulserate/freq;
+    active = perS*cyc-perS/2;
+    off = dur-active-perS/2;
+    X = circshift(X_c,-perS/2,4);
+    a = 1;
+    b = 1;
+    for t = 1:perS:size(X,4)-perS
+        if t < active
+            sig(:,:,:,:,a) = X(:,:,:,t:t+perS);
+            a = a+1;
+        else
+            flat(:,:,:,:,b) = X(:,:,:,t:t+perS);
+            b = b+1;
+        end
+        multiWaitbar('Compressing time axis',t/size(X,4));
+    end
+    sig = mean(sig,5);
+    clear X_c
+    if exist('flat','var')
+        flat = mean(flat,5);
+        X_c = cat(4,sig,flat);
+    else
+        X_c = sig;
+    end
+    ax.stime = linspace(0,perT*2,size(X_c,4));
+end
+
+
 if handles.fastdecim.Value
     d = size(X_c);
     n = length(d);
@@ -5885,10 +5955,10 @@ if handles.fastdecim.Value
             for k = 1:d(3)
                 for t = 1:d(n)
                     if mod(t,2*S) == 0 && t < (d(n)-S-1)
-                        %                         Y(i,j,k,t/4) = mean(X(i,j,k,t-2:t+2));
-                        T = find(max(abs(X(i,j,k,t-S:t+S))));
-                        R = max(abs(X(i,j,k,t-S:t+S)))-min(abs(X(i,j,k,t-S:t+S)));
-                        Y(i,j,k,t/(S*2)) = X(i,j,k,t-S+T)*R;
+                        Y(i,j,k,t/(S*2)) = mean(X(i,j,k,t-S:t+S));
+                        %                         T = find(max(abs(X(i,j,k,t-S:t+S))));
+                        %                         R = max(abs(X(i,j,k,t-S:t+S)))-min(abs(X(i,j,k,t-S:t+S)));
+                        %                         Y(i,j,k,t/(S*2)) = X(i,j,k,t-S+T)*R;
                     else
                         %  Y(i,j,k,t) = X(i,j,k,t);
                     end
@@ -5899,22 +5969,26 @@ if handles.fastdecim.Value
     end
     ax = evalin('base','ax_c');
     ax.stime = linspace(ax.stime(1),max(ax.stime),size(Y,4));
-%     ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
-clear X;
+    %     ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
+    clear X;
     X = Y;
     assignin('base','ax_c',ax);
+else
+    X = X_c;
 end
 if handles.fastdecz.Value
     d = size(X);
     n = length(d);
+      S = str2double(get(handles.dectN,'String'));
        for i = 1:d(1)
         for j = 1:d(2)
             for k = 1:d(3)
                 for t = 1:d(n)
-                    if mod(k,2) == 0 && k < d(3)
-                    T = find(max(abs(X(i,j,k-1:k+1,t))));
-                    R = max(X(i,j,k-1:k+1,t))-min(X(i,j,k-1:k+1,t));
-                    Z(i,j,k/2,t) = X(i,j,k-1+T)*R;
+                    if mod(k,2*S) == 0 && k < d(3)-S-1
+                         Z(i,j,k/(S*2),t) = mean(X(i,j,k-S:k+S,t));
+%                     T = find(max(abs(X(i,j,k-1:k+1,t))));
+%                     R = max(X(i,j,k-1:k+1,t))-min(X(i,j,k-1:k+1,t));
+%                     Z(i,j,k/2,t) = X(i,j,k-1+T)*R;
                     end
                 end
             end
@@ -5926,8 +6000,8 @@ if handles.fastdecz.Value
     ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
     clear X;
     X = Z;
-    assignin('base','ax_c',ax);
 end
+
 if handles.fastpulse.Value
     d = size(X);
     n = length(d);
@@ -5951,24 +6025,26 @@ if handles.fastpulse.Value
                 end
             end
         end
-       multiWaitbar('Building pulse segments',i/d(1));
-   end
-   if handles.fastmed.Value
-       Y2 = median(Y,5);
-   else
-       Y2 = mean(Y,5);
-   end
-   for i = 1:d(1)
-       for j = 1:d(2)
-           for t = 1:d(4)
+        multiWaitbar('Building pulse segments',i/d(1));
+    end
+    if handles.fastmed.Value
+        Y2 = median(Y,5);
+    else
+        Y2 = mean(Y,5);
+    end
+    for i = 1:d(1)
+        for j = 1:d(2)
+            for t = 1:d(4)
                 X(i,j,zstart-area:area+zstart,t) = Y2(i,j,:,t);
-           end
-       end
-       multiWaitbar('Reconstructing',i/d(1));
-   end
+            end
+        end
+        multiWaitbar('Reconstructing',i/d(1));
+    end
 end
 multiWaitbar('CLOSEALL');
-   assignin('base','X_c',X);
+assignin('base','X_c',X);
+assignin('base','ax_c',ax);
+set(handles.active_ae,'String',num2str(size(X)))
 
 % hObject    handle to fastrecon (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -6038,6 +6114,11 @@ function catHF_Callback(hObject, eventdata, handles)
 function auto_recon_Callback(hObject, eventdata, handles)
 
 % --- Executes on button press in auto_recon.
+if ~ismember('Xmerged',evalin('base','who'))%~exist('Xmerged','var')
+    X_c = evalin('base','X_c');
+    Xcat = X_c;
+    assignin('base','Xcat',Xcat);
+else
 Xmerged = evalin('base','Xmerged');
 for i = 1:length(Xmerged)
     set(handles.catHF,'Value',0)
@@ -6059,6 +6140,7 @@ for i = 1:length(Xmerged)
     Enhance_Sig_Callback(hObject, eventdata, handles)
     plot4_Callback(hObject, eventdata, handles);
     returntomerge_Callback(hObject, eventdata, handles);
+end
 end
 % hObject    handle to auto_recon (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -6195,3 +6277,89 @@ function pulsearea_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+% --- Executes on button press in maxrange. @008
+function maxrange_Callback(hObject, eventdata, handles)
+  if handles.use_chop.Value == 0
+        ax = evalin('base','ax');
+        x1 = num2str(round(ax.x(1),1)); x2 = num2str(round(ax.x(end),1));
+        z2 = floor(ax.depth(end));
+        set(handles.xR,'String', [x1 ' ' x2]);
+        set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
+        set(handles.zR,'String', num2str([0 z2]));
+        set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+        X = evalin('base','Xfilt');
+        set(handles.active_ae,'String',num2str(size(X)));
+       
+    else
+        ax_c = evalin('base','ax_c');
+        set(handles.xR,'String', num2str([ax_c.x(1) ax_c.x(end)]));
+        set(handles.yR,'String', num2str([ax_c.y(1) ax_c.y(end)]));
+        set(handles.zR,'String', num2str([ax_c.depth(1) floor(ax_c.depth(end))]));
+        set(handles.tR,'String', num2str([ax_c.stime(1) ax_c.stime(end)]));
+        X = evalin('base','X_c');
+       set(handles.active_ae,'String',num2str(size(X)));
+  end
+
+
+% --- Executes on button press in zoombutton.
+function zoombutton_Callback(hObject, eventdata, handles)
+[y,x,button]=ginput(1);
+position = get(handles.axes1,'CurrentPoint');
+set(handles.axes1,'CurrentPoint',position);
+zoom(2);
+a = 2;
+% hObject    handle to zoombutton (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in s2c.
+function s2c_Callback(hObject, eventdata, handles)
+% hObject    handle to s2c (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+param = evalin('base','param');
+X = evalin('base','X_c');
+ax = evalin('base','ax_c');
+PE = evalin('base','PEparam');
+xstep = param.velmex.XDist/(param.velmex.XNStep-1);
+zstep = ax.depth(11)-ax.depth(10);
+z = PE.TX.focus;
+x = linspace(-param.velmex.XDist/2,param.velmex.XDist/2,param.velmex.XNStep);
+for i = 1:param.velmex.XNStep
+    r = sqrt(z^2+x(i)^2);
+    rstep = z-r;
+    sampstep(i) = round(rstep/zstep,2)*5;
+    X2(i,:,:,:) = circshift(X(i,:,:,:),round(sampstep(i)),3);
+    multiWaitbar('Converting',i/param.velmex.XNStep);
+end
+multiWaitbar('CLOSEALL');
+if ndims(X2) == 3
+    X2 = permute(X2,[1 4 2 3]);
+end
+assignin('base','X_c',X2);
+
+
+% --- Executes on button press in stime_compress.
+function stime_compress_Callback(hObject, eventdata, handles)
+% hObject    handle to stime_compress (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of stime_compress
+
+
+% --- Executes during object creation, after setting all properties.
+function active_ae_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to active_ae (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+
+% --- Executes during object creation, after setting all properties.
+function fastrecon_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to fastrecon (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called

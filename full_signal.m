@@ -5,7 +5,7 @@
 % one: if 1 designates single element transducer
 % new: if 1 designates that scan was taken using new AEScan
 
-function [HF, HF1] = full_signal(loc,param,a,one,new)
+function [HF, HF1] = full_signal(loc,param,a)
 k = param.velmex.XNStep*param.velmex.YNStep;
 % if param.velmex.FastAxis == 'X'
     fL = param.velmex.XNStep; % gets fast direction scan points
@@ -14,7 +14,9 @@ k = param.velmex.XNStep*param.velmex.YNStep;
 %     fL = param.velmex.YNStep;
 %     sL = param.velmex.XNStep;
 % end
-
+one = param.post.onemhz;
+new = param.post.new;
+ind = param.post.ind;
 
 %b = waitbar(0);
 %     for i = 1:fL
@@ -30,7 +32,7 @@ if one
     for j = 1:sL
         for i = 1:fL
             if new
-                [~,HF1{i,j}] = Read_Data(loc,(i-1)*sL+j); % Gets data sequentially
+                [~,HF1{i,j}] = Read_Data(loc,(i-1)*sL+j,param); % Gets data sequentially
             else
                 [~,HF1{i,j}] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
             end
@@ -45,10 +47,11 @@ if one
     end
 else
     
+    
     for j = 1:sL
         for i = 1:fL
             if new
-                [HF1{i,j}] = Read_Data(loc,(i)+(fL*(j-1))); % Gets data sequentially
+                [HF1{i,j}] = Read_Data(loc,(i)+(fL*(j-1)),param); % Gets data sequentially
             else
                 [~,HF1{i,j}] = read_ucsdi_data(loc,(i)+(fL*(j-1))); % Gets data sequentially
             end
@@ -58,8 +61,8 @@ else
         %waitbar(i/(fL),b,'Creating 4D array');
         % fprintf('.');
         if j < sL
-        multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
-        end 
+            multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
+        end
     end
 end
 % for i = 1:size(HF1,1)

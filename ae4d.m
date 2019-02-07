@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to helpf ae4d
 
-% Last Modified by GUIDE v2.5 21-Jan-2019 13:53:14
+% Last Modified by GUIDE v2.5 06-Feb-2019 15:49:46
 
 % Begin initialization code - DO NOT EDIT
 
@@ -60,6 +60,8 @@ function varargout = ae4d(varargin)
 % @031 = Z shift slider
 % @032 = Y shift slider
 % @033 = Stitch for fusing two images
+% @034 = Additional Averaging Methods
+% @036 = Easy Image Export
 
 gui_Singleton = 1;
 gui_State = struct('gui_Name',       mfilename, ...
@@ -547,17 +549,24 @@ function create_4d_Callback(hObject, eventdata, handles) % @004
 % hObject    handle to create_4d (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-
-if handles.newaescan.Value
-    [file, path] = uigetfile(fullfile(pwd,'*_info.mat'));
+   [file, path] = uigetfile(fullfile(pwd,'*_info.mat'));
     param = load([path file]);
     param = param.bScanParm;
-    [~,LF] = Read_Data([path file],1);
+    param.post.ind = handles.ind_box.Value;
+    param.post.new = handles.newaescan.Value;
+    param.post.onemhz = handles.onemhz.Value;
+    param.post.tc = handles.tc.Value;
+    param.lf_only = 1;
+if handles.newaescan.Value
+ 
+    [~,LF] = Read_Data([path file],1,param);
 else
-    [file, path] = uigetfile(fullfile(pwd,'*_info.dat')); %Gets file location
-    param = read_ucsdi_info([path file]); %Gets scan parameters
+%     [file, path] = uigetfile(fullfile(pwd,'*_info.dat')); %Gets file location
+%     param = read_ucsdi_info([path file]); %Gets scan parameters
     [~,~,LF] = read_ucsdi_data([path file],1); %Gets input current waveform
 end
+
+param.lf_only = 0;
 cd(path);
 PE = [];
 t_delay = 5.2;
@@ -587,223 +596,239 @@ if isempty(handles.hfchans.String)
     hf_num = 1;
 end
 for p = 1:hf_num
-    if ~isempty(handles.hfchans.String)
-        a = a_full(p);
-    end
-    
-    %Gets Raw Data into cell array
-    [~, HF1] = full_signal([path file],param,a,handles.onemhz.Value,handles.newaescan.Value); %Gets the raw data
-    
-    
-    %Filters in Fast Time
-    if handles.ft_on.Value == 1
-        if handles.match_box.Value == 1
-            X = w_ae_filt2(param,HF1,PE,1,handles); %Filters in fast time; 0 is match, 1 uses cutoffs
-        end
-        if handles.match_box.Value == 0
-            X = w_ae_filt2(param,HF1,1,0,handles,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
-        end
-    end
-    
-    %LF = padarray(LF,length(LF));
-      %Filters in Slow Time
-      if handles.st_on.Value == 1
-          if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
-              [X, LF] = w_slow_filt2(param,X,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
-          elseif handles.slow_box.Value == 1
-              [X, LF] = w_slow_filt2(param, X,LF,handles.slow_box.Value);
-          end
-      end
-      if handles.st_on.Value == 0 & handles.ft_on.Value == 0
-          X = HF1;
-      end
-      
-  
-    %%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
-    % b = waitbar(0,'Matrix Conversion');
-    %    waitbar(0,b,'Enveloping and converting to 4D matrix')
-    HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
-    s = size(X);
-    for i = 1:s(1)
-        for j = 1:s(2)
-            %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
-            HF(i,j,:,:) = X{i,j}; %Converts cell array to double
-        end
-        % waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
-        multiWaitbar('Converting to 4D Matrix', i/s(1));
-    end
-    
-    if handles.onemhz.Value == 1
-        if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
-            if param.velmex.SlowAxis == 'X'
-                for i = 1:size(HF,1)
-                    if mod(i,2) == 0
-                        HF(i,:,:,:) = fliplr(HF(i,:,:,:));
-                    end
+    if param.post.ind
+        for p1 = 1:param.Scan.Avg
+            param.avenum = p1;
+            if ~isempty(handles.hfchans.String)
+                a = a_full(p);
+            end
+            
+            %Gets Raw Data into cell array
+            [~, HF1] = full_signal([path file],param,a); %Gets the raw data
+            
+            
+            
+            %Filters in Fast Time
+            if handles.ft_on.Value == 1
+                if handles.match_box.Value == 1
+                    X = w_ae_filt2(param,HF1,PE,1,handles); %Filters in fast time; 0 is match, 1 uses cutoffs
                 end
-            else
-                for i = 1:size(HF,2)
-                    if mod(i,2) == 0
-                        HF(:,i,:,:) = fliplr(HF(:,i,:,:));
-                    end
+                if handles.match_box.Value == 0
+                    X = w_ae_filt2(param,HF1,1,0,handles,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
                 end
             end
+            
+            %LF = padarray(LF,length(LF));
+            %Filters in Slow Time
+            if handles.st_on.Value == 1
+                if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
+                    [X, LF] = w_slow_filt2(param,X,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
+                elseif handles.slow_box.Value == 1
+                    [X, LF] = w_slow_filt2(param, X,LF,handles.slow_box.Value);
+                end
+            end
+            if handles.st_on.Value == 0 & handles.ft_on.Value == 0
+                X = HF1;
+            end
+            
+            
+            %%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
+            % b = waitbar(0,'Matrix Conversion');
+            %    waitbar(0,b,'Enveloping and converting to 4D matrix')
+            HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
+            s = size(X);
+            for i = 1:s(1)
+                for j = 1:s(2)
+                    %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
+                    HF(i,j,:,:) = X{i,j}; %Converts cell array to double
+                end
+                % waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
+                multiWaitbar('Converting to 4D Matrix', i/s(1));
+            end
+            
+            if handles.onemhz.Value == 1
+                if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+                    if param.velmex.SlowAxis == 'X'
+                        for i = 1:size(HF,1)
+                            if mod(i,2) == 0
+                                HF(i,:,:,:) = fliplr(HF(i,:,:,:));
+                            end
+                        end
+                    else
+                        for i = 1:size(HF,2)
+                            if mod(i,2) == 0
+                                HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+                            end
+                        end
+                    end
+                end
+                %     else
+                %         if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
+                %              for i = 1:size(HF,2)
+                %                     if mod(i,2) == 0
+                %                         HF(:,i,:,:) = fliplr(HF(:,i,:,:));
+                %                     end
+                %              end
+                %         end
+            end
+            
+            
+            %%%%%%%%
+            %     if isempty(num2str(handles.depR.String))
+            qq = [10 round(1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz-10)];
+            %     else
+            %         qq = str2num(handles.depR.String);
+            %     end
+            
+            dims = size(HF);
+            [~, ax] = make_axes(param,dims,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
+            % XdB = real(20*log10(real(HF)./max(max(max(max(real(HF(:,:,M.xT,:))))))));
+            % Xfilt = filts2D(XdB,[0 1 12],[0 2 2]);
+            
+            %%%%% Using depth calculation from SEP
+            if handles.onemhz.Value == 0
+                lensDelay = PE.Trans.lensCorrection.*PE.PData.Lambda/1.49; %modified to 1.49
+                RefPulseOneWay = PE.TW.Wvfm1Wy;
+                if handles.newaescan.Value
+                    RefPulse       = resample(RefPulseOneWay,PE.bScanParm.daq.HFdaq.fs_MHz,PE.bScanParm.vsx_fs);
+                    [~,b]          = max(abs(hilbert(RefPulse-mean(RefPulse))));
+                    RefPulseT      = (0:size(RefPulse,1)-1)/PE.bScanParm.daq.HFdaq.fs_MHz;
+                else
+                    RefPulse = resample(RefPulseOneWay,PE.bScanParm.HFSamplingRate,PE.bScanParm.vsx_fs);
+                    [~,b] = max(abs(hilbert(RefPulse-mean(RefPulse))));
+                    RefPulseT = (0:size(RefPulse,1)-1)/PE.bScanParm.HFSamplingRate;
+                end
+                peakDelay       = RefPulseT(b);
+                z_delay = (lensDelay + peakDelay).*1.485;
+                ax.depth = ax.depth - z_delay;
+            end
+            %%%%%%%%%%%%%
+            
+            if handles.tc.Value
+                tc_params = evalin('base','tc_params');
+                dep_sub = tc_params.thickness/1.485 - tc_params.thickness/tc_params.speed;
+                ax.depth = ax.depth-dep_sub;
+            end
+            %     if ~isempty('PE')
+            %         for i = 1:length(PE.TXArray)
+            %             fd(i) = max(PE.TXArray(i).Delay);
+            %         end
+            %         form_delay = max(fd);
+            %         ax.depth = ax.depth - form_delay;
+            %     end
+            
+            %%%%% Cyl to Cart %%% This is very rough draft
+            % if handles.onemhz.Value == 0
+            %     ptheta = atan((ax.x-mean(ax.x))./PE.TX.focus*PE.PData.Lambda);
+            %     px = ax.x.*cos(ptheta);
+            %     pz = ax.depth.*cos(ptheta)';
+            %     for i = 1:length(ax.x)
+            %         pXind(i) = find(ax.x >= px(i),1);
+            %        XF2(i,:,:,:) = circshift(HF(i,:,:,:),abs(round(length(ax.x)/2)-i)*-1,3);
+            % %        step = sqrt((PE.TX.focus*PE.PData.Lambda)^2+ax.x(i)^2)-PE.TX.focus*PE.PData.Lambda;
+            % % step = sqrt((ax.depth(end))^2+ax.x(i)^2)-ax.depth(end);
+            % %        mindist = ax.depth(2)-ax.depth(1);
+            % %        shift = ceil(step/mindist)*2;
+            % %        XF2(i,:,:,:) = circshift(HF(i,:,:,:),-shift,3);
+            %         for j = 1:length(ax.depth)
+            %             pZind(i,j) = find(ax.depth >= pz(i,j),1);
+            %         end
+            %     end
+            %
+            %     if length(size(XF2)) < 4
+            %         HF = permute(XF2,[1 4 2 3]);
+            %     else
+            %         HF = XF2;
+            %     end
+            % end
+            %xstep = param.velmex.XDist/(param.velmex.XNStep-1);
+            if strcmp(PE.Trans.name(1:4),'P4-2') | strcmp(PE.Trans.name(1:4),'P4-1')
+                zstep = ax.depth(11)-ax.depth(10);
+                z = PE.TX.focus;
+                x = linspace(-param.velmex.XDist/2,param.velmex.XDist/2,param.velmex.XNStep);
+                for i = 1:param.velmex.XNStep
+                    r = sqrt(z^2+x(i)^2);
+                    rstep = z-r;
+                    sampstep(i) = round(rstep/zstep,2)*4;
+                    X2(i,:,:,:) = circshift(HF(i,:,:,:),round(sampstep(i)),3);
+                    multiWaitbar('Converting to Cartesian',i/param.velmex.XNStep);
+                end
+                clear HF
+                if ndims(X2) == 3
+                    HF = permute(X2,[1 4 2 3]);
+                else
+                    HF = X2;
+                end
+            end
+            
+            
+            
+            
+            
+            if length(ax.y) > 1 && length(ax.x) == 1
+                ax.x = ax.y;
+                ax.y = 1;
+                HF = permute(HF,[2 1 3 4]);
+            end
+            % for m = 1:size(HF,4)
+            %     Pfin = zeros(length(pXind),length(pZind));
+            %     Pnum = Pfin;
+            %    % for i = 1:length(pXind)
+            %    for i = 1:length(ax.x)
+            %         for j = 1:length(pZind)
+            %             Pfin(i,pZind(i,j)) = Pfin(i,pZind(i,j)) + squeeze(HF(i,1,j,m));
+            %             Pnum(i,pZind(i,j)) = Pnum(i,pZind(i,j)) + 1;
+            %         end
+            %     end
+            %     Ptot = Pfin./Pnum;
+            %     Ptot(isnan(Ptot)) = 0;
+            %     XF(:,:,m) = Ptot;
+            %
+            % end
+            
+            if length(ax.y) > 1 && length(ax.x) == 1
+                ax.x = ax.y;
+                ax.y = 1;
+                HF = permute(HF,[2 1 3 4]);
+            end
+            
+            %%%%%
+            Xfilt = HF;
+            multiWaitbar('CLOSEALL');
+            % delete(b)
+            
+            if handles.save_4d.Value == 1
+                multiWaitbar('Saving','busy');
+                f = file(1:end-4);
+                if ~isempty(handles.hfchans.String)
+                    hchan = num2str(a);
+                    if param.post.ind
+                        avenum = num2str(param.avenum);
+                        f2 = [f '_chan_' hchan '_ave_' avenum '_4d_data.mat'];
+                    else
+                        f2 = [f '_chan_' hchan '_4d_data.mat'];
+                    end
+                else
+                    if param.post.ind
+                        avenum = num2str(param.avenum);
+                        f2 = [f '_ave_' avenum '_4d_data.mat'];
+                    else
+                        f2 = [f '_4d_data.mat'];
+                    end
+                end
+                fprintf('Saving 4D file...')
+                if handles.large_box.Value == 1
+                    clearvars -except Xfilt file path param ax LF PE f2 
+                    eval([ 'save ' f2 ' -v7.3']);
+                else
+                    %  clearvars -except Xfilt file path param ax LF PE f2
+                    save(f2,'Xfilt','path','file','param','ax','LF','PE','f2');
+                end
+                clearvars -except a_full hf_num file path file2 path2 PE US LF param handles p
+                fprintf('Done\n')
+                multiWaitbar('Saving','Close');
+            end
         end
-        %     else
-        %         if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
-        %              for i = 1:size(HF,2)
-        %                     if mod(i,2) == 0
-        %                         HF(:,i,:,:) = fliplr(HF(:,i,:,:));
-        %                     end
-        %              end
-        %         end
-    end
-    
-    
-    %%%%%%%%
-%     if isempty(num2str(handles.depR.String))
-        qq = [10 round(1.48*param.daq.HFdaq.pts/param.daq.HFdaq.fs_MHz-10)];
-%     else
-%         qq = str2num(handles.depR.String);
-%     end
-    
-    dims = size(HF);
-    [~, ax] = make_axes(param,dims,qq, 12.3); %selects range for dB calculation exlcuding the 10mm around each border
-    % XdB = real(20*log10(real(HF)./max(max(max(max(real(HF(:,:,M.xT,:))))))));
-    % Xfilt = filts2D(XdB,[0 1 12],[0 2 2]);
-    
-    %%%%% Using depth calculation from SEP
-    if handles.onemhz.Value == 0
-        lensDelay = PE.Trans.lensCorrection.*PE.PData.Lambda/1.49; %modified to 1.49
-        RefPulseOneWay = PE.TW.Wvfm1Wy;
-        if handles.newaescan.Value
-            RefPulse       = resample(RefPulseOneWay,PE.bScanParm.daq.HFdaq.fs_MHz,PE.bScanParm.vsx_fs);
-            [~,b]          = max(abs(hilbert(RefPulse-mean(RefPulse))));
-            RefPulseT      = (0:size(RefPulse,1)-1)/PE.bScanParm.daq.HFdaq.fs_MHz;
-        else
-            RefPulse = resample(RefPulseOneWay,PE.bScanParm.HFSamplingRate,PE.bScanParm.vsx_fs);
-            [~,b] = max(abs(hilbert(RefPulse-mean(RefPulse))));
-            RefPulseT = (0:size(RefPulse,1)-1)/PE.bScanParm.HFSamplingRate;
-        end
-        peakDelay       = RefPulseT(b);
-        z_delay = (lensDelay + peakDelay).*1.485;
-        ax.depth = ax.depth - z_delay;
-    end
-    %%%%%%%%%%%%%
-    
-    if handles.tc.Value
-        tc_params = evalin('base','tc_params');
-        dep_sub = tc_params.thickness/1.485 - tc_params.thickness/tc_params.speed;
-        ax.depth = ax.depth-dep_sub;
-    end
-    %     if ~isempty('PE')
-    %         for i = 1:length(PE.TXArray)
-    %             fd(i) = max(PE.TXArray(i).Delay);
-    %         end
-    %         form_delay = max(fd);
-    %         ax.depth = ax.depth - form_delay;
-    %     end
-    
-    %%%%% Cyl to Cart %%% This is very rough draft
-% if handles.onemhz.Value == 0
-%     ptheta = atan((ax.x-mean(ax.x))./PE.TX.focus*PE.PData.Lambda);
-%     px = ax.x.*cos(ptheta);
-%     pz = ax.depth.*cos(ptheta)';
-%     for i = 1:length(ax.x)
-%         pXind(i) = find(ax.x >= px(i),1);
-%        XF2(i,:,:,:) = circshift(HF(i,:,:,:),abs(round(length(ax.x)/2)-i)*-1,3);
-% %        step = sqrt((PE.TX.focus*PE.PData.Lambda)^2+ax.x(i)^2)-PE.TX.focus*PE.PData.Lambda;
-% % step = sqrt((ax.depth(end))^2+ax.x(i)^2)-ax.depth(end);
-% %        mindist = ax.depth(2)-ax.depth(1);
-% %        shift = ceil(step/mindist)*2;
-% %        XF2(i,:,:,:) = circshift(HF(i,:,:,:),-shift,3);
-%         for j = 1:length(ax.depth)
-%             pZind(i,j) = find(ax.depth >= pz(i,j),1);
-%         end
-%     end
-%     
-%     if length(size(XF2)) < 4
-%         HF = permute(XF2,[1 4 2 3]);
-%     else
-%         HF = XF2;
-%     end
-% end
-%xstep = param.velmex.XDist/(param.velmex.XNStep-1);
-if strcmp(PE.Trans.name(1:4),'P4-2') | strcmp(PE.Trans.name(1:4),'P4-1')
-    zstep = ax.depth(11)-ax.depth(10);
-    z = PE.TX.focus;
-    x = linspace(-param.velmex.XDist/2,param.velmex.XDist/2,param.velmex.XNStep);
-    for i = 1:param.velmex.XNStep
-        r = sqrt(z^2+x(i)^2);
-        rstep = z-r;
-        sampstep(i) = round(rstep/zstep,2)*4;
-        X2(i,:,:,:) = circshift(HF(i,:,:,:),round(sampstep(i)),3);
-        multiWaitbar('Converting to Cartesian',i/param.velmex.XNStep);
-    end
-    clear HF
-    if ndims(X2) == 3
-        HF = permute(X2,[1 4 2 3]);
-    else
-        HF = X2;
-    end
-end
-
-
-
-
-    
-    if length(ax.y) > 1 && length(ax.x) == 1
-        ax.x = ax.y;
-        ax.y = 1;
-        HF = permute(HF,[2 1 3 4]);
-    end
-    % for m = 1:size(HF,4)
-    %     Pfin = zeros(length(pXind),length(pZind));
-    %     Pnum = Pfin;
-    %    % for i = 1:length(pXind)
-    %    for i = 1:length(ax.x)
-    %         for j = 1:length(pZind)
-    %             Pfin(i,pZind(i,j)) = Pfin(i,pZind(i,j)) + squeeze(HF(i,1,j,m));
-    %             Pnum(i,pZind(i,j)) = Pnum(i,pZind(i,j)) + 1;
-    %         end
-    %     end
-    %     Ptot = Pfin./Pnum;
-    %     Ptot(isnan(Ptot)) = 0;
-    %     XF(:,:,m) = Ptot;
-    %
-    % end
-    
-     if length(ax.y) > 1 && length(ax.x) == 1
-        ax.x = ax.y;
-        ax.y = 1;
-        HF = permute(HF,[2 1 3 4]);
-    end
-    
-    %%%%%
-    Xfilt = HF;
-    multiWaitbar('CLOSEALL');
-    % delete(b)
-    
-    if handles.save_4d.Value == 1
-        multiWaitbar('Saving','busy');
-        f = file(1:end-4);
-        if ~isempty(handles.hfchans.String)
-            hchan = num2str(a);
-            f2 = [f '_chan_' hchan '_4d_data.mat'];
-        else
-            f2 = [f '_4d_data.mat'];
-        end
-        fprintf('Saving 4D file...')
-        if handles.large_box.Value == 1
-            clearvars -except Xfilt file path param ax LF PE f2
-            eval([ 'save ' f2 ' -v7.3']);
-        else
-            %  clearvars -except Xfilt file path param ax LF PE f2
-            save(f2,'Xfilt','path','file','param','ax','LF','PE','f2');
-        end
-        clearvars -except a_full hf_num file path file2 path2 PE US LF param handles
-        fprintf('Done\n')
-        multiWaitbar('Saving','Close');
     end
 end
 
@@ -854,7 +879,7 @@ Xfilt = real(Xfilt);
 if handles.showlf.Value == 1
     LF = evalin('base','LF');
     LF = LF(:,str2double(handles.LF_chan.String));
-    lf_ax = linspace(0,30,length(LF));
+    lf_ax = linspace(0,param.Duration,length(LF));
 end
 
 xR = str2num(handles.xR.String);
@@ -1363,6 +1388,7 @@ if handles.use_chop.Value == 0
     [~,ax] = make_axes(param,size(Xfilt));
     assignin('base','ax',ax);
     assignin('base','Xfilt',Xfilt)
+    set(handles.active_ae,'String',num2str(size(Xfilt)));
 else
     param = evalin('base','param');
     Xfilt = evalin('base','X_c');
@@ -1398,6 +1424,7 @@ else
     
     assignin('base','ax_c',ax);
     assignin('base','X_c',Xfilt)
+    set(handles.active_ae,'String',num2str(size(Xfilt)));
 end
 
 
@@ -3540,7 +3567,7 @@ elseif handles.bsq.Value == 1
         y_mm = ((1:dsize(2))*wavlen*PData(1).PDelta(2));
         pex.y = y_mm-mean(y_mm);
     end
-      
+    
     if handles.save_4d.Value == 1
         clearvars -except f bScanParm pedata PData Trans TW TX pex TXArray
         f = f(1:end-10);
@@ -5878,9 +5905,9 @@ Jay;
 
 
 % --- Executes on button press in fastrecon.
-function fastrecon_Callback(hObject, eventdata, handles)
-X = evalin('base','Xcat');
-d = ndims(X);
+function fastrecon_Callback(hObject, eventdata, handles) %@034
+X_c = evalin('base','Xcat');
+d = ndims(X_c);
     ax = evalin('base','ax_c');
 % for i = 2:size(X,d)
 %     test1 = squeeze(X(10,1,:,15,1));
@@ -5895,27 +5922,13 @@ d = ndims(X);
 %     multiWaitbar('Reconstructing',i/size(X,d));
 % end
 % multiWaitbar('CLOSEALL');
-if handles.fastchan.Value
-    if handles.fastmed.Value
-        X_c = median(X,d);
-        X = X_c;
-    else
-        X_c = mean(X,d);
-        X = X_c;
-    end
-
-    ax.depth = linspace(ax.depth(1),ax.depth(end),size(X,3));
-    ax.stime = linspace(ax.stime(1),ax.stime(end),size(X,4));
-    assignin('base','ax_c','ax');
-else
-    X_c = X;
-end
 
 if handles.stime_compress.Value
-    param = evalin('base','PEparam.bScanParm');
-    cyc = param.Cycles;
-    freq = param.Frequency;
-    pulserate = param.PulseRate;
+%     param = evalin('base','PEparam.bScanParm');
+param = evalin('base','param');
+    cyc = param.Stim.Cycles;
+    freq = param.Stim.Frequency;
+    pulserate = param.Daq.HF.PulseRate;
     dur = param.Duration;
     perT = 1000/freq;
     perS = pulserate/freq;
@@ -5926,41 +5939,61 @@ if handles.stime_compress.Value
     b = 1;
     for t = 1:perS:size(X,4)-perS
         if t < active
-            sig(:,:,:,:,a) = X(:,:,:,t:t+perS);
+            sig(:,:,:,:,a,:) = X(:,:,:,t:t+perS,:);
             a = a+1;
         else
-            flat(:,:,:,:,b) = X(:,:,:,t:t+perS);
+            flat(:,:,:,:,b,:) = X(:,:,:,t:t+perS,:);
             b = b+1;
         end
-        multiWaitbar('Compressing time axis',t/size(X,4));
+        multiWaitbar('Compressing time axis',t/size(X,4)-perS);
     end
     sig = mean(sig,5);
+    if ndims(sig) <4
+        addy = 1;
+    else 
+        addy = 0;
+    end
+    if addy
+        sig = permute(sig,[1 4 2 3]);
+    end
     clear X_c
     if exist('flat','var')
         flat = mean(flat,5);
+        if addy
+            flat = permute(flat,[1 4 2 3]);
+        end
         X_c = cat(4,sig,flat);
+        X_c = permute(X_c,[1 2 3 4 6 5]);
     else
         X_c = sig;
+        X_c = permute(X_c,[1 2 3 4 6 5]);
     end
     ax.stime = linspace(0,perT*2,size(X_c,4));
+    clear X
+    X = X_c;
 end
 
 
 if handles.fastdecim.Value
     d = size(X_c);
+    if numel(d) < 5
+        d(5) = 1;
+    end
     n = length(d);
     S = str2double(get(handles.dectN,'String'));
     for i = 1:d(1)
         for j = 1:d(2)
             for k = 1:d(3)
-                for t = 1:d(n)
-                    if mod(t,2*S) == 0 && t < (d(n)-S-1)
-                        Y(i,j,k,t/(S*2)) = mean(X(i,j,k,t-S:t+S));
-                        %                         T = find(max(abs(X(i,j,k,t-S:t+S))));
-                        %                         R = max(abs(X(i,j,k,t-S:t+S)))-min(abs(X(i,j,k,t-S:t+S)));
-                        %                         Y(i,j,k,t/(S*2)) = X(i,j,k,t-S+T)*R;
-                    else
-                        %  Y(i,j,k,t) = X(i,j,k,t);
+                for t = 1:d(4)
+                    for m = 1:d(5)
+                        if mod(t,2*S) == 0 && t < (d(4)-S-1)
+                            Y(i,j,k,t/(S*2),m) = mean(X_c(i,j,k,t-S:t+S,m));
+                            %                         T = find(max(abs(X(i,j,k,t-S:t+S))));
+                            %                         R = max(abs(X(i,j,k,t-S:t+S)))-min(abs(X(i,j,k,t-S:t+S)));
+                            %                         Y(i,j,k,t/(S*2)) = X(i,j,k,t-S+T)*R;
+                        else
+                            %  Y(i,j,k,t) = X(i,j,k,t);
+                        end
                     end
                 end
             end
@@ -5978,17 +6011,22 @@ else
 end
 if handles.fastdecz.Value
     d = size(X);
+     if numel(d) < 5
+        d(5) = 1;
+    end
     n = length(d);
       S = str2double(get(handles.dectN,'String'));
        for i = 1:d(1)
         for j = 1:d(2)
             for k = 1:d(3)
-                for t = 1:d(n)
+                for t = 1:d(4)
+                    for m = 1:d(5)
                     if mod(k,2*S) == 0 && k < d(3)-S-1
-                         Z(i,j,k/(S*2),t) = mean(X(i,j,k-S:k+S,t));
+                         Z(i,j,k/(S*2),t,m) = mean(X(i,j,k-S:k+S,t,m));
 %                     T = find(max(abs(X(i,j,k-1:k+1,t))));
 %                     R = max(X(i,j,k-1:k+1,t))-min(X(i,j,k-1:k+1,t));
 %                     Z(i,j,k/2,t) = X(i,j,k-1+T)*R;
+                    end
                     end
                 end
             end
@@ -6004,6 +6042,9 @@ end
 
 if handles.fastpulse.Value
     d = size(X);
+     if numel(d) < 5
+        d(5) = 1;
+    end
     n = length(d);
     clear Y;
     ax = evalin('base','ax_c');
@@ -6021,7 +6062,9 @@ if handles.fastpulse.Value
         for j = 1:d(2)
             for t = 1:d(4)
                 for k = 1:param.Fast.reps
-                    Y(i,j,:,t,k) = X(i,j,jump(k)-area:jump(k)+area,t);
+                    for m = 1:d(5)
+                        Y(i,j,:,t,k,m) = X(i,j,jump(k)-area:jump(k)+area,t,m);
+                    end
                 end
             end
         end
@@ -6035,11 +6078,28 @@ if handles.fastpulse.Value
     for i = 1:d(1)
         for j = 1:d(2)
             for t = 1:d(4)
-                X(i,j,zstart-area:area+zstart,t) = Y2(i,j,:,t);
+                for m = 1:d(5)
+                    X(i,j,zstart-area:area+zstart,t,m) = Y2(i,j,:,t,m);
+                end
             end
         end
         multiWaitbar('Reconstructing',i/d(1));
     end
+end
+if handles.fastchan.Value
+    if handles.fastmed.Value
+        X_c = median(X,5);
+        X = X_c;
+    else
+        X_c = mean(X,5);
+        X = X_c;
+    end
+
+    ax.depth = linspace(ax.depth(1),ax.depth(end),size(X,3));
+    ax.stime = linspace(ax.stime(1),ax.stime(end),size(X,4));
+    assignin('base','ax_c','ax');
+else
+    X_c = X;
 end
 multiWaitbar('CLOSEALL');
 assignin('base','X_c',X);
@@ -6283,7 +6343,7 @@ end
 function maxrange_Callback(hObject, eventdata, handles)
   if handles.use_chop.Value == 0
         ax = evalin('base','ax');
-        x1 = num2str(round(ax.x(1),1)); x2 = num2str(round(ax.x(end),1));
+        x1 = num2str(floor(ax.x(1))); x2 = num2str(floor(ax.x(end)));
         z2 = floor(ax.depth(end));
         set(handles.xR,'String', [x1 ' ' x2]);
         set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
@@ -6363,3 +6423,58 @@ function fastrecon_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to fastrecon (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
+
+
+% --- Executes on button press in ind_box.
+function ind_box_Callback(hObject, eventdata, handles)
+% hObject    handle to ind_box (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of ind_box
+
+
+% --- Executes on button press in ez_export. @036
+function ez_export_Callback(hObject, eventdata, handles)
+m = get(handles.mean_box,'Value');
+int = get(handles.int_box,'Value');
+s = get(handles.squarify_box,'Value');
+chop_Callback(hObject, eventdata, handles);
+Enhance_Sig_Callback(hObject, eventdata, handles);
+set(handles.mean_box,'Value',0);
+set(handles.squarify_box,'Value',1);
+%Enhance_Sig_Callback(hObject, eventdata, handles);
+modify_button_Callback(hObject, eventdata, handles);
+if handles.fastenv.Value
+    env_button_Callback(hObject, eventdata, handles);
+end
+if handles.bbdb.Value
+    dB_Button_Callback(hObject, eventdata, handles);
+end
+set(handles.use_ext_fig,'Value',0)
+plot4_Callback(hObject, eventdata, handles);
+if handles.save_4d.Value
+set(handles.use_ext_fig,'Value',1)
+plot_ae_Callback(hObject, eventdata, handles);
+    if handles.save_fig.Value
+        movie_button_Callback(hObject, eventdata, handles);
+    else
+        savefig_Callback(hObject, eventdata, handles);
+    end
+end
+set(handles.mean_box,'Value',m);
+set(handles.int_box,'Value',int);
+set(handles.squarify_box,'Value',s);
+set(handles.use_ext_fig,'Value',0)
+% hObject    handle to ez_export (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+% --- Executes on button press in space_comp.
+function space_comp_Callback(hObject, eventdata, handles)
+% hObject    handle to space_comp (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of space_comp

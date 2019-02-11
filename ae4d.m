@@ -597,7 +597,11 @@ if isempty(handles.hfchans.String)
 end
 for p = 1:hf_num
     if param.post.ind
-        for p1 = 1:param.Scan.Avg
+        p2 = param.Scan.Avg;
+    else 
+        p2 = 1;
+    end
+        for p1 = 1:p2
             param.avenum = p1;
             if ~isempty(handles.hfchans.String)
                 a = a_full(p);
@@ -827,8 +831,7 @@ for p = 1:hf_num
                 clearvars -except a_full hf_num file path file2 path2 PE US LF param handles p
                 fprintf('Done\n')
                 multiWaitbar('Saving','Close');
-            end
-        end
+            end  
     end
 end
 
@@ -2450,7 +2453,19 @@ end
 if length(str2num(handles.baseb.String)) == 1
     if bb(1) > 0
         if handles.bb_win.Value == 0
-            X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz,wc1,wc2);
+            %X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz,wc1,wc2);
+            for i = 1:size(X,1)
+                for j = 1:size(X,2)
+                    Img = squeeze(X(i,j,:,:));
+                    X(i,j,:,:) = ae_demod2(Img,ax.depth/1.485,str2double(handles.baseb.String));
+                end
+                multiWaitbar('Basebanding',i/size(X,1));
+            end
+             if handles.bbdb.Value == 1
+                 S = sign(X);
+                 R = 20*log10(abs(X)./max(abs(X(:))));
+                 X = R.*S;
+            end
         else
             win_n = str2double(handles.bb_win_num.String); %number of windows
             win = size(X,1)/win_n; %number of points per window
@@ -2555,26 +2570,36 @@ elseif length(str2num(handles.baseb.String)) == 3
         R = Xfilt;
         yp = str2double(handles.yP.String);
         yloc = find(ax.y >= yp,1);
-        X = baseband2(squeeze(R(:,yloc,:,:)),rfreq(n),param.daq.HFdaq.fs_MHz,wc1,wc2);
-        
-        if handles.signed_env.Value == 1
-            S = sign(imag(X));         
-            dims = size(R);
-          %  b = waitbar(0);   
-            for i = 1:dims(1)
-%                 for j = 1:dims(2)
-                    R2(i,:,:) = envelope(squeeze(real(R(i,yloc,:,:))));
-%                 end
-%                 waitbar(i/dims(1),b,'Basebanding');
-            multiWaitbar('Basebanding',i/dims(1));
+        %         X = baseband2(squeeze(R(:,yloc,:,:)),rfreq(n),param.daq.HFdaq.fs_MHz,wc1,wc2);
+        for i = 1:size(X,1)
+            for j = 1:size(X,2)
+                Img = squeeze(R(i,j,:,:));
+                X(i,j,:,:) = ae_demod2(Img,ax.depth/1.485,rfreq(n));
             end
-            if handles.bbdb.Value == 1
-                R2 = 20*log10(R2./max(R2(:)));
-            end
-            X = S.*abs(R2);
-            %   X = S.*envelope(real(X));
+            multiWaitbar('Basebanding',i/size(X,1));
         end
         
+%         if handles.signed_env.Value == 1
+%             S = sign(imag(X));         
+%             dims = size(R);
+          %  b = waitbar(0);   
+%             for i = 1:dims(1)
+% %                 for j = 1:dims(2)
+%                     R2(i,:,:) = envelope(squeeze(real(R(i,yloc,:,:))));
+% %                 end
+% %                 waitbar(i/dims(1),b,'Basebanding');
+% %             multiWaitbar('Basebanding',i/dims(1));
+%             end
+
+            if handles.bbdb.Value == 1
+                S = sign(X);
+                R2 = 20*log10(abs(X)./max(abs(X(:))));
+                 X = S.*R2;
+            end
+           
+            %   X = S.*envelope(real(X));
+%         end
+%         
         xR = str2num(handles.xR.String);
         if length(xR) == 1
             xR = [xR xR];
@@ -2607,7 +2632,8 @@ elseif length(str2num(handles.baseb.String)) == 3
         else
             q.t = 1:dims(4);
             tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
-            Y = squeeze(X(xInd,yInd,zInd,tInd));
+            tp = find(ax.stime >= str2double(handles.tP.String),1);
+            Y = squeeze(X(xInd,yInd,zInd,tp));
         end
         else 
             Y = X(xInd,zInd);
@@ -5908,71 +5934,7 @@ Jay;
 function fastrecon_Callback(hObject, eventdata, handles) %@034
 X_c = evalin('base','Xcat');
 d = ndims(X_c);
-    ax = evalin('base','ax_c');
-% for i = 2:size(X,d)
-%     test1 = squeeze(X(10,1,:,15,1));
-%     test2 = squeeze(X(10,1,:,15,i));
-%     for j = 1:length(test2)
-%         test3 = circshift(test2,j-1);
-%         c(i,j) = corr(test1,test3);
-%     end
-%     e = envelope(c(i,:));
-%     f(i) = find(e >= max(e),1);
-%     X = circshift(X,f(i),3);
-%     multiWaitbar('Reconstructing',i/size(X,d));
-% end
-% multiWaitbar('CLOSEALL');
-
-if handles.stime_compress.Value
-%     param = evalin('base','PEparam.bScanParm');
-param = evalin('base','param');
-    cyc = param.Stim.Cycles;
-    freq = param.Stim.Frequency;
-    pulserate = param.Daq.HF.PulseRate;
-    dur = param.Duration;
-    perT = 1000/freq;
-    perS = pulserate/freq;
-    active = perS*cyc-perS/2;
-    off = dur-active-perS/2;
-    X = circshift(X_c,-perS/2,4);
-    a = 1;
-    b = 1;
-    for t = 1:perS:size(X,4)-perS
-        if t < active
-            sig(:,:,:,:,a,:) = X(:,:,:,t:t+perS,:);
-            a = a+1;
-        else
-            flat(:,:,:,:,b,:) = X(:,:,:,t:t+perS,:);
-            b = b+1;
-        end
-        multiWaitbar('Compressing time axis',t/size(X,4)-perS);
-    end
-    sig = mean(sig,5);
-    if ndims(sig) <4
-        addy = 1;
-    else 
-        addy = 0;
-    end
-    if addy
-        sig = permute(sig,[1 4 2 3]);
-    end
-    clear X_c
-    if exist('flat','var')
-        flat = mean(flat,5);
-        if addy
-            flat = permute(flat,[1 4 2 3]);
-        end
-        X_c = cat(4,sig,flat);
-        X_c = permute(X_c,[1 2 3 4 6 5]);
-    else
-        X_c = sig;
-        X_c = permute(X_c,[1 2 3 4 6 5]);
-    end
-    ax.stime = linspace(0,perT*2,size(X_c,4));
-    clear X
-    X = X_c;
-end
-
+ax = evalin('base','ax_c');
 
 if handles.fastdecim.Value
     d = size(X_c);
@@ -6038,6 +6000,62 @@ if handles.fastdecz.Value
     ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
     clear X;
     X = Z;
+end
+
+if handles.stime_compress.Value
+    %     param = evalin('base','PEparam.bScanParm');
+    param = evalin('base','param');
+    cyc = param.Stim.Cycles;
+    freq = param.Stim.Frequency;
+    if handles.fastdecim.Value
+        pulserate = param.Daq.HF.PulseRate/(2*str2double(handles.dectN.String));
+    else
+        pulserate = param.Daq.HF.PulseRate;
+    end
+    dur = param.Duration;
+    perT = 1000/freq;
+    perS = pulserate/freq;
+    active = perS*cyc-perS/2;
+    off = dur-active-perS/2;
+    X = circshift(X,-perS/2,4);
+    a = 1;
+    b = 1;
+    for t = 1:perS:size(X,4)-perS
+        if t < active
+            sig(:,:,:,:,a,:) = X(:,:,:,t:t+perS,:);
+            a = a+1;
+        else
+            flat(:,:,:,:,b,:) = X(:,:,:,t:t+perS,:);
+            b = b+1;
+        end
+        multiWaitbar('Compressing time axis',t/size(X,4));
+    end
+    sig = mean(sig,5);
+    if ndims(sig) <4
+        addy = 1;
+    else
+        addy = 0;
+    end
+    if addy
+        sig = permute(sig,[1 4 2 3]);
+    end
+    clear X_c
+    if exist('flat','var')
+        flat = mean(flat,5);
+        if addy
+            flat = permute(flat,[1 4 2 3]);
+        end
+        X_c = cat(4,sig,flat);
+        X_c = permute(X_c,[1 2 3 4 6 5]);
+    else
+        X_c = sig;
+        X_c = permute(X_c,[1 2 3 4 6 5]);
+    end
+    ax.stime = linspace(0,perT*2,size(X_c,4));
+    clear X
+    X = X_c;
+    set(handles.tR,'String',num2str([0 floor(ax.stime(end))]))
+    set(handles.tP,'String',num2str(round(ax.stime(end)/2)));
 end
 
 if handles.fastpulse.Value

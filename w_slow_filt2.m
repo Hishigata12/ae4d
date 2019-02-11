@@ -165,30 +165,40 @@ elseif mode == 1
     end
     
     RefPulse = RefPulse/(sum(abs(RefPulse)));
+    F = param.Stim.Frequency;
+    prf = param.daq.HFdaq.pulseRepRate_Hz;
+    dur = param.daq.HFdaq.duration_ms;
+    onecyc = 1/F*prf;
+    RefPulse = RefPulse(1:onecyc);
   %  RefPulse = flipud(conj(RefPulse));
     
 %    fprintf('Filtering 4D data\n')
    % b = waitbar(0,'Filtering 4D data');
     %y = zeros(size(HF_xy,1),size(HF_xy,2),size(HF_zt(1))+length(RefPulse)-1,size(HF_zt(2)));
     
-    
+    %Initializes matrices
     for i = 1:HF_xy(1)
         for j = 1:HF_xy(2)
-            y{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);   
-            Q{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);   
+            y2{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);   
+           % Q{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);
+            Q{i,j} = zeros(HF_zt(1),HF_zt(2)); 
+            y{i,j} = zeros(HF_zt(1),HF_zt(2));  
         end
     end
     
+    %Convolves AE data with match filter
     for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
+        for j = 1:HF_xy(2)  
             for k = 1:HF_zt(1)
-                y{i,j}(k,:) = conv(HF{i,j}(k,:),RefPulse);
+                y2{i,j}(k,:) = conv(HF{i,j}(k,:),RefPulse);
+                y{i,j}(k,:) = interp1(linspace(0,1,HF_zt(2)+length(RefPulse)-1),y2{i,j}(k,:),linspace(0,1,HF_zt(2)));
             end
         end
        % waitbar(i/HF_xy(1),b,'Slow Time Filtering')
        multiWaitbar('Slow Time Filtering',i/HF_xy(1));
     end
     %
+    
     %Removes DC components
     Hfilt = ones(1,size(y{1,1},2));
     Hfilt(1:2) = 0;

@@ -600,7 +600,7 @@ for p = 1:hf_num
         p2 = param.Scan.Avg;
     else 
         p2 = 1;
-    end
+    end    
         for p1 = 1:p2
             param.avenum = p1;
             if ~isempty(handles.hfchans.String)
@@ -877,7 +877,7 @@ else
     %    param = evalin('base','param');
     ax = evalin('base','ax_c');
 end
-
+param = evalin('base','param');
 Xfilt = real(Xfilt);
 if handles.showlf.Value == 1
     LF = evalin('base','LF');
@@ -1180,8 +1180,10 @@ if handles.all_movie.Value == 1
             
             plot(handles.axes4,lf_ax(lfInd),LF(lfInd),'k')
             hold(handles.axes4,'on')
+%             xlim([tR(1) tR(2)]);
             %  plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
-            plot(handles.axes4,lf_ax(round(k*lfdif)),LF(round(k*lfdif)),'ro','MarkerFaceColor','r')
+%             plot(handles.axes4,lf_ax(round(k*lfdif)),LF(round(k*lfdif)),'ro','MarkerFaceColor','r')
+            plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
             hold(handles.axes4,'off')
             
         end
@@ -2457,7 +2459,7 @@ if length(str2num(handles.baseb.String)) == 1
             for i = 1:size(X,1)
                 for j = 1:size(X,2)
                     Img = squeeze(X(i,j,:,:));
-                    X(i,j,:,:) = ae_demod2(Img,ax.depth/1.485,str2double(handles.baseb.String));
+                    X(i,j,:,:) = ae_demod3(Img,ax.depth/1.485,str2double(handles.baseb.String));
                 end
                 multiWaitbar('Basebanding',i/size(X,1));
             end
@@ -2574,7 +2576,7 @@ elseif length(str2num(handles.baseb.String)) == 3
         for i = 1:size(X,1)
             for j = 1:size(X,2)
                 Img = squeeze(R(i,j,:,:));
-                X(i,j,:,:) = ae_demod2(Img,ax.depth/1.485,rfreq(n));
+                X(i,j,:,:) = ae_demod3(Img,ax.depth/1.485,rfreq(n));
             end
             multiWaitbar('Basebanding',i/size(X,1));
         end
@@ -5042,20 +5044,28 @@ function bsq_Callback(hObject, eventdata, handles)
 function tshifter_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value
     ax = evalin('base','ax_c');
+    x = evalin('base','X_c');
 else
     ax = evalin('base','ax');
+    x = evalin('base','Xfilt');
 end
 %set(hObject,'Value',str2double(handles.tP.String));
 val = get(hObject,'Value');
-if val < ax.stime(1) || val > ax.stime(end)
-    errordlg('T value outside of range');
-    return
+d = size(x,4);
+% if val < ax.stime(1) || val > ax.stime(end)
+%     errordlg('T value outside of range');
+%     return
+% end
+if val < ax.stime(1)
+    val = ax.stime(1);
+elseif val > ax.stime(end)
+    val = ax.stime(end);
 end
 if length(ax.stime) > 1
-    inc = ax.stime(2)-ax.stime(1);
-    handles.tshifter.SliderStep = [inc/30, inc/3];
+    inc = ax.stime(end)-ax.stime(1);
+    handles.tshifter.SliderStep = [1/d, 1/10];
 end
-val = round(val,1);
+%val = round(val,1);
 val = num2str(val);
 set(handles.tP,'String',val);
 set(hObject,'Value',str2double(val));
@@ -5086,18 +5096,26 @@ end
 function zshifter_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value
     ax = evalin('base','ax_c');
+    x = evalin('base','X_c');
 else
     ax = evalin('base','ax');
+    x = evalin('base','Xfilt');
 end
+d = size(x,3);
 %set(hObject,'Value',str2double(handles.zP.String));
 val = get(hObject,'Value');
-if val < ax.depth(1) || val > ax.depth(end)
-    errordlg('Z value outside of range');
-    return
+% if val < ax.depth(1) || val > ax.depth(end)
+%     errordlg('Z value outside of range');
+%     return
+% end
+if val < ax.depth(1)
+    val = ax.depth(1);
+elseif val > ax.depth(end)
+    val = ax.depth(end);
 end
 if length(ax.depth) > 1
     inc = ax.depth(2)-ax.depth(1);
-    handles.zshifter.SliderStep = [inc/30, inc/3];
+    handles.zshifter.SliderStep = [1/d, 1/10];
 end
 val = round(val,2);
 val = num2str(val);
@@ -5125,17 +5143,25 @@ end
 function yshifter_Callback(hObject, eventdata, handles)
 if handles.use_chop.Value
     ax = evalin('base','ax_c');
+    x = evalin('base','X_c');
 else
     ax = evalin('base','ax');
+    x = evalin('base','Xfilt');
 end
 val = get(hObject,'Value');
-if val < ax.y(1) || val > ax.y(end)
-    errordlg('Y value outside of range');
-    return
+d = size(x,2);
+% if val < ax.y(1) || val > ax.y(end)
+%     errordlg('Y value outside of range');
+%     return
+% end
+if val < ax.y(1)
+    val = ax.y(1);
+elseif val > ax.y(end)
+    val = ax.y(end);
 end
 if length(ax.y) > 1
     inc = ax.y(2)-ax.y(1);
-    handles.y.SliderStep = [inc/10, inc];
+    handles.y.SliderStep = [1/d, 1/10];
 end
 set(handles.yP,'String',num2str(val));
 set(hObject,'Max',ax.y(end));
@@ -5932,75 +5958,26 @@ Jay;
 
 % --- Executes on button press in fastrecon.
 function fastrecon_Callback(hObject, eventdata, handles) %@034
-X_c = evalin('base','Xcat');
-d = ndims(X_c);
+X = evalin('base','Xcat');
+d = ndims(X);
 ax = evalin('base','ax_c');
 
-if handles.fastdecim.Value
-    d = size(X_c);
-    if numel(d) < 5
-        d(5) = 1;
+if handles.fastchan.Value
+    if handles.fastmed.Value
+        X_c = median(X,5);
+        X = X_c;
+    else
+        X_c = mean(X,5);
+        X = X_c;
     end
-    n = length(d);
-    S = str2double(get(handles.dectN,'String'));
-    for i = 1:d(1)
-        for j = 1:d(2)
-            for k = 1:d(3)
-                for t = 1:d(4)
-                    for m = 1:d(5)
-                        if mod(t,2*S) == 0 && t < (d(4)-S-1)
-                            Y(i,j,k,t/(S*2),m) = mean(X_c(i,j,k,t-S:t+S,m));
-                            %                         T = find(max(abs(X(i,j,k,t-S:t+S))));
-                            %                         R = max(abs(X(i,j,k,t-S:t+S)))-min(abs(X(i,j,k,t-S:t+S)));
-                            %                         Y(i,j,k,t/(S*2)) = X(i,j,k,t-S+T)*R;
-                        else
-                            %  Y(i,j,k,t) = X(i,j,k,t);
-                        end
-                    end
-                end
-            end
-        end
-        multiWaitbar('decimating and averaging along stime',i/d(1));
-    end
-    ax = evalin('base','ax_c');
-    ax.stime = linspace(ax.stime(1),max(ax.stime),size(Y,4));
-    %     ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
-    clear X;
-    X = Y;
-    assignin('base','ax_c',ax);
+
+    ax.depth = linspace(ax.depth(1),ax.depth(end),size(X,3));
+    ax.stime = linspace(ax.stime(1),ax.stime(end),size(X,4));
+    assignin('base','ax_c','ax');
 else
-    X = X_c;
+    X_c = X;
 end
-if handles.fastdecz.Value
-    d = size(X);
-     if numel(d) < 5
-        d(5) = 1;
-    end
-    n = length(d);
-      S = str2double(get(handles.dectN,'String'));
-       for i = 1:d(1)
-        for j = 1:d(2)
-            for k = 1:d(3)
-                for t = 1:d(4)
-                    for m = 1:d(5)
-                    if mod(k,2*S) == 0 && k < d(3)-S-1
-                         Z(i,j,k/(S*2),t,m) = mean(X(i,j,k-S:k+S,t,m));
-%                     T = find(max(abs(X(i,j,k-1:k+1,t))));
-%                     R = max(X(i,j,k-1:k+1,t))-min(X(i,j,k-1:k+1,t));
-%                     Z(i,j,k/2,t) = X(i,j,k-1+T)*R;
-                    end
-                    end
-                end
-            end
-        end
-        multiWaitbar('decimating and averaging along depth',i/d(1));
-       end
-    ax = evalin('base','ax_c');
-%     ax.stime = linspace(0,max(ax.stime),size(Y,4));
-    ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
-    clear X;
-    X = Z;
-end
+%%%X_c = X
 
 if handles.stime_compress.Value
     %     param = evalin('base','PEparam.bScanParm');
@@ -6057,6 +6034,8 @@ if handles.stime_compress.Value
     set(handles.tR,'String',num2str([0 floor(ax.stime(end))]))
     set(handles.tP,'String',num2str(round(ax.stime(end)/2)));
 end
+%%%X_c = X
+
 
 if handles.fastpulse.Value
     d = size(X);
@@ -6103,22 +6082,78 @@ if handles.fastpulse.Value
         end
         multiWaitbar('Reconstructing',i/d(1));
     end
-end
-if handles.fastchan.Value
-    if handles.fastmed.Value
-        X_c = median(X,5);
-        X = X_c;
-    else
-        X_c = mean(X,5);
-        X = X_c;
-    end
-
-    ax.depth = linspace(ax.depth(1),ax.depth(end),size(X,3));
-    ax.stime = linspace(ax.stime(1),ax.stime(end),size(X,4));
-    assignin('base','ax_c','ax');
-else
     X_c = X;
 end
+%%%X_c = X
+
+if handles.fastdecim.Value
+    d = size(X_c);
+    if numel(d) < 5
+        d(5) = 1;
+    end
+    n = length(d);
+    S = str2double(get(handles.dectN,'String'));
+    for i = 1:d(1)
+        for j = 1:d(2)
+            for k = 1:d(3)
+                for t = 1:d(4)
+                    for m = 1:d(5)
+                        if mod(t,2*S) == 0 && t < (d(4)-S-1)
+                            Y(i,j,k,t/(S*2),m) = mean(X_c(i,j,k,t-S:t+S,m));
+                            %                         T = find(max(abs(X(i,j,k,t-S:t+S))));
+                            %                         R = max(abs(X(i,j,k,t-S:t+S)))-min(abs(X(i,j,k,t-S:t+S)));
+                            %                         Y(i,j,k,t/(S*2)) = X(i,j,k,t-S+T)*R;
+                        else
+                            %  Y(i,j,k,t) = X(i,j,k,t);
+                        end
+                    end
+                end
+            end
+        end
+        multiWaitbar('decimating and averaging along stime',i/d(1));
+    end
+    ax = evalin('base','ax_c');
+    ax.stime = linspace(ax.stime(1),max(ax.stime),size(Y,4));
+    %     ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
+    clear X;
+    X = Y;
+    assignin('base','ax_c',ax);
+else
+    X = X_c;
+end
+%%%X ~= X_c
+
+if handles.fastdecz.Value
+    d = size(X);
+     if numel(d) < 5
+        d(5) = 1;
+    end
+    n = length(d);
+      S = str2double(get(handles.dectN,'String'));
+       for i = 1:d(1)
+        for j = 1:d(2)
+            for k = 1:d(3)
+                for t = 1:d(4)
+                    for m = 1:d(5)
+                    if mod(k,2*S) == 0 && k < d(3)-S-1
+                         Z(i,j,k/(S*2),t,m) = mean(X(i,j,k-S:k+S,t,m));
+%                     T = find(max(abs(X(i,j,k-1:k+1,t))));
+%                     R = max(X(i,j,k-1:k+1,t))-min(X(i,j,k-1:k+1,t));
+%                     Z(i,j,k/2,t) = X(i,j,k-1+T)*R;
+                    end
+                    end
+                end
+            end
+        end
+        multiWaitbar('decimating and averaging along depth',i/d(1));
+       end
+    ax = evalin('base','ax_c');
+%     ax.stime = linspace(0,max(ax.stime),size(Y,4));
+    ax.depth = linspace(ax.depth(1),ax.depth(end),size(Z,3));
+    clear X;
+    X = Z;
+end
+
 multiWaitbar('CLOSEALL');
 assignin('base','X_c',X);
 assignin('base','ax_c',ax);

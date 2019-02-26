@@ -22,7 +22,7 @@ function varargout = beautify(varargin)
 
 % Edit the above text to modify the response to help beautify
 
-% Last Modified by GUIDE v2.5 15-Jan-2019 15:39:54
+% Last Modified by GUIDE v2.5 08-Feb-2019 15:20:43
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -62,6 +62,8 @@ set(handles.zpt,'String',1);
 set(handles.zslide,'Min',0);
 set(handles.tpt,'String',1);
 set(handles.tslide,'Min',0);
+set(handles.use_chop,'Value',1);
+load_Callback(hObject, eventdata, handles);
 
 % Update handles structure
 guidata(hObject, handles);
@@ -269,6 +271,11 @@ else
     axes(handles.axes1)
 end
 imagesc(imag)
+if handles.plotmod.Value
+% handles.axes3.Children.CData = imag;
+else
+%     handles.axes1.Children.CData = imag;
+end
 colormap(h)
 c = [str2double(get(handles.cmin,'String')) str2double(get(handles.cmax,'String'))];
 if isnan(c)
@@ -1518,3 +1525,194 @@ a = 3;
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
     
+
+
+% --- Executes on button press in shift.
+function shift_Callback(hObject, eventdata, handles)
+if handles.holdmods.Value
+    X = evalin('base','Xnew');
+else
+    X = evalin('base','X');
+end
+
+if handles.shiftall.Value
+    xs = str2double(handles.xshift.String);
+    ys = str2double(handles.yshift.String);
+    zs = str2double(handles.zshift.String);
+    ts = str2double(handles.tshift.String);
+    X = circshift(X,xs,1);
+    X = circshift(X,ys,2);
+    X = circshift(X,zs,3);
+    X = circshift(X,ts,4);
+else
+    xs = str2double(handles.xshift.String);
+    ys = str2double(handles.yshift.String);
+    zs = str2double(handles.zshift.String);
+    ts = str2double(handles.tshift.String);
+    xp = str2double(handles.xpt.String);
+    X(xp,:,:,:) = circshift(X(xp,:,:,:),zs,3);
+end
+assignin('base','Xnew',X);
+
+% hObject    handle to shift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+
+
+function tshift_Callback(hObject, eventdata, handles)
+% hObject    handle to tshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of tshift as text
+%        str2double(get(hObject,'String')) returns contents of tshift as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function tshift_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to tshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function zshift_Callback(hObject, eventdata, handles)
+% hObject    handle to zshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of zshift as text
+%        str2double(get(hObject,'String')) returns contents of zshift as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function zshift_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to zshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function yshift_Callback(hObject, eventdata, handles)
+% hObject    handle to yshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of yshift as text
+%        str2double(get(hObject,'String')) returns contents of yshift as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function yshift_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to yshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function xshift_Callback(hObject, eventdata, handles)
+% hObject    handle to xshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of xshift as text
+%        str2double(get(hObject,'String')) returns contents of xshift as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function xshift_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to xshift (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in shiftall.
+function shiftall_Callback(hObject, eventdata, handles)
+% hObject    handle to shiftall (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of shiftall
+
+
+% --- Executes on button press in align.
+function align_Callback(hObject, eventdata, handles)
+if handles.holdmods.Value
+    X = evalin('base','Xnew');
+else
+X = evalin('base','X');
+end
+xs = str2double(handles.xshift.String);
+if xs ~= 0
+    xr = -xs:xs;
+else
+    xr = 0;
+end
+ys = str2double(handles.yshift.String);
+if ys ~= 0
+    yr = -ys:ys;
+else
+    yr = 0;
+end
+zs = str2double(handles.zshift.String);
+ts = str2double(handles.tshift.String);
+xp = str2double(handles.xpt.String);
+yp = str2double(handles.ypt.String);
+tp = str2double(handles.tpt.String);
+Y = X;
+for i = str2double(handles.tmin.String):str2double(handles.tmax.String)
+%     for i = tp
+%         figure;
+        hold all;
+    orig = squeeze(X(xp,yp,:,i));
+    for j = xr
+        for k = yr
+            comp = squeeze(X(xp+j,yp+k,:,i));
+%             plot(comp);
+            test = corr(orig,comp);
+           % disp(test);
+            if abs(test) > 0.1  
+                cor = xcorr(orig,comp);
+%                 plot(cor);
+                s = round(length(cor)/2)+find(cor == max(cor));
+                if s~=0
+%                     disp(s)
+                    Y(xp+j,yp+k,:,i) = circshift(comp,s);
+                end
+            end
+        end
+    end
+    multiWaitbar('Shifting Depths',i/str2double(handles.tmax.String));
+end
+assignin('base','Xnew',Y);
+multiWaitbar('CLOSEALL');
+
+
+% hObject    handle to align (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)

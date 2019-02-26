@@ -222,6 +222,7 @@ if ShiftAverage
         end
         LFAveraged = LFAveraged+LFShifted; % Sum the LF waveform
         HFAveraged = HFAveraged+HFShifted; % Sum the HF waveform
+        multiWaitbar('Shifting Original Data',AvgNum/NumAvgs);
 
     end
     LFAveraged = LFAveraged./NumAvgs; % Average the LF waveform

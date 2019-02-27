@@ -6168,6 +6168,22 @@ if handles.fastdecim.Value
                 %                         end
                 %                     end
             else strcmp(param.Stim.Waveform,'Sin')
+                LF = interp1(linspace(0,1,length(LF)),LF,linspace(0,1,d(4)));
+                pk_threshold = max(LF)/2;
+               
+                pks = find(LF>pk_threshold);
+                min_threshold = min(LF)/2;
+                mins = find(LF<min_threshold);
+                cyc = param.Stim.Cycles;
+                per = 1000/param.Stim.Frequency;
+                on_time = cyc*per*param.daq.HFdaq.pulseRepRate_Hz/1000;
+                X2 = X_c(:,:,:,1:on_time,:);
+                X3 = X_c(:,:,:,on_time+1:end,:);
+                a = 1:on_time;
+                sig = mean(X2(:,:,:,a(ismember(a,pks)),:),4);
+                neg_sig = mean(X2(:,:,:,a(ismember(a,mins)),:),4);
+                noise =  mean(X3(:,:,:,:,:),4);
+                 Y = cat(4,neg_sig,sig,noise);
             end
         end
         

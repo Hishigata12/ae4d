@@ -612,12 +612,15 @@ for p = a_full%hf_num
             for j = 1:sL
                 for i = 1:fL
                     if ~isempty(handles.hfchans.String)
-                        a = a_full(p);
+                       % a = a_full(p);
+                       a = p;
                     end
                     % [HF1(i,:,:,:)),LF,LF1] = PostAverage(param,[],[str2double(handles.fast_cut1.String), str2double(handles.fast_cut2.String), str2double(handles.slow_cut1.String), str2double(handles.slow_cut2.String)],(i-1)*sL+j,p1,0,1,0,0);
-                    [HF1{i,j},LF,LF1] = PostAverage(param,[],[str2double(handles.fast_cut1.String), str2double(handles.fast_cut2.String), str2double(handles.slow_cut1.String), str2double(handles.slow_cut2.String)],(i-1)*sL+j,a,0,1,0,0);
+                    [HF1{i,j},LF,LF1] = PostAverage(param,[],[str2double(handles.fast_cut1.String), str2double(handles.fast_cut2.String), str2double(handles.slow_cut1.String), str2double(handles.slow_cut2.String)],(i-1)*sL+j,p,0,1,0,0);
                     
-                    multiWaitbar(['Compiling step ' num2str(i) ' of ' num2str(param.Scan.steps)],i/fL);
+                    multiWaitbar('Compiling steps',i/fL);
+                   % multiWaitbar(['Compiling steps' num2str(i) ' of ' num2str(param.Scan.steps)],i/fL);
+                   % multiWaitbar(['Compiling step ' num2str(i)], 'Relabel',['Compiling step ' num2str(i+1)])
                 end
             end
             
@@ -625,11 +628,11 @@ for p = a_full%hf_num
             
             %             param.avenum = p1;
             if ~isempty(handles.hfchans.String)
-                a = a_full(p);
+                %a = p;%a_full(p);
             end
             
             %Gets Raw Data into cell array
-            [~, HF1] = full_signal([path file],param,a); %Gets the raw data
+            [~, HF1] = full_signal([path file],param,p); %Gets the raw data
         end
         %Filters in Fast Time
         if handles.ft_on.Value == 1
@@ -838,7 +841,7 @@ for p = a_full%hf_num
         multiWaitbar('Saving','busy');
         f = file(1:end-4);
         if ~isempty(handles.hfchans.String)
-            hchan = num2str(a);
+            hchan = num2str(p);
 %             if param.post.ind
 %                 avenum = num2str(param.avenum);
 %                 f2 = [f '_chan_' hchan '_ave_' avenum '_4d_data.mat'];

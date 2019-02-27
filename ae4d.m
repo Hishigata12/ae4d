@@ -616,14 +616,12 @@ for p = a_full%hf_num
                        a = p;
                     end
                     % [HF1(i,:,:,:)),LF,LF1] = PostAverage(param,[],[str2double(handles.fast_cut1.String), str2double(handles.fast_cut2.String), str2double(handles.slow_cut1.String), str2double(handles.slow_cut2.String)],(i-1)*sL+j,p1,0,1,0,0);
-                    [HF1{i,j},LF,LF1] = PostAverage(param,[],[str2double(handles.fast_cut1.String), str2double(handles.fast_cut2.String), str2double(handles.slow_cut1.String), str2double(handles.slow_cut2.String)],(i-1)*sL+j,p,0,1,0,0);
-                    
+                    [HF1{i,j},LF,LF1] = PostAverage(param,[],[str2double(handles.slow_cut1.String)*0.75, str2double(handles.slow_cut1.String), str2double(handles.slow_cut2.String), str2double(handles.slow_cut2.String) + (str2double(handles.slow_cut1.String) - str2double(handles.slow_cut1.String)*0.7)],(i-1)*sL+j,p,0,1,0,0); 
                     multiWaitbar('Compiling steps',i/fL);
                    % multiWaitbar(['Compiling steps' num2str(i) ' of ' num2str(param.Scan.steps)],i/fL);
                    % multiWaitbar(['Compiling step ' num2str(i)], 'Relabel',['Compiling step ' num2str(i+1)])
                 end
             end
-            
         else
             
             %             param.avenum = p1;

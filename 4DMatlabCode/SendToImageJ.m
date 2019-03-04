@@ -27,6 +27,9 @@ function SendToImageJ(handles,overlay)
         Xfilt = evalin('base','Xfilt');
         ax = evalin('base','ax');
     end
+    
+    %Makes sure that the data is not complex
+    Xfilt = real(Xfilt);
 
 
     xR = str2num(handles.xR.String);
@@ -81,6 +84,7 @@ function SendToImageJ(handles,overlay)
     location = checkMijConnection;
     
     sizeData = size(mainSet);
+    mainSet = mainSet;
     if ndims(mainSet) == 4
     %Sends each 3D figure to imageJ
     for timePoint = 1:sizeData(4)
@@ -93,12 +97,16 @@ function SendToImageJ(handles,overlay)
 
         %Creating small border so the image cannot crash even if the 3D
         %image is empty
-        mainSetPartition(1,1,1) = dBRng(2);
-        mainSetPartition(1,end,1) = dBRng(2);
-        mainSetPartition(end,end,1) = dBRng(2);
-        mainSetPartition(end,1,1) = dBRng(2);
+        mainSetPartition(1,:,:) = (dBRng(2) - dBRng(1))/100 + dBRng(1);
+        mainSetPartition(1,:,1) = (dBRng(2) - dBRng(1))/100 + dBRng(1);
+        mainSetPartition(1,1,:) = (dBRng(2) - dBRng(1))/100 + dBRng(1);
+        mainSetPartition(end,:,:) = (dBRng(2) - dBRng(1))/100 + dBRng(1);
+        mainSetPartition(end,:,end) = (dBRng(2) - dBRng(1))/100 + dBRng(1);
+        mainSetPartition(end,end,:) = (dBRng(2) - dBRng(1))/100 + dBRng(1);
         
         MIJ.createImage(mainSetPartition);
+        size(mainSetPartition)
+        
     end
     else 
         mainSetPartition = single(mainSet);
@@ -110,31 +118,31 @@ function SendToImageJ(handles,overlay)
     %Putting in fiji because it is easy to find in that directory for the
     %macro
     fileID = fopen(strcat(location,'\Fiji.app\macros\exp.txt'),'w');
-    fprintf(fileID,strcat(colorMap,'\n'));
-    fprintf(fileID,strcat(num2str(dBRng(1)),'\n'));
-    fprintf(fileID,strcat(num2str(dBRng(2)),'\n'));
+    fprintf(fileID,strcat(colorMap,'\n')); %Row 0
+    fprintf(fileID,strcat(num2str(dBRng(1)),'\n')); %Row 1
+    fprintf(fileID,strcat(num2str(dBRng(2)),'\n')); %Row 2
     if 1==1%struc.scale.travel==1 %for PA only
-        fprintf(fileID,'AE\n');
+        fprintf(fileID,'AE\n'); %Row 3
     else
-        fprintf(fileID,'PE\n');
+        fprintf(fileID,'PE\n'); %Row 3
     end
 
     %Checks if the 4D data wants to be saved into a tif
     if handles.save_fig.Value == 1
-        fprintf(fileID,'saveTrue\n');
+        fprintf(fileID,'saveTrue\n'); %Row 4
     else
-        fprintf(fileID,'saveFalse\n');
+        fprintf(fileID,'saveFalse\n'); %Row 4
     end
     
     %Sets the name and location of the file to save
-    fprintf(fileID,strcat(strjoin(strsplit(location,'\'),'\\\'), '_', '.tif','\n'));
+    fprintf(fileID,strcat(strjoin(strsplit(location,'\'),'\\\'), '_', '.tif','\n')); %Row 5
     
     %Simply gets the end points
     %This needs to give the correct values on the 4DCreation.ijm or 
     %4DCreationPEOverlay.ijm, needs to give the pixel width,pixel height,voxel depth
-    fprintf(fileID, strcat(num2str(abs(xR(1)-xR(2))/sizeData(1)),'\n'));
-    fprintf(fileID, strcat(num2str(abs(yR(1)-yR(2))/sizeData(2)),'\n'));
-    fprintf(fileID, strcat(num2str(abs(zR(1)-zR(2))/sizeData(3)),'\n'));
+    fprintf(fileID, strcat(num2str(abs(xR(1)-xR(2))/sizeData(1)),'\n')); %Row 6
+    fprintf(fileID, strcat(num2str(abs(yR(1)-yR(2))/sizeData(2)),'\n')); %Row 7
+    fprintf(fileID, strcat(num2str(abs(zR(1)-zR(2))/sizeData(3)),'\n')); %Row 8
     
     %Calls the macro that turns the 3D data that was sent to ImageJ into a 4D
     %data set and puts that 4D image in the 3D viewer

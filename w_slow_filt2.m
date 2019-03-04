@@ -165,12 +165,29 @@ elseif mode == 1
     end
     
     RefPulse = RefPulse/(sum(abs(RefPulse)));
-    F = param.Stim.Frequency;
-    prf = param.daq.HFdaq.pulseRepRate_Hz;
-    dur = param.daq.HFdaq.duration_ms;
-    onecyc = 1/F*prf;
-    RefPulse = RefPulse(1:onecyc);
-  %  RefPulse = flipud(conj(RefPulse));
+    if ~param.full_sm
+        F = param.Stim.Frequency;
+        prf = param.daq.HFdaq.pulseRepRate_Hz;
+        dur = param.daq.HFdaq.duration_ms;
+        onecyc = 1/F*prf;
+        RefPulse = RefPulse(1:onecyc);
+        RefPulse = flipud(conj(RefPulse));
+        LF_d = size(LF,2);
+        one_LF = 1/F*param.daq.LFdaq.fs_Hz;
+        for i = 1:size(LF,2)
+            LF2(:,i) = conv(LF(:,i),LF(1:one_LF,i));
+            LF3(:,i) = interp1(linspace(0,1,length(LF2)),LF2,linspace(0,1,length(LF)));
+            LF(:,LF_d+i) = LF3(:,i)/sum(abs(LF3(:,i)));
+        end
+    else
+        LF_d = size(LF,2);
+        for i = 1:LF_d
+            LF2(:,i) = conv(LF(:,i),LF(:,i));
+            LF3(:,i) = interp1(linspace(0,1,length(LF2)),LF2,linspace(0,1,length(LF)));
+            LF(:,LF_d+i) = LF3(:,i)/sum(abs(LF3(:,i)));
+        end
+%         LF = LF3;
+    end
     
 %    fprintf('Filtering 4D data\n')
    % b = waitbar(0,'Filtering 4D data');

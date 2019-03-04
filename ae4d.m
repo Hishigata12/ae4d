@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to helpf ae4d
 
-% Last Modified by GUIDE v2.5 25-Feb-2019 16:53:10
+% Last Modified by GUIDE v2.5 01-Mar-2019 17:02:26
 
 % Begin initialization code - DO NOT EDIT
 
@@ -557,6 +557,7 @@ param.post.new = handles.newaescan.Value;
 param.post.onemhz = handles.onemhz.Value;
 param.post.tc = handles.tc.Value;
 param.lf_only = 1;
+param.full_sm = handles.full_sm.Value;
 
 
 if handles.newaescan.Value
@@ -4264,7 +4265,9 @@ else
     ax = evalin('base','ax');
 end
 
-% reset_button_Callback(hObject, eventdata, handles);
+if handles.autoreset.Value
+reset_button_Callback(hObject, eventdata, handles);
+end
 
 Xfilt = real(Xfilt);
 %set(handles.axes1,'ButtonDownFcn',@Plot4OnClickXZ)
@@ -6142,6 +6145,12 @@ if handles.fastdecim.Value
             
             if strcmp(param.Stim.Waveform,'Pls')
                 %                 match_axis = linspace(ax.stime(1),ax.stime(end),length(LF));
+                if handles.slow_box.Value
+                     LF2 = conv(LF,LF);
+                     LF3 = interp1(linspace(0,1,3199),LF2,linspace(0,1,1600));
+                     clear LF
+                     LF  = LF3;
+                end
                 LF = interp1(linspace(0,1,length(LF)),LF,linspace(0,1,d(4)));
                 pk_threshold = max(LF)/2;
                 a = 1:length(LF);
@@ -6170,10 +6179,10 @@ if handles.fastdecim.Value
                 %                     end
             else strcmp(param.Stim.Waveform,'Sin')
                 LF = interp1(linspace(0,1,length(LF)),LF,linspace(0,1,d(4)));
-                pk_threshold = max(LF)/2;
+                pk_threshold = max(LF)*.7071;
                
                 pks = find(LF>pk_threshold);
-                min_threshold = min(LF)/2;
+                min_threshold = min(LF)*.7071;
                 mins = find(LF<min_threshold);
                 cyc = param.Stim.Cycles;
                 per = 1000/param.Stim.Frequency;
@@ -6646,3 +6655,21 @@ function stimemagic_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of stimemagic
+
+
+% --- Executes on button press in autoreset.
+function autoreset_Callback(hObject, eventdata, handles)
+% hObject    handle to autoreset (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of autoreset
+
+
+% --- Executes on button press in full_sm.
+function full_sm_Callback(hObject, eventdata, handles)
+% hObject    handle to full_sm (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of full_sm

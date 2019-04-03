@@ -25,7 +25,7 @@ end
 
 n = fix(3/8*m);
 
-if mod(m,2)==1
+if mod(m,2)==0
     m = m;
 else 
     m = m-1;

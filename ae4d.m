@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to helpf ae4d
 
-% Last Modified by GUIDE v2.5 01-Mar-2019 17:02:26
+% Last Modified by GUIDE v2.5 02-Apr-2019 17:46:23
 
 % Begin initialization code - DO NOT EDIT
 
@@ -348,14 +348,15 @@ xInd = find(ax.x >= xR(1)):find(ax.x >= xR(2));
 yInd = find(ax.y >= yR(1)):find(ax.y >= yR(2));
 zInd = find(ax.depth >= zR(1)):find(ax.depth >= zR(2));
 if tR(1)-tR(2) == 0
+    tInd = find(ax.stime >= tR(1),1);
     if yR(1) == yR(2)
         Y = squeeze(Xfilt(xInd,zInd));
     elseif xR(1) == xR(2)
-        Y = squeeze(Xfilt(yInd,zInd));
+        Y = squeeze(Xfilt(xInd,yInd,zInd,tInd));
     elseif zR(1) == zR(2)
-        Y = squeeze(Xfilt(xInd,yInd));
+        Y = squeeze(Xfilt(xInd,yInd,zInd,tInd));
     else
-        Y = squeeze(Xfilt(xInd,yInd,zInd));
+        Y = squeeze(Xfilt(xInd,yInd,zInd,tInd));
     end
 else
     q.t = 1:dims(4);
@@ -376,16 +377,21 @@ end
 %     Y = medfilt2(Y,[3 3]);
 % end
 
-if handles.hotcold.Value == 1
+if handles.hotcold.Value == 2
     if handles.bbdb.Value == 1
         h = hotcoldDB;
     else
     h = hotcold;
     end
-elseif handles.graybox.Value == 1
-    h = 'gray';
-else
+elseif handles.hotcold.Value == 1
     h = 'hot';
+elseif handles.hotcold.Value == 3
+    h = 'blue2';
+elseif handles.hotcold.Value == 4
+    h = 'purple2';
+end
+if handles.graybox.Value == 1
+    h = 'gray';
 end
 
 if handles.use_ext_fig.Value == 0
@@ -446,7 +452,10 @@ if handles.use_ext_fig.Value == 0
     end
 else
     figure(2)
-    imshow(Y')
+    if handles.plotbox1.Value ~= 6
+        Y = Y';
+    end
+    imshow(Y)
     colormap(gca,h)
     if ~isempty(aeR)
         caxis(aeR)
@@ -558,6 +567,7 @@ param.post.onemhz = handles.onemhz.Value;
 param.post.tc = handles.tc.Value;
 param.lf_only = 1;
 param.full_sm = handles.full_sm.Value;
+param.medfilt = handles.med_box.Value;
 
 
 if handles.newaescan.Value
@@ -974,16 +984,21 @@ if handles.use_ext_fig.Value == 0
 else
     figure(1);
 end
-if handles.hotcold.Value == 1
+if handles.hotcold.Value == 2
     if handles.bbdb.Value == 1
         h = hotcoldDB;
     else
-        h = hotcold;
+    h = hotcold;
     end
-elseif handles.graybox.Value == 1
-    h = 'gray';
-else
+elseif handles.hotcold.Value == 1
     h = 'hot';
+elseif handles.hotcold.Value == 3
+    h = 'blue2';
+elseif handles.hotcold.Value == 4
+    h = 'purple2';
+end
+if handles.graybox.Value == 1
+    h = 'gray';
 end
 if handles.save_fig.Value == 0
     if handles.plotbox2.Value == 1 && handles.all_movie.Value == 0
@@ -1936,7 +1951,9 @@ end
 dims = (size(HF));
 q.z = 1:size(HF,3);
 zInd =  q.z(find(ax.depth >= qq(1)):find(ax.depth >= qq(2)));
-HFdB = 20*log10(HF./(max(max(max(max(HF(:,:,zInd,:)))))));
+HFdB = real(20*log10(HF./(max(max(max(max(HF(:,:,zInd,:))))))));
+
+% HFdB = HFdB.*real(sign(HF));
 fprintf('Finished converting to dB\n');
 set(handles.bbdb,'Value',1);
 if handles.use_chop.Value == 0
@@ -2337,8 +2354,10 @@ else
 end
 
 hold on
-plot(xax,S,'k')
+plot(xax,S,'Color','k','LineWidth',1.5)
+if handles.fwhmline.Value
 plot(xax,ydb,'r--')
+end
 xlabel('mm');
 
 P = round(max(S),2);
@@ -2395,8 +2414,10 @@ else
     ylabel('\muV')
 end
 
-plot(yax,S,'k')
-plot(yax,ydb,'r--')
+plot(yax,S,'Color','k','LineWidth',1.5)
+if handles.fwhmline.Value
+    plot(yax,ydb,'r--')
+end
 xlabel('mm')
 
 P = round(max(S),2);
@@ -2904,16 +2925,21 @@ zInd = q.z(find(ax.depth >= zR(1)):find(ax.depth >= zR(2)));
 peInd = q.pe(find(ax.pe >= zR(1)):find(ax.pe >= zR(2)));
 %peInd = zInd*2;
 
-if handles.hotcold.Value == 1
-     if handles.bbdb.Value == 1
-    h = hotcoldDB;
+if handles.hotcold.Value == 2
+    if handles.bbdb.Value == 1
+        h = hotcoldDB;
     else
-        h = hotcold;
+    h = hotcold;
     end
-elseif handles.graybox.Value == 1
-    h = 'gray';
-else
+elseif handles.hotcold.Value == 1
     h = 'hot';
+elseif handles.hotcold.Value == 3
+    h = 'blue2';
+elseif handles.hotcold.Value == 4
+    h = 'purple2';
+end
+if handles.graybox.Value == 1
+    h = 'gray';
 end
 
 if length(size(Xfilt)) == 3
@@ -4343,16 +4369,21 @@ else
     Yzt = squeeze(Xfilt(px,py,zInd,tInd));
 end
 
-if handles.hotcold.Value == 1
-     if handles.bbdb.Value == 1
-    h = hotcoldDB;
+if handles.hotcold.Value == 2
+    if handles.bbdb.Value == 1
+        h = hotcoldDB;
     else
-        h = hotcold;
+    h = hotcold;
     end
-elseif handles.graybox.Value == 1
-    h = 'gray';
-else
+elseif handles.hotcold.Value == 1
     h = 'hot';
+elseif handles.hotcold.Value == 3
+    h = 'blue2';
+elseif handles.hotcold.Value == 4
+    h = 'purple2';
+end
+if handles.graybox.Value == 1
+    h = 'gray';
 end
 
 if length(size(Yxy)) > 2
@@ -4428,7 +4459,7 @@ else
     xlabel('Lateral (mm)');
     ylabel('Depth (mm)');
     figure(52)
-    imshow(Yyz)
+    imshow(Yyz')
     colormap(gca,h)
     if ~isempty(aeR)
         caxis(aeR)
@@ -4793,9 +4824,15 @@ if handles.show_fft.Value == 1
     yloc = find(ax.depth >= pt(1,2),1);
     xloc = find(ax.x >= pt(1,1),1);
     [X,xaxis,yaxis] = plot_fft(param,hObject.CData,1);
-    axes(handles.axes2)
-    plot(yaxis,X(1:length(yaxis),xloc));
-    xlabel('Depth Freq MHz')
+    if handles.use_ext_fig.Value
+        figure(3)
+        plot(yaxis,X(1:length(yaxis),xloc),'Color','k','LineWidth',1.5);
+        xlabel('Depth Freq MHz')
+    else
+        axes(handles.axes2)
+        plot(yaxis,X(1:length(yaxis),xloc));
+        xlabel('Depth Freq MHz')
+    end
     axes(handles.axes3)
     plot(xaxis,X(yloc,1:length(xaxis)))
     xlabel('Lateral Spatial Freq kHz')
@@ -6595,32 +6632,53 @@ function ind_box_Callback(hObject, eventdata, handles)
 
 % --- Executes on button press in ez_export. @036
 function ez_export_Callback(hObject, eventdata, handles)
+name = handles.savefigname.String;
 m = get(handles.mean_box,'Value');
 int = get(handles.int_box,'Value');
 s = get(handles.squarify_box,'Value');
 chop_Callback(hObject, eventdata, handles);
-Enhance_Sig_Callback(hObject, eventdata, handles);
-set(handles.mean_box,'Value',0);
-set(handles.squarify_box,'Value',1);
-%Enhance_Sig_Callback(hObject, eventdata, handles);
-modify_button_Callback(hObject, eventdata, handles);
+s2c_Callback(hObject, eventdata, handles);
 if handles.fastenv.Value
     env_button_Callback(hObject, eventdata, handles);
 end
+
+% set(handles.mean_box,'Value',0);
+% set(handles.int_box,'Value',1);
+% Enhance_Sig_Callback(hObject, eventdata, handles);
+set(handles.mean_box,'Value',1);
+set(handles.int_box,'Value',1);
+% set(handles.squarify_box,'Value',1);
+Enhance_Sig_Callback(hObject, eventdata, handles);
+% modify_button_Callback(hObject, eventdata, handles);
+
+% Enhance_Sig_Callback(hObject, eventdata, handles);
 if handles.bbdb.Value
     dB_Button_Callback(hObject, eventdata, handles);
 end
 set(handles.use_ext_fig,'Value',0)
-plot4_Callback(hObject, eventdata, handles);
+% plot4_Callback(hObject, eventdata, handles);
 if handles.save_4d.Value
 set(handles.use_ext_fig,'Value',1)
+set(handles.plotbox1,'Value',3)
+
 plot_ae_Callback(hObject, eventdata, handles);
+savefig_Callback(hObject, eventdata, handles);
     if handles.save_fig.Value
         movie_button_Callback(hObject, eventdata, handles);
     else
-        savefig_Callback(hObject, eventdata, handles);
+%         set(handles.savefigname,'String',[name '_XZ'])
+%         savefig_Callback(hObject, eventdata, handles);
     end
 end
+%  set(handles.plotbox1,'Value',2)
+%  plot_ae_Callback(hObject, eventdata, handles);
+%  set(handles.savefigname,'String',[name '_XY'])
+%  savefig_Callback(hObject, eventdata, handles);
+%  set(handles.plotbox1,'Value',5)
+%  plot_ae_Callback(hObject, eventdata, handles);
+%  set(handles.savefigname,'String',[name '_YZ'])
+%  savefig_Callback(hObject, eventdata, handles);
+
 set(handles.mean_box,'Value',m);
 set(handles.int_box,'Value',int);
 set(handles.squarify_box,'Value',s);
@@ -6673,3 +6731,22 @@ function full_sm_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of full_sm
+
+
+
+function nframes_Callback(hObject, eventdata, handles)
+% hObject    handle to nframes (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of nframes as text
+%        str2double(get(hObject,'String')) returns contents of nframes as a double
+
+
+% --- Executes on button press in fwhmline.
+function fwhmline_Callback(hObject, eventdata, handles)
+% hObject    handle to fwhmline (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of fwhmline

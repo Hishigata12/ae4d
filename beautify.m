@@ -178,6 +178,7 @@ if handles.use_chop.Value
 else
     X = evalin('base','Jrecon');
 end
+X = real(X);
 assignin('base','X',X);
 s = size(X);
 % Writes number of points in each dimension

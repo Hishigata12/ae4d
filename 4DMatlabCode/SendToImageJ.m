@@ -5,7 +5,7 @@ function SendToImageJ(handles,overlay)
     
     %Checks if the data set is PE or AE
     if handles.PE_4dbox.Value == 0
-        if handles.hotcold.Value == 1
+        if handles.hotcold.Value == 2
             if handles.bbdb.Value == 1
                 h = hotcoldDB;
             else
@@ -19,7 +19,8 @@ function SendToImageJ(handles,overlay)
     else
         colorMap = 'grayscale';  
     end
-    
+ 
+            
     if handles.use_chop.Value == 1
         Xfilt = evalin('base','X_c');
         ax = evalin('base','ax_c');
@@ -30,8 +31,17 @@ function SendToImageJ(handles,overlay)
     
     %Makes sure that the data is not complex
     Xfilt = real(Xfilt);
+    
+    %Duplicates PE data to show during entire video
+    if handles.PE_4dbox.Value
+        N = str2double(get(handles.nframes,'String'));
+        for i = 1:N
+            Xfilt(:,:,:,i) = Xfilt(:,:,:,1);
+        end
+    end
 
 
+    %Accomodates 3D rather than 4D input
     xR = str2num(handles.xR.String);
     if length(xR) == 1
         xR = [xR xR];
@@ -66,6 +76,10 @@ function SendToImageJ(handles,overlay)
         tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
     else
         tInd = 1;
+    end
+    %Uses all created time points for PE image
+    if handles.PE_4dbox.Value
+        tInd = 1:N;
     end
     
     %Selects the data in the specified range
@@ -140,8 +154,8 @@ function SendToImageJ(handles,overlay)
     %Simply gets the end points
     %This needs to give the correct values on the 4DCreation.ijm or 
     %4DCreationPEOverlay.ijm, needs to give the pixel width,pixel height,voxel depth
-    fprintf(fileID, strcat(num2str(abs(xR(1)-xR(2))/sizeData(1)),'\n')); %Row 6
-    fprintf(fileID, strcat(num2str(abs(yR(1)-yR(2))/sizeData(2)),'\n')); %Row 7
+    fprintf(fileID, strcat(num2str(abs(xR(1)-xR(2))/sizeData(2)),'\n')); %Row 6
+    fprintf(fileID, strcat(num2str(abs(yR(1)-yR(2))/sizeData(1)),'\n')); %Row 7
     fprintf(fileID, strcat(num2str(abs(zR(1)-zR(2))/sizeData(3)),'\n')); %Row 8
     
     %Calls the macro that turns the 3D data that was sent to ImageJ into a 4D

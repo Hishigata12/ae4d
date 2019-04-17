@@ -613,7 +613,7 @@ function handles=LoadImageList(handles, loadLeftListbox, loadRightListbox, loadS
 					[folder, name, extension] = fileparts(baseFileName);
 					extension = upper(extension);
 					switch lower(extension)
-					case {'.png', '.bmp', '.jpg', '.tif', '.wav'}
+					case {'.png', '.bmp', '.jpg', '.tif', '.wav','.gif'}
 						% Allow only PNG, TIF, JPG, or BMP images
 						ListOfImageNames = [ListOfImageNames baseFileName];
 					otherwise
@@ -647,7 +647,7 @@ function handles=LoadImageList(handles, loadLeftListbox, loadRightListbox, loadS
 					[folder, name, extension] = fileparts(baseFileName);
 					extension = upper(extension);
 					switch lower(extension)
-					case {'.png', '.bmp', '.jpg', '.tif', '.wav'}
+					case {'.png', '.bmp', '.jpg', '.tif', '.wav','.gif'}
 						% Allow only PNG, TIF, JPG, or BMP images
 						ListOfImageNames = [ListOfImageNames baseFileName];
 					otherwise
@@ -681,7 +681,7 @@ function handles=LoadImageList(handles, loadLeftListbox, loadRightListbox, loadS
 					[folder, name, extension] = fileparts(baseFileName);
 					extension = upper(extension);
 					switch lower(extension)
-					case {'.png', '.bmp', '.jpg', '.tif', '.wav'}
+					case {'.png', '.bmp', '.jpg', '.tif', '.wav','.gif'}
 						% Allow only PNG, TIF, JPG, or BMP images
 						ListOfImageNames = [ListOfImageNames baseFileName];
 					otherwise

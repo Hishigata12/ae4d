@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to helpf ae4d
 
-% Last Modified by GUIDE v2.5 02-Apr-2019 17:46:23
+% Last Modified by GUIDE v2.5 17-Apr-2019 13:59:41
 
 % Begin initialization code - DO NOT EDIT
 
@@ -343,7 +343,6 @@ if handles.plotbox1.Value == 6
     yR(:) = yR(3);
 end
 
-
 xInd = find(ax.x >= xR(1)):find(ax.x >= xR(2));
 yInd = find(ax.y >= yR(1)):find(ax.y >= yR(2));
 zInd = find(ax.depth >= zR(1)):find(ax.depth >= zR(2));
@@ -376,7 +375,20 @@ end
 % if handles.med_box.Value == 1
 %     Y = medfilt2(Y,[3 3]);
 % end
-
+switch handles.hotcold.Value
+    case 2
+        if handles.bbdb.Value == 1
+            h = hotcoldDB;
+        else
+            h = hotcold;
+        end
+    case 1
+         h = 'hot';
+    case 3
+        h = 'blue2';
+    case 4
+        h = 'purple2';
+end
 if handles.hotcold.Value == 2
     if handles.bbdb.Value == 1
         h = hotcoldDB;
@@ -415,6 +427,9 @@ if handles.use_ext_fig.Value == 0
         handles.axes1.YLabel.String = 'Elevational (mm)';
     end
     if handles.plotbox1.Value == 3
+        if handles.testbox.Value
+            
+        else
         imagesc(ax.x(xInd),ax.depth(zInd),(Y'),'ButtonDownFcn',{@Plot4OnClickXZ,handles})
         colormap(h)
         if ~isempty(aeR)
@@ -422,6 +437,7 @@ if handles.use_ext_fig.Value == 0
         end
         handles.axes1.XLabel.String = 'Lateral (mm)';
         handles.axes1.YLabel.String = 'Depth (mm)';
+        end
     end
     if handles.plotbox1.Value == 4
         imagesc(ax.stime(tInd),ax.y(yInd),(Y))
@@ -558,16 +574,17 @@ function create_4d_Callback(hObject, eventdata, handles) % @004
 % hObject    handle to create_4d (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-[file, path] = uigetfile(fullfile(pwd,'*_info.mat'));
-param = load([path file]);
-param = param.bScanParm;
-param.post.ind = handles.ind_box.Value;
-param.post.new = handles.newaescan.Value;
-param.post.onemhz = handles.onemhz.Value;
-param.post.tc = handles.tc.Value;
+if handles.newaescan.Value
+    [file, path] = uigetfile(fullfile(pwd,'*_info.mat'));
+    param = load([path file]);
+    param = param.bScanParm;
+else
+    [file, path] = uigetfile(fullfile(pwd,'*_info.dat'));
+%     param = load([path file]);
+end
+
 param.lf_only = 1;
-param.full_sm = handles.full_sm.Value;
-param.medfilt = handles.med_box.Value;
+param.post.ind = handles.ind_box.Value;
 
 
 if handles.newaescan.Value
@@ -576,8 +593,16 @@ if handles.newaescan.Value
 else
     %     [file, path] = uigetfile(fullfile(pwd,'*_info.dat')); %Gets file location
     %     param = read_ucsdi_info([path file]); %Gets scan parameters
-    [~,~,LF] = read_ucsdi_data([path file],1); %Gets input current waveform
+    [param,~,LF] = read_ucsdi_data([path file],1); %Gets input current waveform
 end
+
+param.post.ind = handles.ind_box.Value;
+param.post.new = handles.newaescan.Value;
+param.post.onemhz = handles.onemhz.Value;
+param.post.tc = handles.tc.Value;
+
+param.full_sm = handles.full_sm.Value;
+param.medfilt = handles.med_box.Value;
 
 param.lf_only = 0;
 cd(path);
@@ -651,6 +676,8 @@ for p = a_full%hf_num
             if handles.match_box.Value == 0
                 X = w_ae_filt2(param,HF1,1,0,handles,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
             end
+        else 
+            X = HF1;
         end
         
         %LF = padarray(LF,length(LF));
@@ -670,16 +697,17 @@ for p = a_full%hf_num
         %%%%%%%%%%%%%%%%%%%% Gets new axes for z and t %%%%%%%%%%%%%%%%%%
         % b = waitbar(0,'Matrix Conversion');
         %    waitbar(0,b,'Enveloping and converting to 4D matrix')
-        HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
-        s = size(X);
-        for i = 1:s(1)
-            for k = 1:s(2)
-                %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
-                HF(i,k,:,:) = X{i,k}; %Converts cell array to double
-            end
-            % waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
-            multiWaitbar('Converting to 4D Matrix', i/s(1));
-        end
+%         HF = zeros(size(X,1),size(X,2),size(X{1},1),size(X{1},2));
+%         s = size(X);
+%         for i = 1:s(1)
+%             for k = 1:s(2)
+%                 %HF(i,j,:,:) = envelope(real(X{i,j})); %Converts cell array to double
+%                 HF(i,k,:,:) = X{i,k}; %Converts cell array to double
+%             end
+%             % waitbar(i/param.velmex.XNStep,b,'Converting to 4D matrix');
+%             multiWaitbar('Converting to 4D Matrix', i/s(1));
+%         end
+HF = X;
         
         if handles.onemhz.Value == 1
             if param.velmex.XNStep ~= 1 && param.velmex.YNStep ~= 1
@@ -777,6 +805,7 @@ for p = a_full%hf_num
     %     end
     % end
     %xstep = param.velmex.XDist/(param.velmex.XNStep-1);
+    if handles.tocart.Value
     if strcmp(PE.Trans.name(1:4),'P4-2') | strcmp(PE.Trans.name(1:4),'P4-1') | strcmp(PE.Trans.name(1:4),'H235')
         zstep = ax.depth(11)-ax.depth(10);
         z = PE.TX.focus;
@@ -794,6 +823,7 @@ for p = a_full%hf_num
         else
             HF = X2;
         end
+    end
     end
     
     
@@ -1439,8 +1469,13 @@ if handles.use_chop.Value == 0
     m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
     n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) get(handles.squarify_box,'Value')];
     o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
+    p = [str2double(handles.med_t.String) str2double(handles.mean_t.String) str2double(handles.int_t.String)];
     Xfilt = filts3D(Xfilt,m,n,o,param);
+    if sum(p) > 3
+        Xfilt = filtsT(Xfilt,p,[o(1) m(1) n(1)],param);
+    end
     [~,ax] = make_axes(param,size(Xfilt));
+    
     assignin('base','ax',ax);
     assignin('base','Xfilt',Xfilt)
     set(handles.active_ae,'String',num2str(size(Xfilt)));
@@ -1451,7 +1486,11 @@ else
     m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
     n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) get(handles.squarify_box,'Value')];
     o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
+    p = [str2double(handles.med_t.String) str2double(handles.mean_t.String) str2double(handles.int_t.String)];
     Xfilt = filts3D(Xfilt,m,n,o,param);
+     if sum(p) > 3
+        Xfilt = filtsT(Xfilt,p,[o(1) m(1) n(1)],param);
+    end
     if length(ax.y) == 1 & size(Xfilt,2) ~= 1
         Xfilt = permute(Xfilt,[1 3 2]);
     end
@@ -1572,6 +1611,9 @@ if get(hObject,'Value') == 1
         set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
         set(handles.zR,'String', num2str([0 z2]));
         set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
+        if num2str(get(handles.zP,'String')) > num2str(z2)
+        set(handles.tP,'String', num2str(z2));
+        end
     else
         ax_c = evalin('base','ax_c');
         set(handles.xR,'String', num2str([ax_c.x(1) ax_c.x(end)]));
@@ -2308,16 +2350,16 @@ p = 7;
 % --- Executes on button press in fwhm_button.
 function fwhm_button_Callback(hObject, eventdata, handles) %@014
 if handles.keep_box.Value == 0
-[x,y] = ginput(1);
+    [x,y] = ginput(1);
 else
     if handles.plotbox1.Value == 3
         x = str2double(get(handles.xP,'String'));
         y = str2double(get(handles.zP,'String'));
     elseif handles.plotbox1.Value == 5
-         x = str2double(get(handles.yP,'String'));
+        x = str2double(get(handles.yP,'String'));
         y = str2double(get(handles.zP,'String'));
     elseif handles.plotbox1.Value == 2
-         x = str2double(get(handles.xP,'String'));
+        x = str2double(get(handles.xP,'String'));
         y = str2double(get(handles.yP,'String'));
     end
 end
@@ -2326,9 +2368,23 @@ C = handles.axes1.Children.CData; %Gets image data, Y is dim 1, X is dim 2
 xax = handles.axes1.Children.XData;
 yax = handles.axes1.Children.YData;
 
-[~,yloc] = find(yax>y,1);
-S = C(yloc,:);
 
+pixarea = (xax(2)-xax(1))*(yax(2)-yax(1));
+pix_max = max(C(:));
+if handles.bbdb.Value
+    pix_half = pix_max - 6;
+else
+    pix_half = pix_max/2;
+end
+C2 = C(C>=pix_half);
+num_pix = numel(C2);
+fwhm_area = num_pix*pixarea;
+
+yDif = abs(yax-y);
+[~,yloc] = min(yDif);
+
+% [~,yloc] = find(yax>y,1);
+S = C(yloc,:);
 
 if handles.use_ext_fig.Value == 1
     figure(5);
@@ -2356,7 +2412,7 @@ end
 hold on
 plot(xax,S,'Color','k','LineWidth',1.5)
 if handles.fwhmline.Value
-plot(xax,ydb,'r--')
+    plot(xax,ydb,'r--')
 end
 xlabel('mm');
 
@@ -2403,7 +2459,11 @@ end
 hold on
 clear S
 clear ydb
-xloc = find(xax>x,1);
+
+xDif = abs(xax-x);
+[~,xloc] = min(xDif);
+
+% xloc = find(xax>x,1);
 S = C(:,xloc);
 if max(S) <= 0
     ydb(1:length(S)) = max(S)-6;
@@ -2449,6 +2509,15 @@ end
 if ~isempty(handles.ylims3.String)
     ylim(str2num(handles.ylims3.String));
 end
+if handles.fwhmarea.Value
+    set(handles.param1,'String','Peak Amp')
+    set(handles.param4,'String','Area mm^2')
+    set(handles.output1,'String',pix_max*1e6/str2double(handles.hfgain.String));
+    set(handles.output4,'String',fwhm_area);
+end
+    
+    
+
 
 
 % --- Executes on button press in hold_box.
@@ -4330,6 +4399,8 @@ else
 end
 aeR = str2num(handles.aeR.String);
 
+
+
 %ax.current = [xR(3) yR(3) zR(3) tR(3)];
 
 
@@ -4351,12 +4422,48 @@ if length(xR) < 3 || length(yR) < 3 || length(zR) <3 || length(tR) <3
     errordlg('All 4 dimensions need 3 values ([range1, range2, point])')
     return
 end
-px = q.x(find(ax.x >=xR(3),1));
-py = q.y(find(ax.y >=yR(3),1));
-pz = q.z(find(ax.depth >=zR(3),1));
-if length(size(Xfilt)) > 3
-    pt = q.t(find(ax.stime >=tR(3),1));
+
+xDif = abs(ax.x-xR(3));
+[~,px] = min(xDif);
+[~,py] = min(abs(ax.y-yR(3)));
+[~,pz] = min(abs(ax.depth - zR(3)));
+% px = q.x(find(ax.x >=xR(3),1));
+% py = q.y(find(ax.y >=yR(3),1));
+% pz = q.z(find(ax.depth >=zR(3),1));
+
+%Sets shifter bar values
+if zR(1) ~= zR(2)
+    set(handles.zshifter,'Value', pz/length(zInd)-(zInd(2)-zInd(1))/length(zInd))
+else
+    set(handles.zshifter,'Value', pz/length(zInd))
 end
+zshifter_Callback(hObject, eventdata, handles, 0)
+
+if yR(1) ~= yR(2)
+    set(handles.yshifter,'Value', py/length(yInd)-(yInd(2)-yInd(1))/length(yInd))
+else
+    set(handles.yshifter,'Value', py/length(yInd))
+end
+yshifter_Callback(hObject, eventdata, handles, 0)
+
+if xR(1) ~= xR(2)
+    set(handles.xshifter,'Value', px/length(xInd)-(xInd(2)-xInd(1))/length(xInd))
+else
+    set(handles.xshifter,'Value', px/length(xInd))
+end
+xshifter_Callback(hObject, eventdata, handles, 0)
+
+if length(size(Xfilt)) > 3
+    [~,pt] = min(abs(ax.stime -tR(3)));
+    %     pt = q.t(find(ax.stime >=tR(3),1));
+    if tR(1) ~= tR(2)
+        set(handles.tshifter,'Value', pt/length(tInd)-(tInd(2)-tInd(1))/length(tInd))
+    else
+        set(handles.tshifter,'Value', pt/length(tInd))
+    end
+    tshifter_Callback(hObject, eventdata, handles, 0)
+end
+
 if length(size(Xfilt)) < 4
     Yxy = squeeze(Xfilt(xInd,yInd,pz));
     Yxz = squeeze(Xfilt(xInd,py,zInd));
@@ -4547,6 +4654,7 @@ set(handles.ymm,'String',num2str([ax.y(1) ax.y(end)]));
 set(handles.ysamp,'String',num2str([1 length(ax.y)]));
 set(handles.zmm,'String',num2str([ax.depth(1) round(ax.depth(end))]));
 set(handles.zsamp,'String',num2str([1 length(ax.depth)]));
+set(handles.channel,'String',num2str((1:str2double(handles.numhf.String))'));
 
 if handles.reset_axes.Value == 1
     set(handles.xR,'String', num2str([ax.x(1) ax.x(end)]));
@@ -4606,7 +4714,7 @@ end
 
 % --- Executes on button press in usechan. @027
 function usechan_Callback(hObject, eventdata, handles)
-m = str2double(handles.channel.String);
+m = handles.channel.Value;
 if handles.catHF.Value == 0
     Xmerged = evalin('base','Xmerged');
     if m > length(Xmerged)
@@ -4618,6 +4726,7 @@ if handles.catHF.Value == 0
     if ~isempty(handles.hfchans.String)
         set(handles.active_chan,'String',handles.hfchans.String);
     end
+   
 else
     Xcat = evalin('base','Xcat');
     if m > size(Xcat,ndims(Xcat))
@@ -4765,13 +4874,15 @@ if handles.catHF.Value == 0
     if handles.use_chop.Value == 1
         X = evalin('base','X_c');
         Xmerged = evalin('base','Xmerged');
-        Xmerged{str2double(handles.channel.String)} = X;
+        Xmerged{handles.channel.Value} = X;
         assignin('base','Xmerged',Xmerged);
+         set(handles.channel,'String',num2str((1:length(Xmerged))'));
     else
         X = evalin('base','Xfilt');
         Xmerged = evalin('base','Xmerged');
-        Xmerged{str2double(handles.channel.String)} = X;
+        Xmerged{handles.channel.Value} = X;
         assignin('base','Xmerged',Xmerged);
+        set(handles.channel,'String',num2str((1:length(Xmerged))'));
     end
 else
     
@@ -4781,21 +4892,23 @@ else
         X2 = evalin('base','Xfilt');
     end
     d = ndims(X2);
-    m = str2double(handles.channel.String);
+    m = handles.channel.Value;
     if m == 0
         Xcat = X2;
     else
-        Xcat = evalin('base','Xcat');
+        if ismember('Xcat',evalin('base','who'))
+            Xcat = evalin('base','Xcat');
+        end
         if d == 2
             Xcat(:,:,m) = X2;
         elseif d == 3
              Xcat(:,:,:,m) = X2;
         elseif d == 4
              Xcat(:,:,:,:,m) = X2;
-        end
-       
+        end    
     end
      assignin('base','Xcat',Xcat);
+%      set(handles.channel,'String',num2str((1:size(Xcat,ndims(Xcat)))'));
 end
    
 
@@ -4811,9 +4924,17 @@ function showlf_Callback(hObject, eventdata, handles)
 function Plot4OnClickXZ(hObject,eventdata,handles) %@029
 pt = get(gca,'currentpoint');
 
-
-set(handles.xP,'String',pt(1,1))
-set(handles.zP,'String',pt(1,2))
+if handles.use_chop.Value
+    ax = evalin('base','ax_c');
+else
+    ax = evalin('base','ax');
+end
+[~,xloc] = min(abs(ax.x-pt(1,1)));
+[~,zloc] = min(abs(ax.depth-pt(1,2)));
+set(handles.xP,'String',ax.x(xloc))
+set(handles.zP,'String',ax.depth(zloc))
+% set(handles.xP,'String',pt(1,1))
+% set(handles.zP,'String',pt(1,2))
 if handles.show_fft.Value == 1
     param = evalin('base','param');
     if handles.use_chop.Value == 1
@@ -4842,22 +4963,52 @@ end
 
 function Plot4OnClickYZ(hObject,eventdata,handles)
 pt = get(gca,'currentpoint');
-set(handles.yP,'String',pt(1,1))
-set(handles.zP,'String',pt(1,2))
+if handles.use_chop.Value
+    ax = evalin('base','ax_c');
+else
+    ax = evalin('base','ax');
+end
+[~,yloc] = min(abs(ax.y-pt(1,1)));
+[~,zloc] = min(abs(ax.depth-pt(1,2)));
+set(handles.yP,'String',ax.y(yloc))
+set(handles.zP,'String',ax.depth(zloc))
+% set(handles.yP,'String',pt(1,1))
+% set(handles.zP,'String',pt(1,2))
 plot4_Callback(hObject, eventdata, handles);
 
 
 function Plot4OnClickXY(hObject,eventdata,handles)
 pt = get(gca,'currentpoint');
-set(handles.xP,'String',pt(1,1))
-set(handles.yP,'String',pt(1,2))
+if handles.use_chop.Value
+    ax = evalin('base','ax_c');
+else
+    ax = evalin('base','ax');
+end
+[~,xloc] = min(abs(ax.x-pt(1,1)));
+[~,yloc] = min(abs(ax.y-pt(1,2)));
+set(handles.xP,'String',ax.x(xloc))
+set(handles.yP,'String',ax.y(yloc))
+% set(handles.xP,'String',pt(1,1))
+% set(handles.yP,'String',pt(1,2))
 plot4_Callback(hObject, eventdata, handles);
 
 
 function Plot4OnClickTZ(hObject,eventdata,handles)
 pt = get(gca,'currentpoint');
-set(handles.tP,'String',pt(1,1))
-set(handles.zP,'String',pt(1,2))
+
+if handles.use_chop.Value
+    ax = evalin('base','ax_c');
+else
+    ax = evalin('base','ax');
+end
+
+[~,tloc] = min(abs(ax.stime-pt(1,1)));
+[~,zloc] = min(abs(ax.depth-pt(1,2)));
+set(handles.tP,'String',ax.stime(tloc))
+set(handles.zP,'String',ax.depth(zloc))
+
+% set(handles.tP,'String',pt(1,1))
+% set(handles.zP,'String',pt(1,2))
 if handles.show_fft.Value == 1
     param = evalin('base','param');
     if handles.use_chop.Value == 1
@@ -5115,7 +5266,10 @@ function bsq_Callback(hObject, eventdata, handles)
 
 
 % --- Executes on slider movement. @030
-function tshifter_Callback(hObject, eventdata, handles)
+function tshifter_Callback(hObject, eventdata, handles, p)
+if ~exist('p','var')
+    p = 1;
+end
 if handles.use_chop.Value
     ax = evalin('base','ax_c');
     x = evalin('base','X_c');
@@ -5124,28 +5278,42 @@ else
     x = evalin('base','Xfilt');
 end
 %set(hObject,'Value',str2double(handles.tP.String));
-val = get(hObject,'Value');
+% val = get(hObject,'Value');
+val = handles.tshifter.Value;
 d = size(x,4);
 % if val < ax.stime(1) || val > ax.stime(end)
 %     errordlg('T value outside of range');
 %     return
 % end
-if val < ax.stime(1)
-    val = ax.stime(1);
-elseif val > ax.stime(end)
-    val = ax.stime(end);
+if val < 0
+    val = 0;
+elseif val > 1
+    val = 1;
 end
 if length(ax.stime) > 1
     inc = ax.stime(end)-ax.stime(1);
     handles.tshifter.SliderStep = [1/d, 1/10];
 end
 %val = round(val,1);
-val = num2str(val);
-set(handles.tP,'String',val);
-set(hObject,'Value',str2double(val));
-set(hObject,'Max',ax.stime(end));
-set(hObject,'Min',ax.stime(1));
+
+Tval = (ax.stime(end)-ax.stime(1))*val+ax.stime(1);
+Tdif = abs(ax.stime-Tval);
+% T = find(1:d >= d*val,1);
+T = find(Tdif == min(Tdif));
+Tpt = ax.stime(T);
+
+% T = find(1:d >= d*val,1);
+% Tpt = ax.stime(round(T));
+Tpt = num2str(Tpt);
+if p
+set(handles.tP,'String',Tpt);
+end
+set(handles.tshifter,'Value',val);
+% set(handles.tshifter,'Max',ax.stime(end));
+% set(handles.tshifter,'Min',ax.stime(1));
+if p
 plot_ae_Callback(hObject, eventdata, handles)
+end
 % hObject    handle to tshifter (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
@@ -5167,7 +5335,10 @@ end
 
 
 % --- Executes on slider movement. @031
-function zshifter_Callback(hObject, eventdata, handles)
+function zshifter_Callback(hObject, eventdata, handles, p)
+if ~exist('p','var')
+    p = 1;
+end
 if handles.use_chop.Value
     ax = evalin('base','ax_c');
     x = evalin('base','X_c');
@@ -5177,27 +5348,39 @@ else
 end
 d = size(x,3);
 %set(hObject,'Value',str2double(handles.zP.String));
-val = get(hObject,'Value');
+val = get(handles.zshifter,'Value');
 % if val < ax.depth(1) || val > ax.depth(end)
 %     errordlg('Z value outside of range');
 %     return
 % end
-if val < ax.depth(1)
-    val = ax.depth(1);
-elseif val > ax.depth(end)
-    val = ax.depth(end);
+if val < 0
+%     val = ax.depth(1);
+val = 0;
+elseif val > 1
+%     val = ax.depth(end);
+    val = 1;
 end
 if length(ax.depth) > 1
     inc = ax.depth(2)-ax.depth(1);
     handles.zshifter.SliderStep = [1/d, 1/10];
 end
-val = round(val,2);
-val = num2str(val);
-set(handles.zP,'String',val);
-set(hObject,'Value',str2double(val));
-set(hObject,'Max',ax.depth(end));
-set(hObject,'Min',ax.depth(1));
+Tval = (ax.depth(end)-ax.depth(1))*val+ax.depth(1);
+Tdif = abs(ax.depth-Tval);
+% T = find(1:d >= d*val,1);
+T = find(Tdif == min(Tdif));
+Tpt = ax.depth(T);
+Tpt = num2str(Tpt);
+if p
+set(handles.zP,'String',Tpt);
+end
+% val = round(val,2);
+% val = num2str(val);
+set(handles.zshifter,'Value',val);
+% set(hObject,'Max',ax.depth(end));
+% set(hObject,'Min',ax.depth(1));
+if p
 plot_ae_Callback(hObject, eventdata, handles)
+end
 
 
 
@@ -5214,7 +5397,10 @@ end
 
 
 % --- Executes on slider movement. @032
-function yshifter_Callback(hObject, eventdata, handles)
+function yshifter_Callback(hObject, eventdata, handles, p)
+if ~exist('p','var')
+    p = 1;
+end
 if handles.use_chop.Value
     ax = evalin('base','ax_c');
     x = evalin('base','X_c');
@@ -5222,25 +5408,36 @@ else
     ax = evalin('base','ax');
     x = evalin('base','Xfilt');
 end
-val = get(hObject,'Value');
+val = get(handles.yshifter,'Value');
 d = size(x,2);
 % if val < ax.y(1) || val > ax.y(end)
 %     errordlg('Y value outside of range');
 %     return
 % end
-if val < ax.y(1)
-    val = ax.y(1);
-elseif val > ax.y(end)
-    val = ax.y(end);
+if val < 0
+    val = 0;
+elseif val > 1
+    val = 1;
 end
 if length(ax.y) > 1
     inc = ax.y(2)-ax.y(1);
     handles.y.SliderStep = [1/d, 1/10];
 end
-set(handles.yP,'String',num2str(val));
-set(hObject,'Max',ax.y(end));
-set(hObject,'Min',ax.y(1));
-plot_ae_Callback(hObject, eventdata, handles)
+Tval = (ax.y(end)-ax.y(1))*val+ax.y(1);
+Tdif = abs(ax.y-Tval);
+% T = find(1:d >= d*val,1);
+T = find(Tdif == min(Tdif));
+Tpt = ax.y(T);
+Tpt = num2str(Tpt);
+if p
+set(handles.yP,'String',Tpt);
+end
+set(handles.yshifter,'Value',val);
+% set(hObject,'Max',ax.y(end));
+% set(hObject,'Min',ax.y(1));
+if p
+    plot_ae_Callback(hObject, eventdata, handles)
+end
 
 
 % --- Executes during object creation, after setting all properties.
@@ -5253,6 +5450,56 @@ function yshifter_CreateFcn(hObject, eventdata, handles)
 if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor',[.9 .9 .9]);
 end
+
+% --- Executes on slider movement.
+function xshifter_Callback(hObject, eventdata, handles, p)
+if ~exist('p','var')
+    p = 1;
+end
+if handles.use_chop.Value
+    ax = evalin('base','ax_c');
+    x = evalin('base','X_c');
+else
+    ax = evalin('base','ax');
+    x = evalin('base','Xfilt');
+end
+val = get(handles.xshifter,'Value');
+d = size(x,1);
+% if val < ax.y(1) || val > ax.y(end)
+%     errordlg('Y value outside of range');
+%     return
+% end
+if val < 0
+    val = 0;
+elseif val > 1
+    val = 1;
+end
+if length(ax.x) > 1
+    inc = ax.x(2)-ax.x(1);
+    handles.x.SliderStep = [1/d, 1/10];
+end
+Tval = (ax.x(end)-ax.x(1))*val+ax.x(1);
+Tdif = abs(ax.x-Tval);
+% T = find(1:d >= d*val,1);
+T = find(Tdif == min(Tdif));
+Tpt = ax.x(T);
+Tpt = num2str(Tpt);
+if p
+set(handles.xP,'String',Tpt);
+end
+set(handles.xshifter,'Value',val)
+% set(hObject,'Max',ax.y(end));
+% set(hObject,'Min',ax.y(1));
+if p
+plot_ae_Callback(hObject, eventdata, handles)
+end
+% hObject    handle to xshifter (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'Value') returns position of slider
+%        get(hObject,'Min') and get(hObject,'Max') to determine range of slider
+
 
 
 % --- Executes on button press in stitch_gui. @033
@@ -6297,6 +6544,10 @@ if handles.fastdecz.Value
     X = Z;
 end
 
+if handles.sumbox.Value
+    X = sum(X,5);
+end
+
 multiWaitbar('CLOSEALL');
 assignin('base','X_c',X);
 assignin('base','ax_c',ax);
@@ -6375,28 +6626,28 @@ if ~ismember('Xmerged',evalin('base','who'))%~exist('Xmerged','var')
     Xcat = X_c;
     assignin('base','Xcat',Xcat);
 else
-Xmerged = evalin('base','Xmerged');
-for i = 1:length(Xmerged)
-    set(handles.catHF,'Value',0)
-    set(handles.channel,'String',i)
-    usechan_Callback(hObject, eventdata, handles);
-    chop_Callback(hObject, eventdata, handles);
-    
-    set(handles.catHF,'Value',1)
-    if i == 1
-        set(handles.channel,'String',0)
-    else
-        set(handles.channel,'String',i)
+    Xmerged = evalin('base','Xmerged');
+    for i = 1:length(Xmerged)
+        set(handles.catHF,'Value',0)
+        set(handles.channel,'Value',i)
+        usechan_Callback(hObject, eventdata, handles);
+        chop_Callback(hObject, eventdata, handles);
+        
+        set(handles.catHF,'Value',1)
+%         if i == 1
+%             set(handles.channel,'String',0)
+%         else
+%             set(handles.channel,'String',i)
+%         end
+        if handles.fastenv.Value
+            env_button_Callback(hObject, eventdata, handles);
+        elseif handles.fastbb.Value
+            modify_button_Callback(hObject, eventdata, handles)
+        end
+        Enhance_Sig_Callback(hObject, eventdata, handles)
+        plot4_Callback(hObject, eventdata, handles);
+        returntomerge_Callback(hObject, eventdata, handles);
     end
-    if handles.fastenv.Value
-           env_button_Callback(hObject, eventdata, handles);
-    elseif handles.fastbb.Value
-    modify_button_Callback(hObject, eventdata, handles)
-    end
-    Enhance_Sig_Callback(hObject, eventdata, handles)
-    plot4_Callback(hObject, eventdata, handles);
-    returntomerge_Callback(hObject, eventdata, handles);
-end
 end
 % hObject    handle to auto_recon (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
@@ -6541,21 +6792,31 @@ function maxrange_Callback(hObject, eventdata, handles)
         ax = evalin('base','ax');
         x1 = num2str(floor(ax.x(1))); x2 = num2str(floor(ax.x(end)));
         z2 = floor(ax.depth(end));
+        T = str2double(get(handles.tP,'String'));
+        t = str2num(get(handles.tR,'String'));
         set(handles.xR,'String', [x1 ' ' x2]);
         set(handles.yR,'String', num2str([ax.y(1) ax.y(end)]));
         set(handles.zR,'String', num2str([0 z2]));
         set(handles.tR,'String', num2str([ax.stime(1) ax.stime(end)]));
         X = evalin('base','Xfilt');
         set(handles.active_ae,'String',num2str(size(X)));
+        if t(2) < T
+            set(handles.tP,'String', t(2));
+        end
        
     else
         ax_c = evalin('base','ax_c');
+              T = str2double(get(handles.tP,'String'));
+        t = str2num(get(handles.tR,'String'));
         set(handles.xR,'String', num2str([ax_c.x(1) ax_c.x(end)]));
         set(handles.yR,'String', num2str([ax_c.y(1) ax_c.y(end)]));
         set(handles.zR,'String', num2str([ax_c.depth(1) floor(ax_c.depth(end))]));
         set(handles.tR,'String', num2str([ax_c.stime(1) ax_c.stime(end)]));
         X = evalin('base','X_c');
        set(handles.active_ae,'String',num2str(size(X)));
+        if t(2) < T
+            set(handles.tP,'String', t(2));
+        end
   end
 
 
@@ -6750,3 +7011,122 @@ function fwhmline_Callback(hObject, eventdata, handles)
 % handles    structure with handles and user data (see GUIDATA)
 
 % Hint: get(hObject,'Value') returns toggle state of fwhmline
+
+
+% --- Executes on button press in fwhmarea.
+function fwhmarea_Callback(hObject, eventdata, handles)
+% hObject    handle to fwhmarea (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of fwhmarea
+
+
+% --- Executes on button press in testbox.
+function testbox_Callback(hObject, eventdata, handles)
+% hObject    handle to testbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of testbox
+
+
+% --- Executes on button press in sumbox.
+function sumbox_Callback(hObject, eventdata, handles)
+% hObject    handle to sumbox (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of sumbox
+
+
+
+
+% --- Executes during object creation, after setting all properties.
+function xshifter_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to xshifter (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: slider controls usually have a light gray background.
+if isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor',[.9 .9 .9]);
+end
+
+
+
+function med_t_Callback(hObject, eventdata, handles)
+% hObject    handle to med_t (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of med_t as text
+%        str2double(get(hObject,'String')) returns contents of med_t as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function med_t_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to med_t (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function mean_t_Callback(hObject, eventdata, handles)
+% hObject    handle to mean_t (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of mean_t as text
+%        str2double(get(hObject,'String')) returns contents of mean_t as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function mean_t_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to mean_t (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+
+function int_t_Callback(hObject, eventdata, handles)
+% hObject    handle to int_t (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of int_t as text
+%        str2double(get(hObject,'String')) returns contents of int_t as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function int_t_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to int_t (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in tocart.
+function tocart_Callback(hObject, eventdata, handles)
+% hObject    handle to tocart (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hint: get(hObject,'Value') returns toggle state of tocart

@@ -9,16 +9,25 @@ function [y, lf] = w_slow_filt2(param,HF,LF,mode,c)
 
 %mode = 0;
 
-if length(size(HF{1}))>2
-    for i = size(HF,1)
-        for j = size(HF,2)
-            HF2{i,j} = squeeze(HF{i,j}(:,:,2)); % Gets only a single channel for AE
-        end
-    end
+if ndims(HF) > 4
+    HF2 = HF(:,:,:,:,2);
     clear HF
     HF = HF2;
     clear HF2
 end
+    
+
+
+% if length(size(HF{1}))>2
+%     for i = size(HF,1)
+%         for j = size(HF,2)
+%             HF2{i,j} = squeeze(HF{i,j}(:,:,2)); % Gets only a single channel for AE
+%         end
+%     end
+%     clear HF
+%     HF = HF2;
+%     clear HF2
+% end
 
 % if size(LF,2) > 1
 %     LF = LF(:,1); %Not sure why I had this in...
@@ -44,8 +53,8 @@ max_us = L_us/2;
 
 %~~~~~Filter in slow time~~~~%
 fspec = '* %d percent complete \n*';
-HF_xy = size(HF);
-HF_zt = size(HF{1});
+% HF_xy = size(HF);
+% HF_zt = size(HF{1});
 
 
 %%%%% FREQUENCY FILTERING %%%%%%%%%%%%
@@ -89,30 +98,51 @@ if mode == 0
 % end
 %     
         
+
+X2 = zeros(size(HF));
+y = X2;
         
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            % X{i,j} = HF{i,j}(:,1:end/2);
-            X2{i,j} = zeros(HF_zt(1),HF_zt(2));
-            y{i,j} = zeros(HF_zt);
-        end
-    end
-    
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             % X{i,j} = HF{i,j}(:,1:end/2);
+%             X2{i,j} = zeros(HF_zt(1),HF_zt(2));
+%             y{i,j} = zeros(HF_zt);
+%         end
+%     end
+%     
  %   fprintf('Filtering 4D data\n')
     %b = waitbar(0,'Filtering 4D data');
     
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            for k = 1:HF_zt(1)
-                y{i,j}(k,:) = real(ifft(fft(HF{i,j}(k,:)).*H',HF_zt(2)));
-                %X2(i,j,k,:) = filter(Hd,squeeze(X(i,j,k,:)));
-                
+    for i = 1:size(HF,1)
+        for j = 1:size(HF,2)
+            for k = 1:size(HF,3)
+                if param.medfilt
+                    y(i,j,k,:) = medfilt1(real(ifft(fft(squeeze(HF(i,j,k,:))).*H',size(HF,4))),3);
+                else
+                    y(i,j,k,:) = real(ifft(fft(squeeze(HF(i,j,k,:))).*H,size(HF,4)));
+                end
             end
         end
-        %waitbar(i/HF_xy(1)/2,b,'Slow Time Filtering')
-        multiWaitbar('Slow Time Filtering',i/HF_xy(1));
-    end
+              multiWaitbar('Slow Time Filtering',i/size(HF,1));
+    end 
     
+%     
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             for k = 1:HF_zt(1)
+%                 if param.medfilt
+%                     y{i,j}(k,:) = medfilt1(real(ifft(fft(HF{i,j}(k,:)).*H',HF_zt(2))),3);
+%                 else
+%                     y{i,j}(k,:) = real(ifft(fft(HF{i,j}(k,:)).*H',HF_zt(2)));
+%                 end
+%                 %X2(i,j,k,:) = filter(Hd,squeeze(X(i,j,k,:)));
+%                 
+%             end
+%         end
+%         %waitbar(i/HF_xy(1)/2,b,'Slow Time Filtering')
+%         multiWaitbar('Slow Time Filtering',i/HF_xy(1));
+%     end
+%     
 %     
     LF2 = fft(LF);
     LFHam = hamming(length(LF));
@@ -171,19 +201,20 @@ elseif mode == 1
         dur = param.daq.HFdaq.duration_ms;
         onecyc = 1/F*prf;
         RefPulse = RefPulse(1:onecyc);
-        RefPulse = flipud(conj(RefPulse));
+%         RefPulse = flipud(conj(RefPulse));
         LF_d = size(LF,2);
         one_LF = 1/F*param.daq.LFdaq.fs_Hz;
         for i = 1:size(LF,2)
             LF2(:,i) = conv(LF(:,i),LF(1:one_LF,i));
-            LF3(:,i) = interp1(linspace(0,1,length(LF2)),LF2,linspace(0,1,length(LF)));
+            LF3(:,i) = LF2(1:length(LF),i);
+%             LF3(:,i) = interp1(linspace(0,1,length(LF2)),LF2,linspace(0,1,length(LF)));
             LF(:,LF_d+i) = LF3(:,i)/sum(abs(LF3(:,i)));
         end
     else
         LF_d = size(LF,2);
         for i = 1:LF_d
             LF2(:,i) = conv(LF(:,i),LF(:,i));
-            LF3(:,i) = interp1(linspace(0,1,length(LF2)),LF2,linspace(0,1,length(LF)));
+            LF3(:,i) = interp1(linspace(0,1,length(LF2)),LF2(:,i),linspace(0,1,length(LF)));
             LF(:,LF_d+i) = LF3(:,i)/sum(abs(LF3(:,i)));
         end
 %         LF = LF3;
@@ -194,42 +225,84 @@ elseif mode == 1
     %y = zeros(size(HF_xy,1),size(HF_xy,2),size(HF_zt(1))+length(RefPulse)-1,size(HF_zt(2)));
     
     %Initializes matrices
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            y2{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);   
-           % Q{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);
-            Q{i,j} = zeros(HF_zt(1),HF_zt(2)); 
-            y{i,j} = zeros(HF_zt(1),HF_zt(2));  
-        end
-    end
+    
+    y2 = zeros(size(HF,1),size(HF,2),size(HF,3),size(HF,4)+length(RefPulse)-1);
+    y = zeros(size(HF));
+%     y = Q;
+    
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             y2{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);   
+%            % Q{i,j} = zeros(HF_zt(1),HF_zt(2)+length(RefPulse)-1);
+%             Q{i,j} = zeros(HF_zt(1),HF_zt(2)); 
+%             y{i,j} = zeros(HF_zt(1),HF_zt(2));  
+%         end
+%     end
     
     %Convolves AE data with match filter
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)  
-            for k = 1:HF_zt(1)
-                y2{i,j}(k,:) = conv(HF{i,j}(k,:),RefPulse);
-                y{i,j}(k,:) = interp1(linspace(0,1,HF_zt(2)+length(RefPulse)-1),y2{i,j}(k,:),linspace(0,1,HF_zt(2)));
+    for i = 1:size(HF,1)
+        for j = 1:size(HF,2)
+            for k = 1:size(HF,3)
+                if param.medfilt
+                    y2(i,j,k,:) = medfilt1(conv(squeeze(HF(i,j,k,:)),RefPulse),3);
+                else
+                    y2(i,j,k,:) = conv(squeeze(HF(i,j,k,:)),RefPulse');
+                end
+                if ~param.full_sm
+                    y(i,j,k,:) = squeeze(y2(i,j,k,1:size(HF,4)));
+                else
+                    y(i,j,k,:) = interp1(linspace(0,1,size(HF,4)+length(RefPulse)-1),squeeze(y2(i,j,k,:)),linspace(0,1,size(HF,4)));
+                end
             end
         end
-       % waitbar(i/HF_xy(1),b,'Slow Time Filtering')
-       multiWaitbar('Slow Time Filtering',i/HF_xy(1));
+         multiWaitbar('Slow Time Filtering',i/size(HF,1));
     end
+    
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)  
+%             for k = 1:HF_zt(1)
+%                 if param.medfilt
+%                     y2{i,j}(k,:) = medfilt1(conv(HF{i,j}(k,:),RefPulse),3);
+%                 else
+%                     y2{i,j}(k,:) = conv(HF{i,j}(k,:),RefPulse);
+%                 end
+%                 if ~param.full_sm
+%                     y{i,j}(k,:) = y2{i,j}(k,1:HF_zt(2));
+%                 else
+%                     y{i,j}(k,:) = interp1(linspace(0,1,HF_zt(2)+length(RefPulse)-1),y2{i,j}(k,:),linspace(0,1,HF_zt(2)));
+%                 end
+%             end
+%         end
+%        % waitbar(i/HF_xy(1),b,'Slow Time Filtering')
+%        multiWaitbar('Slow Time Filtering',i/HF_xy(1));
+%     end
     %
     
     %Removes DC components
-    Hfilt = ones(1,size(y{1,1},2));
+    Hfilt = ones(1,size(y,4));
+%     Hfilt = ones(1,size(y{1,1},2));
     Hfilt(1:2) = 0;
     Hfilt(end-1:end) = 0;
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            for k = 1:size(y{1,1},1)
-                Q{i,j}(k,:) = fft(y{i,j}(k,:));
-                Q{i,j}(k,:) = Q{i,j}(k,:).*Hfilt;
-                y{i,j}(k,:) = ifft(Q{i,j}(k,:));
+    
+    for i = 1:size(HF,1)
+        for j = 1:size(HF,2)
+            for k = 1:size(y,3)
+                Q = fft(squeeze(y(i,j,k,:))).*Hfilt';
+                y(i,j,k,:) = ifft(Q);
             end
         end
-         multiWaitbar('Removing DC',i/HF_xy(1));
+        multiWaitbar('Removing DC',i/size(HF,1));
     end
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             for k = 1:size(y{1,1},1)
+%                 Q{i,j}(k,:) = fft(y{i,j}(k,:));
+%                 Q{i,j}(k,:) = Q{i,j}(k,:).*Hfilt;
+%                 y{i,j}(k,:) = ifft(Q{i,j}(k,:));
+%             end
+%         end
+%          multiWaitbar('Removing DC',i/HF_xy(1));
+%     end
   %  delete(b)
   lf = LF;
 end

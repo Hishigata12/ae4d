@@ -47,24 +47,41 @@ if one
     end
 else
     
-    
     for j = 1:sL
         for i = 1:fL
             if new
-                [HF1{i,j}] = Read_Data(loc,(i)+(fL*(j-1)),param); % Gets data sequentially
-            else
-                [~,HF1{i,j}] = read_ucsdi_data(loc,(i)+(fL*(j-1))); % Gets data sequentially
+                HF1(i,j,:,:) = Read_Data(loc,(i)+(fL*(j-1)),param);
+            else 
+                [~,HF1(i,j,:,:)] = read_ucsdi_data(loc,(i)+(fL*(j-1)));
             end
-            % disp((i)+(fL*(j-1)));
             multiWaitbar(['Creating 4D Array y = ' num2str(j)],i/fL);
         end
-        %waitbar(i/(fL),b,'Creating 4D array');
-        % fprintf('.');
-        if j < sL
-            multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
+        if j<sL
+                multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
         end
     end
 end
+                    
+    
+    
+    
+%     for j = 1:sL
+%         for i = 1:fL
+%             if new
+%                 [HF1{i,j}] = Read_Data(loc,(i)+(fL*(j-1)),param); % Gets data sequentially
+%             else
+%                 [~,HF1{i,j}] = read_ucsdi_data(loc,(i)+(fL*(j-1))); % Gets data sequentially
+%             end
+%             % disp((i)+(fL*(j-1)));
+%             multiWaitbar(['Creating 4D Array y = ' num2str(j)],i/fL);
+%         end
+%         %waitbar(i/(fL),b,'Creating 4D array');
+%         % fprintf('.');
+%         if j < sL
+%             multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
+%         end
+%     end
+% end
 % for i = 1:size(HF1,1)
 %     for j = 1:size(HF1,2)
 %     y(i,:,:) = HF1{i,1};
@@ -74,17 +91,17 @@ end
 
   
 
-if length(size(HF1{1})) > 2
-    if exist('a','var')
-        for i = 1:size(HF1,1)
-            for j = 1:size(HF1,2)
-                HF1{i,j} = HF1{i,j}(:,:,a);
-            end
-        end
-    end
-end
+% if length(size(HF1{1})) > 2
+%     if exist('a','var')
+%         for i = 1:size(HF1,1)
+%             for j = 1:size(HF1,2)
+%                 HF1{i,j} = HF1{i,j}(:,:,a);
+%             end
+%         end
+%     end
+% end
 
-HF=zeros(size(HF1,1),size(HF1,2),size(HF1{1},1),size(HF1{1},2));
+% HF=zeros(size(HF1,1),size(HF1,2),size(HF1{1},1),size(HF1{1},2));
 % for i = 1:fL
 %     for j = 1:sL
 %        % HF((i-1)*sL+j,:,:) = HF1{i,j}; %converts cells to pseudo 4-D array
@@ -94,7 +111,7 @@ HF=zeros(size(HF1,1),size(HF1,2),size(HF1{1},1),size(HF1{1},2));
 % end
 
 %HF = reshape(HF,fL,sL,param.daq.HFdaq.pts,param.daq.HFdaq.NoBurstTriggers); %converts pseudo 4-D to 4-D
-
+HF = 0;
 if param.velmex.FastAxis == 'Y'
     HF = permute(HF,[2 1 3 4]); %rearrange Y and X if data was taken that way
 end

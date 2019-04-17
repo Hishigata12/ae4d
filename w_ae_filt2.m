@@ -50,8 +50,9 @@ fae = freqae(1:end/2);
 
 %~~~~~Filter in fast time~~~~%
 fspec = '* %d percent complete \n*';
-HF_xy = size(HF);
-HF_zt = size(HF{1});
+% HF_xy = size(HF);
+% HF_zt = size(HF{1});
+HF_sz = size(HF);
 
 %%%%% FREQUENCY FILTERING %%%%%%%%%
 
@@ -122,33 +123,47 @@ if mode == 0
     %     H = H.*H2;
     % end
     
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            % X{i,j} = HF{i,j}(1:end/2,:);
-            X2{i,j} = zeros(HF_zt(1),HF_zt(2));
-            y{i,j} = zeros(HF_zt);
-        end
-    end
+    X2 = zeros(size(HF));
+
+    y = X2;
+    
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             % X{i,j} = HF{i,j}(1:end/2,:);
+%             X2{i,j} = zeros(HF_zt(1),HF_zt(2));
+%             y{i,j} = zeros(HF_zt);
+%         end
+%     end
     
     % fprintf('Filtering 4D data\n')
     %   b = waitbar(0,'Filtering 4D data');
     if size(H,2) > size(H,1)
         H = H';
     end
-    if length(H) < size(HF{1,1},1)
-        H = padarray(H,size(HF{1,1},1)-length(H),'pre');
+    if length(H) < size(HF,3)
+        H = padarray(H,size(HF,3)-length(H),'pre');
     end
     
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            for k = 1:HF_zt(2)
-                X2{i,j}(:,k) = fft(HF{i,j}(:,k)).*H;
-                %X2(i,j,k,:) = filter(Hd,squeeze(X(i,j,k,:)));
+    for i = 1:size(HF,1)
+        for j = 1:size(HF,2)
+            for k = 1:size(HF,4)
+                X2(i,j,:,k) = fft(squeeze(HF(i,j,:,k))).*H;
             end
         end
-        %  waitbar(i/HF_xy(1)/2,b,'Fast Time Filtering')
-        multiWaitbar('Fast Time Filtering',i/HF_xy(1));
+        multiWaitbar('Fast Time Filtering',i/size(HF,1));
     end
+        
+    
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             for k = 1:HF_zt(2)
+%                 X2{i,j}(:,k) = fft(HF{i,j}(:,k)).*H;
+%                 %X2(i,j,k,:) = filter(Hd,squeeze(X(i,j,k,:)));
+%             end
+%         end
+%         %  waitbar(i/HF_xy(1)/2,b,'Fast Time Filtering')
+%         multiWaitbar('Fast Time Filtering',i/HF_xy(1));
+%     end
     
     
     %fprintf('Filtering 4D data\n')
@@ -157,17 +172,26 @@ if mode == 0
     % Xf = flip(X2,3);
     % Xs = cat(3,X2,Xf);
     
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            for k = 1:HF_zt(2)
-                y{i,j}(:,k) = ifft(X2{i,j}(:,k),HF_zt(1));
+    for i = 1:size(HF,1)
+        for j = 1:size(HF,2)
+            for k = 1:size(HF,4)
+                y(i,j,:,k) = ifft(squeeze(X2(i,j,:,k)),size(HF,3));
             end
         end
-        %   waitbar(0.5+i/HF_xy(1)/2,b,'Converting back to Time')
-        multiWaitbar('Converting to time domain',i/HF_xy(1));
+          multiWaitbar('Converting to time domain',i/size(HF,1));
     end
-    % delete(b)
-  x =2;  
+    
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             for k = 1:HF_zt(2)
+%                 y{i,j}(:,k) = ifft(X2{i,j}(:,k),HF_zt(1));
+%             end
+%         end
+%         %   waitbar(0.5+i/HF_xy(1)/2,b,'Converting back to Time')
+%         multiWaitbar('Converting to time domain',i/HF_xy(1));
+%     end
+%     % delete(b)
+%   x =2;  
     
     %%%%% CONVOLUTION FILTERING %%%%%
 elseif mode == 1
@@ -192,24 +216,37 @@ elseif mode == 1
     % b = waitbar(0,'Filtering 4D data');
     %y = zeros(size(HF_xy,1),size(HF_xy,2),size(HF_zt(1))+length(RefPulse)-1,size(HF_zt(2)));
     
-    Sz = HF_zt(1)+length(RefPulse)-1;
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            y2{i,j} = zeros(Sz,HF_zt(2));
-            y{i,j} = zeros(HF_zt(1),HF_zt(2));
+    Sz = size(HF,3)+length(RefPulse)-1;
+  y = zeros(size(HF,1),size(HF,2),Sz,size(HF,4));
+%   y = zeros(size(HF));
+            
+%     Sz = HF_zt(1)+length(RefPulse)-1;
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             y2{i,j} = zeros(Sz,HF_zt(2));
+%             y{i,j} = zeros(HF_zt(1),HF_zt(2));
+%         end
+%     end
+for i = 1:size(HF,1)
+    for j = 1:size(HF,2)
+        for k = 1:size(HF,4)
+            y(i,j,:,k) = conv(squeeze(HF(i,j,:,k)),RefPulse);
         end
     end
-    
-    for i = 1:HF_xy(1)
-        for j = 1:HF_xy(2)
-            for k = 1:HF_zt(2)
-                y2{i,j}(:,k) = conv(HF{i,j}(:,k),RefPulse);
-            end
-        end
-        %   waitbar(i/HF_xy(1),b,'Fast Time Filtering')
-        multiWaitbar('Fast Time Filtering',i/HF_xy(1));
-    end
-    y = y2;
+    multiWaitbar('Fast Time Filtering',i/size(HF,1));
+end
+
+
+%     for i = 1:HF_xy(1)
+%         for j = 1:HF_xy(2)
+%             for k = 1:HF_zt(2)
+%                 y2{i,j}(:,k) = conv(HF{i,j}(:,k),RefPulse);
+%             end
+%         end
+%         %   waitbar(i/HF_xy(1),b,'Fast Time Filtering')
+%         multiWaitbar('Fast Time Filtering',i/HF_xy(1));
+%     end
+%     y = y2;
 %     for i = 1:HF_xy(1)
 %         for j = 1:HF_xy(2)
 %             for k = 1:HF_zt(2)
@@ -219,7 +256,6 @@ elseif mode == 1
 %         % waitbar(i/HF_xy(1),b,'Compressing Depth Axis');
 %         multiWaitbar('Compressing Depth Axis',i/HF_xy(1));
 %     end
-    x=1;
     
     
     %  delete(b)

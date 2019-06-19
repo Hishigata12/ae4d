@@ -2,7 +2,7 @@
 %Inputs: fname is the name of the info.txt file
 %        n is the scan point number to grab
 
-function [HF, LF] = Read_Data(fname,ScanPt,param)
+function [HF, LF] = Read_Data(fname,ScanPt,param,p)
 
 if ~exist('ScanPt')
     ScanPt = 1;
@@ -10,12 +10,12 @@ end
 ind = param.post.ind;
 if ind == 1
     froot = fname(1:end-9);
-fparam = [froot '_info.mat'];
-fLF = [froot '_LF.dat'];
-fHF = [froot '_HF.dat'];
+    fparam = [froot '_info.mat'];
+    fLF = [froot '_LF.dat'];
+    fHF = [froot '_HF.dat'];
 else
-froot = fname(1:end-9);
-fparam = [froot '_info.mat'];
+    froot = fname(1:end-9);
+    fparam = [froot '_info.mat'];
 fLF = [froot '_LF_Avg.dat'];
 fHF = [froot '_HF_Avg.dat'];
 end
@@ -41,7 +41,7 @@ if ScanPt ~= 0
     % Get HF Data
     if ~param.lf_only
         m = ScanPt;
-        HF = read_hfdata(fHF,m,param);
+        HF = read_hfdata(fHF,m,param,p);
         x = 1;
     else
         HF = [];
@@ -68,16 +68,21 @@ blk_size = prod(dsize)*4;
 offset_n = cur_pos + blk_size * (ScanPt-1);
 fseek(fid,offset_n,'bof');
 
-data = fread(fid,fliplr(dsize),'single');
+
 if param.post.ind
+    data2 = fread(fid,fliplr(dsize),'single');
     dec = param.Scan.Avg;
-    leng = size(data,1)/dec;
-    data = data(1:leng,:);
+        leng = size(data2,1)/dec;
+    for i = 1:dec
+        data(1:leng,i,:) = data2(1+leng*(i-1):leng*i,:);
+    end
+else
+    data = fread(fid,fliplr(dsize),'single');
 end
 end
 
 
-function [hfdata,param] = read_hfdata(hffile,ScanPt,param)
+function [hfdata,param] = read_hfdata(hffile,ScanPt,param,p)
 blk_idx = ScanPt;
 
 if exist(hffile,'file')
@@ -103,7 +108,7 @@ switch(nver)
     case {140908,160714}
         [hfdata,param] = read_hfdata_v140908(fid);
     case {161108,170103}
-        [hfdata,param] = read_hfdata_v161108(fid,ScanPt,param);
+        [hfdata,param] = read_hfdata_v161108(fid,ScanPt,param,p);
     case 170427
         [hfdata,param] = read_hfdata_v170427(fid,ScanPt);
     otherwise
@@ -113,7 +118,7 @@ param.Version = nver;
 fclose(fid);
 end
 
-function [data,parm] = read_hfdata_v161108(fid,ScanPt,param)
+function [data,parm] = read_hfdata_v161108(fid,ScanPt,param,p)
 
 % nPos = ftell(fid);
 n = fread(fid,1,'int32');
@@ -124,7 +129,7 @@ blk_size = prod(dsize)*4;
 fseek(fid,blk_size*(ScanPt-1),'cof');
 data = fread(fid,[prod(dsize),1],'single');
 if param.post.ind
-    tsize = dsize(1)*dsize(2)*dsize(3)*dsize(4);
+    tsize = dsize(1)*dsize(2)*dsize(3)*dsize(4); %Slow Time, Channels, Fast Time, Averages
 else
     tsize = dsize(1)*dsize(2)*dsize(3);
 end
@@ -133,13 +138,14 @@ if tsize ~= length(data)
     disp(['Missing point ' num2str(ScanPt)]);
 end
 if param.post.ind
-    data = reshape(data,dsize);
-    data = permute(data,[3,1,2,4]);
-    data = data(:,:,:,param.avenum);
+    data = reshape(data,[dsize(3),dsize(2),dsize(1),dsize(4)]);
+    data = permute(data,[3,1,4,2]);
+        data = data(:,:,:,p);
 else
-data = reshape(data,fliplr(dsize));
-
-data = permute(data,[1,3,2]);
+    data = reshape(data,fliplr(dsize));
+    
+    data = permute(data,[1,3,2]);
+    data = data(:,:,p);
 end
 
 parm.dsize = dsize;

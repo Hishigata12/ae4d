@@ -191,9 +191,9 @@ elseif mode == 1
     %%%%%CONVOLUTION FILTERING %%%%%%%%%%%%%
     
     if Fs~=Fs_us
-        RefPulse       = resample(LF(:,1),Fs_us,Fs);
+%         RefPulse       = resample(LF(:,1),Fs_us,Fs);
+        RefPulse = interp1(linspace(0,1,size(LF,1)),LF(:,1),linspace(0,1,length(f_us)));
     end
-    
     RefPulse = RefPulse/(sum(abs(RefPulse)));
     if ~param.full_sm
         F = param.Stim.Frequency;
@@ -205,8 +205,28 @@ elseif mode == 1
         LF_d = size(LF,2);
         one_LF = 1/F*param.daq.LFdaq.fs_Hz;
         for i = 1:size(LF,2)
-            LF2(:,i) = conv(LF(:,i),LF(1:one_LF,i));
-            LF3(:,i) = LF2(1:length(LF),i);
+            for j = 1:(size(LF,1)+one_LF-1)
+                for k = 1:one_LF
+                    W = flipud(LF(1:one_LF,i));
+                   
+                    E = LF(:,i);
+                    if param.post.normal
+                     W = W-min(W);
+                    W = W/max(W);
+                    E = E-min(E);
+                    E = E/max(E);
+                    end
+                    if j-k >= 0 && j-k <= size(LF,1)-1
+                        LF2(j,k) = W(k)*E(j-(k-1));
+                    else
+                        LF2(j,k) = 0;
+                    end
+                end
+            end
+            Q(:,i) = sum(LF2,2);
+%             LF2(:,i) = conv(LF(:,i),LF(1:one_LF,i));
+%             LF3(:,i) = LF2(1:size(LF,1),i);
+            LF3(:,i) = Q(1:size(LF,1),i);
 %             LF3(:,i) = interp1(linspace(0,1,length(LF2)),LF2,linspace(0,1,length(LF)));
             LF(:,LF_d+i) = LF3(:,i)/sum(abs(LF3(:,i)));
         end
@@ -219,6 +239,7 @@ elseif mode == 1
         end
 %         LF = LF3;
     end
+
     
 %    fprintf('Filtering 4D data\n')
    % b = waitbar(0,'Filtering 4D data');
@@ -240,6 +261,10 @@ elseif mode == 1
 %     end
     
     %Convolves AE data with match filter
+    if param.post.normal
+    RefPulse = RefPulse-min(RefPulse);
+    RefPulse = RefPulse/max(RefPulse);
+    end
     for i = 1:size(HF,1)
         for j = 1:size(HF,2)
             for k = 1:size(HF,3)
@@ -281,8 +306,11 @@ elseif mode == 1
     %Removes DC components
     Hfilt = ones(1,size(y,4));
 %     Hfilt = ones(1,size(y{1,1},2));
-    Hfilt(1:2) = 0;
-    Hfilt(end-1:end) = 0;
+fc = find(f_us > 300,1);
+    Hfilt(1:fc) = 0;
+    Hfilt(end-fc:end) = 0;
+    G = hamming(length(Hfilt));
+    Hfilt = Hfilt.*G';
     
     for i = 1:size(HF,1)
         for j = 1:size(HF,2)

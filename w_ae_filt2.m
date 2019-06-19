@@ -18,11 +18,11 @@ if mode == 1
     FsUS = PE.bScanParm.vsx_fs;
     FsAE = param.daq.HFdaq.fs_MHz;
     Lus = length(us);
-    Lae = param.daq.HFdaq.pts;
-    if Lus > Lae
-        us = us(1:Lae);
-        Lus = Lae;
-    end
+    Lae = round(param.daq.HFdaq.pts);
+%     if Lus > Lae
+%         us = us(1:Lae);
+%         Lus = Lae;
+%     end
     
     frequs = linspace(0,FsUS,Lus);
     freqae = linspace(0,FsAE,Lae);
@@ -193,7 +193,7 @@ if mode == 0
 %     % delete(b)
 %   x =2;  
     
-    %%%%% CONVOLUTION FILTERING %%%%%
+    %%%%% CONVOLUTION FILTERING %%%%%   
 elseif mode == 1
     
     if FsUS~=FsAE

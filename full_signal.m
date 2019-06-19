@@ -32,9 +32,9 @@ if one
     for j = 1:sL
         for i = 1:fL
             if new
-                [~,HF1{i,j}] = Read_Data(loc,(i-1)*sL+j,param); % Gets data sequentially
+                [~,HF1(i,j,:,:)] = Read_Data(loc,(i-1)*sL+j,param); % Gets data sequentially
             else
-                [~,HF1{i,j}] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
+                [~,HF1(i,j,:,:)] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
             end
             % disp((i)+(fL*(j-1)));
             multiWaitbar(['Creating 4D Array y = ' num2str(j)],i/fL);
@@ -42,7 +42,7 @@ if one
         %waitbar(i/(fL),b,'Creating 4D array');
         % fprintf('.');
         if j < sL
-        multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
+            multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
         end
     end
 else
@@ -50,18 +50,23 @@ else
     for j = 1:sL
         for i = 1:fL
             if new
-                HF1(i,j,:,:) = Read_Data(loc,(i)+(fL*(j-1)),param);
-            else 
+                if ind
+                    HF1(i,j,:,:,:) = Read_Data(loc,(i)+(fL*(j-1)),param,a);
+                else
+                    HF1(i,j,:,:) = Read_Data(loc,(i)+(fL*(j-1)),param,a);
+                end
+            else
                 [~,HF1(i,j,:,:)] = read_ucsdi_data(loc,(i)+(fL*(j-1)));
             end
             multiWaitbar(['Creating 4D Array y = ' num2str(j)],i/fL);
         end
         if j<sL
-                multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
+            multiWaitbar(['Creating 4D Array y = ' num2str(j)],'Relabel',['Creating 4D Array y = ' num2str(j+1)]);
         end
     end
 end
-                    
+
+
     
     
     

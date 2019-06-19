@@ -54,8 +54,10 @@ end
 if use(3)
     if p(3) < 1
         Q = 'Decimating';
-    else
+    elseif p(3) > 1
         Q = 'Interpolating';
+    else
+        x2 = x;
     end
     if p(3) ~= 1
         for i = 1:size(x,1)

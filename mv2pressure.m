@@ -8,7 +8,7 @@ else
     b = 1;
 end
 if b
-    P = 0.866*mv;
+    P = mv/3.4087;
 else
-    P = 0.866*mv;
+    P = mv/3.4087;
 end

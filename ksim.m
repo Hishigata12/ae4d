@@ -141,7 +141,7 @@ switch val
         ylab = 'Pressure';
         ylab1 = 'Sensor Number';
         xlab1 = 'Time Step';
-        tits1 = 'Pressure'
+        tits1 = 'Pressure';
         plot1 = 0;
     case 'ux'
         sensor_data = sensor_data.ux;
@@ -157,7 +157,7 @@ switch val
          ylab = 'Velocity Y';
            ylab1 = 'Sensor Number';
         xlab1 = 'Time Step';
-        tits1 = 'Y Velocity'
+        tits1 = 'Y Velocity';
          plot1 = 0;
     case 'p_final'
         sensor_data = sensor_data.p_final;

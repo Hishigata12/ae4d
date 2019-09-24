@@ -16,13 +16,13 @@ function varargout = ae4d(varargin)
 %      stop.  All inputs are passed to ae4d_OpeningFcn via varargin.
 %
 %      *See GUI Options on GUIDE's Tools menu.  Choose "GUI allows only one
-%      instance to run (singleton)".
+%      instance to run (singleton)".0.0
 %
 % See also: GUIDE, GUIDATA, GUIHANDLES
 
-% Edit the above text to modify the response to helpf ae4d
+% Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 07-Aug-2019 12:43:28
+% Last Modified by GUIDE v2.5 19-Aug-2019 16:04:30
 
 % Begin initialization code - DO NOT EDIT
 
@@ -591,11 +591,11 @@ param.post.ind = handles.ind_box.Value;
 
 if handles.newaescan.Value
     if param.post.ind
-    [~,LF] = Read_Data([path file],1,param);
+    [~,LF] = Read_Data2([path file],1,param);
     LFtemp = squeeze(LF(:,str2double(handles.ind_temp.String),:));
     LFall = LF;
     else
-    [~,LF] = Read_Data([path file],1,param);
+    [~,LF] = Read_Data2([path file],1,param);
     end
 else
     %     [file, path] = uigetfile(fullfile(pwd,'*_info.dat')); %Gets file location
@@ -684,16 +684,18 @@ for p = a_full%hf_num
 %             end
 %             multiWaitbar('Correlating averages',i/size(HF1,1));
 %         end
-        HF2 = IndividualAvg(param,LF(:,:,p),HF1,LFtemp(:,p),handles.ind_wave.String{handles.ind_wave.Value});
+        [LF2(:,:,p), HF2] = IndividualAvg(param,LF(:,:,p),HF1,LFtemp(:,p),handles.ind_wave.String{handles.ind_wave.Value});
         clear HF1
+        
         HF1 = HF2;
         clear HF2
+  
     end
     %Filters in Fast Time
-    param.post.normal = get(handles.normal_slow,'Value');
+%     param.post.normal = get(handles.normal_slow,'Value');
     if handles.ft_on.Value == 1
         if handles.match_box.Value == 1
-            X = w_ae_filt2(param,HF1,PE,1,handles); %Filters in fast time; 0 is match, 1 uses cutoffs
+            X = w_ae_filt2(param,HF1,PE,1,handles); %Filters in fast time; 1 is match, 0 uses cutoffs
         end
         if handles.match_box.Value == 0
             X = w_ae_filt2(param,HF1,1,0,handles,[str2double(handles.fast_cut1.String) str2double(handles.fast_cut2.String)]); %Filters in fast time; 0 is match, 1 uses cutoffs
@@ -705,10 +707,17 @@ for p = a_full%hf_num
     %LF = padarray(LF,length(LF));
     %Filters in Slow Time
     if handles.st_on.Value == 1
+           if param.post.ind
+               LF = squeeze(LF2(:,:,p));
+           end
         if ~isempty(handles.slow_cut2.String) && ~isempty(handles.slow_cut1.String) && handles.slow_box.Value == 0
             [X, LF] = w_slow_filt2(param,X,LF,handles.slow_box.Value,[str2double(handles.slow_cut1.String) str2double(handles.slow_cut2.String)]); %Filters in slow time 0 is match, 1 uses cutoffs
         elseif handles.slow_box.Value == 1
             [X, LF] = w_slow_filt2(param,X,LF,handles.slow_box.Value);
+        end
+        if param.post.ind
+            clear LF2
+            LF2(:,:,p) = LF;
         end
     end
     if handles.st_on.Value == 0 & handles.ft_on.Value == 0
@@ -829,21 +838,21 @@ for p = a_full%hf_num
     %xstep = param.velmex.XDist/(param.velmex.XNStep-1);
     if handles.tocart.Value
         if strcmp(PE.Trans.name(1:4),'P4-2') | strcmp(PE.Trans.name(1:4),'P4-1') | strcmp(PE.Trans.name(1:4),'H235') | strcmp(PE.Trans.name(1:4),'H247')
-            %             zstep = ax.depth(11)-ax.depth(10);
-            %             z = PE.TX.focus;
-            %             x = linspace(-param.velmex.XDist/2,param.velmex.XDist/2,param.velmex.XNStep);
-            %             for i = 1:param.velmex.XNStep
-            %                 r = sqrt(z^2+x(i)^2);
-            %                 rstep = z-r;
-            %                 sampstep(i) = round(rstep/zstep,2)*4;
-            %                 X2(i,:,:,:) = circshift(HF(i,:,:,:),round(sampstep(i)),3);
-            %                 multiWaitbar('Converting to Cartesian',i/param.velmex.XNStep);
-            %             end
-            %             for i = 1:prod(size(HF,1),size(HF,2))
-            %                 s = size(PE.TxArray(1).Delay,2);
-            %                 c = floor(s/2);
-            %                 e_delay(i) = PE.TxArray(i).Delay(c);
-            %             end
+                        zstep = ax.depth(11)-ax.depth(10);
+                        z = PE.TX.focus;
+                        x = linspace(-param.velmex.XDist/2,param.velmex.XDist/2,param.velmex.XNStep);
+%                         for i = 1:param.velmex.XNStep
+%                             r = sqrt(z^2+x(i)^2);
+%                             rstep = z-r;
+%                             sampstep(i) = round(rstep/zstep,2)*4;
+%                             X2(i,:,:,:) = circshift(HF(i,:,:,:),round(sampstep(i)),3);
+%                             multiWaitbar('Converting to Cartesian',i/param.velmex.XNStep);
+%                         end
+                        for i = 1:prod(size(HF,1),size(HF,2))
+                            s = size(PE.TxArray(1).Delay,2);
+                            c = floor(s/2);
+                            e_delay(i) = PE.TxArray(i).Delay(c);
+                        end
             e_delay_samp = e_delay.*param.wavlen./1.485.*param.daq.HFdaq.fs_MHz;
             for i = 1:prod(size(HF,1),size(HF,2))
                 X2(i,:,:,:) = circshift(HF(i,:,:,:),-1*round(e_delay_samp(i)),3);
@@ -907,6 +916,13 @@ for p = a_full%hf_num
     end
     multiWaitbar('CLOSEALL');
     % delete(b)
+    
+      if param.post.ind
+          if p == a_full
+              clear LF
+              LF = squeeze(LF2(:,:,p));
+          end
+      end
     
     if handles.save_4d.Value == 1
         multiWaitbar('Saving','busy');
@@ -1498,6 +1514,7 @@ function Enhance_Sig_Callback(hObject, eventdata, handles) % @006
 if handles.use_chop.Value == 0
     param = evalin('base','param');
     Xfilt = evalin('base','Xfilt');
+     param.window = handles.mean_menu.String{handles.mean_menu.Value};
     m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
     n = [handles.int_box.Value str2double(handles.int_x.String) str2double(handles.int_y.String) str2double(handles.int_z.String) get(handles.squarify_box,'Value')];
     o = [handles.med_box.Value str2double(handles.med_x.String) str2double(handles.med_y.String) str2double(handles.med_z.String)];
@@ -1513,6 +1530,7 @@ if handles.use_chop.Value == 0
     set(handles.active_ae,'String',num2str(size(Xfilt)));
 else
     param = evalin('base','param');
+    param.window = handles.mean_menu.String{handles.mean_menu.Value};
     Xfilt = evalin('base','X_c');
     ax = evalin('base','ax_c');
     m = [handles.mean_box.Value str2double(handles.mean_x.String) str2double(handles.mean_y.String) str2double(handles.mean_z.String)];
@@ -2615,7 +2633,7 @@ if length(str2num(handles.baseb.String)) == 1
             %X = baseband2(X,str2double(handles.baseb.String),param.daq.HFdaq.fs_MHz,wc1,wc2);
             for i = 1:size(X,1)
                 for j = 1:size(X,2)
-                    Img = squeeze(X(i,j,:,:));
+                    Img = real(squeeze(X(i,j,:,:)));
                     X(i,j,:,:) = ae_demod3(Img,ax.depth/1.485,str2double(handles.baseb.String));
                 end
                 multiWaitbar('Basebanding',i/size(X,1));
@@ -4856,6 +4874,14 @@ else
         v.FrameRate = str2double(handles.framerate.String);
         open(v)
     end
+    if handles.use_ext_fig.Value == 1
+        figure(3);
+    else
+        axes(handles.axes2);
+    end
+    hold on;
+      ylabel('mA');
+        xlabel('ms');
     for i = round(tInd(1):b:tInd(end))
         if handles.use_ext_fig.Value == 1
             figure(3)
@@ -4884,14 +4910,16 @@ else
             if ~isempty(handles.ylims.String)
                 ylim(str2num(handles.ylims.String));
             end
+%             handles.axes2.Children(1) = plot(x,LF,'k');
+%             handles.axes2.Children(2) = plot(x(i),LF(i),'ro','MarkerFaceColor','r');
             plot(x,LF,'k')
             hold on
             plot(x(i),LF(i),'ro','MarkerFaceColor','r')
             hold off
             drawnow;
         end
-        ylabel('mA');
-        xlabel('ms');
+%         ylabel('mA');
+%         xlabel('ms');
         
     end
     if handles.save_fig.Value == 1
@@ -4905,13 +4933,17 @@ function returntomerge_Callback(hObject, eventdata, handles)
 if handles.catHF.Value == 0
     if handles.use_chop.Value == 1
         X = evalin('base','X_c');
+      if ismember('Xmerged',evalin('base','who'))
         Xmerged = evalin('base','Xmerged');
+        end
         Xmerged{handles.channel.Value} = X;
         assignin('base','Xmerged',Xmerged);
          set(handles.channel,'String',num2str((1:length(Xmerged))'));
     else
         X = evalin('base','Xfilt');
+        if ismember('Xmerged',evalin('base','who'))
         Xmerged = evalin('base','Xmerged');
+        end
         Xmerged{handles.channel.Value} = X;
         assignin('base','Xmerged',Xmerged);
         set(handles.channel,'String',num2str((1:length(Xmerged))'));
@@ -7298,6 +7330,7 @@ switch T
                 c(1) = str2double(get(handles.lp_low,'String'));
                 c(2) = str2double(get(handles.lp_high,'String'));
                 num = 0;
+                param.medfilt = get(handles.med_box,'Value');
                 X2 = w_slow_filt2(param,X,LF,num,c);
             case 'Notch' %This doesn't work yet'
                 [~,fc_h] = find(H >= str2double(handles.lp_high.String),1);
@@ -7342,6 +7375,10 @@ switch T
                     multiWaitbar([F ' along time'],i/size(X,1));
                 end
             case 'Match'
+                  c(1) = 20;
+                  c(2) = param.Daq.HF.PulseRate/2;
+                  num = 0;
+                  X = w_slow_filt2(param,X,LF,num,c);
                   div = param.Daq.LF.Rate_hz*1000/param.Daq.HF.PulseRate;
                   LF_ax = linspace(0,param.Daq.HF.PulseRate,d);
                   Per = 1000/param.Stim.Frequency;
@@ -7349,25 +7386,45 @@ switch T
                   Cyc_Samp = param.Daq.HF.PulseRate/param.Stim.Frequency;
                   
                   for i = 1:size(LF,2)
-                    LF2(:,i) = interp1(linspace(0,1,size(LF,1)),LF(:,i),linspace(0,1,size(LF,1)/div));
+                      LF2(:,i) = interp1(linspace(0,1,size(LF,1)),LF(:,i),linspace(0,1,size(LF,1)/div));
                   end
-                  LF2 = LF2(1:Cyc_Samp,:);
+                  if Cyc_Samp < size(LF2,1)
+                      LF2 = LF2(1:Cyc_Samp,:);
+                  end
                   LF_chan = str2double(get(handles.LF_chan,'String'));
+                  LF3 = LF2(:,LF_chan);
+                  LF3 = LF3 - mean(LF3);
+                  MF0 = LF3(1:15);   
+                  LF4 = conv(LF3,flip(MF0));
+                  LF5 = interp1(linspace(0,1,length(LF4)),LF4,linspace(0,1,length(LF2)));
+                  shift = find(LF5 > mean(LF5),1);
+                  LF3 = circshift(LF5,-shift);
+                  MF = padarray(MF0,floor((size(X,4))-(length(MF0))/2),'both');
                   for i = 1:size(X,1)
                       for j = 1:size(X,2)
                           for k = 1:size(X,3)
                               Z = squeeze(X(i,j,k,:));
                               Z2 = padarray(Z,100);
-                              Y = conv(Z2,LF2(:,LF_chan));
-                              s1 = find(Y,1,'first');
-                              s2 = find(Y,1,'last');
-                              Y2 = Y(s1:s2);
-                              X2(i,j,k,:) = interp1(linspace(0,1,length(Y2)),Y2,linspace(0,1,d));
+%                               Y = xcorr(Z2,MF);
+                              Y = conv(Z2,flip(MF));
+                              if max(abs(Y)) > 0
+                                  s1 = find(Y,1,'first');
+                                  s2 = find(Y,1,'last');
+%                                   s1 = 1+ 100 + floor((size(X,4))-(length(MF0))/2);
+%                                   s2 = length(Y) - (100 + floor((size(X,4))-(length(MF0))/2));
+                                  Y2 = Y(s1:s2);
+                              else
+                                  Y2 = zeros(length(Z)+length(LF3),1);
+                              end
+                              X2(i,j,k,:) = interp1(linspace(0,1,length(Y2)),Y2,linspace(0,1,length(Z)));
                           end
                       end
                       multiWaitbar('Match Filter Time',i/size(X,1));
                   end
-                    
+                  LF6 = interp1(linspace(0,1,length(LF5)),LF5,linspace(0,1,length(LF)));
+                  LF4 = [LF LF6'];
+                  
+                    assignin('base','LF',LF4)
         end
         multiWaitbar('CLOSEALL');
         if handles.use_chop.Value
@@ -7448,7 +7505,72 @@ switch T
         else
             param = evalin('base','param');
             PE = evalin('base','PEparam');
-            X2 =  w_ae_filt2(param,X,PE,1,handles);
+            
+            %From AE_FILT
+%             us = PE.TW.Wvfm1Wy;
+%             FsUS = PE.bScanParm.vsx_fs;
+%             FsAE = param.daq.HFdaq.fs_MHz;
+%             Lus = length(us);
+%             Lae = round(param.daq.HFdaq.pts);
+%             frequs = linspace(0,FsUS,Lus);
+%             freqae = linspace(0,FsAE,Lae);
+%             max_fUS = length(frequs)/2;
+%             max_fAE = length(freqae)/2;
+%             fus = frequs(1:end/2);
+%             if FsUS~=FsAE
+%                 RefPulse       = resample(us,FsAE,FsUS);
+%             end
+%             RefPulse = RefPulse/(sum(abs(RefPulse)));
+%             RefPulse = flipud(conj(RefPulse));
+%             HF = X;
+%             Sz = size(HF,3)+length(RefPulse)-1;
+%             y = zeros(size(HF,1),size(HF,2),Sz,size(HF,4));
+%             
+%             RP2 = RefPulse - mean(RefPulse);
+%             
+%             for i = 1:size(HF,1)
+%                 for j = 1:size(HF,2)
+%                     for k = 1:size(HF,4)
+%                         Sig = squeeze(HF(i,j,:,k));
+%                         Sig = Sig - mean(Sig);
+%                                                 [amp,loc] = find(Sig == max(abs(Sig)));
+%                         y(i,j,:,k) = conv(squeeze(HF(i,j,:,k)),RefPulse);
+%                                                 U = y(i,j,:,k);
+%                         P = size(y,3)/size(HF,3);
+%                                                 s = loc*P;
+%                                                 [amp2,s2] = find(U == max(abs(U)));
+%                                                 s3 = s2-s;
+%                         X2(i,j,:,k) = y(i,j,:,k)-mean(y(i,j,:,k));
+%                         
+%                     end
+%                 end
+%                 multiWaitbar('Fast Time Filtering',i/size(HF,1));
+%             end
+%             Sig3 = squeeze(mean(mean(mean(abs(HF),4),2),1));
+%             X3 = squeeze(mean(mean(mean(abs(X2),4),2),1));
+%             [~,s] = find(Sig3 == max(Sig3));
+%             s = round(s*P);
+%             [~,s2] = find(X3 == max(X3));
+%             s3 = s-s2;
+%             X2 = circshift(X2,s3,3);
+            
+%%%%%%%%%%%%%%
+           X2 =  w_ae_filt2(param,X,PE,1,handles);
+           for i = 1:size(X2,1)
+               for j = 1:size(X2,2)
+                   for k = 1:size(X2,4)
+                       X3(i,j,:,k) = interp1(linspace(0,1,size(X2,3)),squeeze(X2(i,j,:,k)),linspace(0,1,size(X,3)));
+                   end
+               end
+               multiWaitbar('Decimating Depth',i/size(X2,1));
+           end
+           clear X2;
+           X2 = X3;
+%            ax = evalin('base','ax');
+%            ax.depth = linspace(ax.depth(1),ax.depth(end),size(X2,3));
+%            [~,ax] = make_axes(param,size(X2));
+           
+%            assignin('base','ax',ax);
         end
         multiWaitbar('CLOSEALL');
         if handles.use_chop.Value
@@ -7710,6 +7832,56 @@ function ind_wave_Callback(hObject, eventdata, handles)
 % --- Executes during object creation, after setting all properties.
 function ind_wave_CreateFcn(hObject, eventdata, handles)
 % hObject    handle to ind_wave (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: popupmenu controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on selection change in mean_menu.
+function mean_menu_Callback(hObject, eventdata, handles)
+switch hObject.String{hObject.Value}
+    case 'Box'
+        set(handles.mean_x,'Visible','on');
+        set(handles.mean_y,'Visible','on');
+        set(handles.mean_z,'Visible','on');
+        set(handles.mean_t,'Visible','on');
+    case 'Tri'
+         set(handles.mean_x,'Visible','on');
+        set(handles.mean_y,'Visible','on');
+        set(handles.mean_z,'Visible','on');
+        set(handles.mean_t,'Visible','on');
+    case '1D Gauss'
+         set(handles.mean_x,'Visible','on');
+        set(handles.mean_y,'Visible','on');
+        set(handles.mean_z,'Visible','on');
+        set(handles.mean_t,'Visible','on');
+    case 'ND Gauss'
+         set(handles.mean_x,'Visible','on');
+        set(handles.mean_y,'Visible','off');
+        set(handles.mean_z,'Visible','off');
+        set(handles.mean_t,'Visible','on');
+    case 'Hamming'
+         set(handles.mean_x,'Visible','on');
+        set(handles.mean_y,'Visible','on');
+        set(handles.mean_z,'Visible','on');
+        set(handles.mean_t,'Visible','on');
+end
+% hObject    handle to mean_menu (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: contents = cellstr(get(hObject,'String')) returns mean_menu contents as cell array
+%        contents{get(hObject,'Value')} returns selected item from mean_menu
+
+
+% --- Executes during object creation, after setting all properties.
+function mean_menu_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to mean_menu (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    empty - handles not created until after all CreateFcns called
 

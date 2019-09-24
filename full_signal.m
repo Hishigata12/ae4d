@@ -32,7 +32,7 @@ if one
     for j = 1:sL
         for i = 1:fL
             if new
-                [~,HF1(i,j,:,:)] = Read_Data(loc,(i-1)*sL+j,param); % Gets data sequentially
+                [~,HF1(i,j,:,:)] = Read_Data2(loc,(i-1)*sL+j,param); % Gets data sequentially
             else
                 [~,HF1(i,j,:,:)] = read_ucsdi_data(loc,(i-1)*sL+j); % Gets data sequentially
             end
@@ -51,9 +51,9 @@ else
         for i = 1:fL
             if new
                 if ind
-                    HF1(i,j,:,:,:) = Read_Data(loc,(i)+(fL*(j-1)),param,a);
+                    HF1(i,j,:,:,:) = Read_Data2(loc,(i)+(fL*(j-1)),param,a);
                 else
-                    HF1(i,j,:,:) = Read_Data(loc,(i)+(fL*(j-1)),param,a);
+                    HF1(i,j,:,:) = Read_Data2(loc,(i)+(fL*(j-1)),param,a);
                 end
             else
                 [~,HF1(i,j,:,:)] = read_ucsdi_data(loc,(i)+(fL*(j-1)));
@@ -73,7 +73,7 @@ end
 %     for j = 1:sL
 %         for i = 1:fL
 %             if new
-%                 [HF1{i,j}] = Read_Data(loc,(i)+(fL*(j-1)),param); % Gets data sequentially
+%                 [HF1{i,j}] = Read_Data2(loc,(i)+(fL*(j-1)),param); % Gets data sequentially
 %             else
 %                 [~,HF1{i,j}] = read_ucsdi_data(loc,(i)+(fL*(j-1))); % Gets data sequentially
 %             end

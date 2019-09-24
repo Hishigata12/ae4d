@@ -227,10 +227,15 @@ elseif mode == 1
 %             y{i,j} = zeros(HF_zt(1),HF_zt(2));
 %         end
 %     end
+RP2 = RefPulse - mean(RefPulse);
+
 for i = 1:size(HF,1)
     for j = 1:size(HF,2)
         for k = 1:size(HF,4)
+            Sig = squeeze(HF(i,j,:,k));
+            Sig = Sig - mean(Sig);
             y(i,j,:,k) = conv(squeeze(HF(i,j,:,k)),RefPulse);
+            y(i,j,:,k) = y(i,j,:,k)-mean(y(i,j,:,k));
         end
     end
     multiWaitbar('Fast Time Filtering',i/size(HF,1));

@@ -207,15 +207,15 @@ elseif mode == 1
         for i = 1:size(LF,2)
             for j = 1:(size(LF,1)+one_LF-1)
                 for k = 1:one_LF
-                    W = flipud(LF(1:one_LF,i));
-                   
+%                     W = flipud(LF(1:one_LF,i));
+                   W = LF(1:one_LF,i)   ;
                     E = LF(:,i);
-                    if param.post.normal
-                     W = W-min(W);
-                    W = W/max(W);
-                    E = E-min(E);
-                    E = E/max(E);
-                    end
+%                     if param.post.normal
+%                      W = W-min(W);
+%                     W = W/max(W);
+%                     E = E-min(E);
+%                     E = E/max(E);
+%                     end
                     if j-k >= 0 && j-k <= size(LF,1)-1
                         LF2(j,k) = W(k)*E(j-(k-1));
                     else
@@ -232,8 +232,12 @@ elseif mode == 1
         end
     else
         LF_d = size(LF,2);
+        
+        
         for i = 1:LF_d
-            LF2(:,i) = conv(LF(:,i),LF(:,i));
+            Temp2 = LF(:,i);
+            Temp2 = (Temp2 - mean(Temp2))/std(Temp2);
+            LF2(:,i) = conv(Temp2,Temp2);
             LF3(:,i) = interp1(linspace(0,1,length(LF2)),LF2(:,i),linspace(0,1,length(LF)));
             LF(:,LF_d+i) = LF3(:,i)/sum(abs(LF3(:,i)));
         end
@@ -261,10 +265,12 @@ elseif mode == 1
 %     end
     
     %Convolves AE data with match filter
-    if param.post.normal
-    RefPulse = RefPulse-min(RefPulse);
-    RefPulse = RefPulse/max(RefPulse);
-    end
+%     if param.post.normal
+%     RefPulse = RefPulse-min(RefPulse);
+%     RefPulse = RefPulse/max(RefPulse);
+%     end
+RefPulse = (RefPulse - mean(RefPulse))/std(RefPulse); %New August 2019
+
     for i = 1:size(HF,1)
         for j = 1:size(HF,2)
             for k = 1:size(HF,3)

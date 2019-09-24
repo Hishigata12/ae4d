@@ -51,45 +51,89 @@ if med(1) == 1
 end
 
 if ave(1) == 1
-    HF = real(HF);
-    dims = size(HF);
-    for i = 2:4
-        if mod(ave(i),2) ~= 1
-            errordlg('Need window size for each dimension to be odd')
-            return
-        end
-    end
-    Sx = zeros(dims);
-    if length(dims) < 4
-        dims(4) = 1;
-    end
-    % H = ones(ave(2),ave(3))/(ave(2)*ave(3));
-    
-    for i = 1:dims(4)
-        Sx(:,:,:,i) = imboxfilt3(HF(:,:,:,i),ave(2:end));
-        multiWaitbar('Smoothing Signal',i/dims(4));
-    end
-    clear HF
-    HF = Sx;
-    if p(2) > 1
-        x = HF;
-        if mod(p(2),2) == 0
-            errordlg('window must be odd')
-        else
-            a = 1;
-            b = (1/p(2))*ones(1,p(2));
-            for i = 1:size(x,1)
-                for j = 1:size(x,2)
-                    for k = 1:size(x,3)
-                        x2(i,j,k,:) = filter(b,a,squeeze(x(i,j,k,:)));
+    switch param.window
+        case 'Box'
+            HF = real(HF);
+            dims = size(HF);
+            for i = 2:4
+                if mod(ave(i),2) ~= 1
+                    errordlg('Need window size for each dimension to be odd')
+                    return
+                end
+            end
+            Sx = zeros(dims);
+            if length(dims) < 4
+                dims(4) = 1;
+            end
+            % H = ones(ave(2),ave(3))/(ave(2)*ave(3));
+            
+            for i = 1:dims(4)
+                Sx(:,:,:,i) = imboxfilt3(HF(:,:,:,i),ave(2:end));
+                multiWaitbar('Smoothing Signal',i/dims(4));
+            end
+            clear HF
+            HF = Sx;
+            if p(2) > 1
+                x = HF;
+                if mod(p(2),2) == 0
+                    errordlg('window must be odd')
+                else
+                    a = 1;
+                    b = (1/p(2))*ones(1,p(2));
+                    for i = 1:size(x,1)
+                        for j = 1:size(x,2)
+                            for k = 1:size(x,3)
+                                x2(i,j,k,:) = filter(b,a,squeeze(x(i,j,k,:)));
+                            end
+                        end
+                        multiWaitbar('Smoothing in Time',i/size(x,1));
                     end
                 end
-                multiWaitbar('Smoothing in Time',i/size(x,1));
+                HF = x2;
+                clear x2;
             end
-        end
-        HF = x2;
-        clear x2;
+        case 'Tri'
+            HF = mean_filter(HF,ave,p,'Tri');
+        case '1D Gauss'
+          HF = mean_filter(HF,ave,p,'1D Gauss');
+        case 'ND Gauss'
+            HF = real(squeeze(HF));
+            dims = size(HF);
+            
+            for i = 1:dims(end)
+                if length(dims) == 4
+                    Sx(:,:,:,i) = imgaussfilt3(HF(:,:,:,i),ave(2));
+                elseif length(dims) == 3
+                    Sx(:,:,i) = imgaussfilt(HF(:,:,i),ave(2));
+                end
+                multiWaitbar('Smoothing Signal',i/dims(4));
+            end
+            if ndims(Sx) == 3
+                permute(Sx,[1 4 2 3]);
+            end
+            clear HF
+            HF = Sx;
+            if p(2) > 1
+                x = HF;
+                b = gausswin(p(2));
+                for i = 1:size(x,1)
+                    for j = 1:size(x,2)
+                        for k = 1:size(x,3)
+                            x2(i,j,k,:) = filter(b,1,squeeze(x(i,j,k,:)));
+                        end
+                    end
+                    multiWaitbar('Smoothing in Time',i/size(x,1));
+                end
+                HF = x2;
+                clear x2;
+            end
+            
+        case 'Hamming'
+            HF = mean_filter(HF,ave,p,'Hamming');
     end
+    
+    
+    
 end
 
 if in(1) == 1
@@ -170,5 +214,97 @@ else
 end
 
 multiWaitbar('CLOSEALL');
+
+function [HF] = mean_filter(HF,ave,p,win)
+    HF = real(HF);
+    dims = size(HF);
+    
+    
+    switch win
+        case 'Tri'
+            for i = 2:length(ave)
+                if ave(i) > 1
+                    b(:,i-1) = triang(ave(i));
+                end
+            end
+            b(:,4) = triang(p(2));
+        case '1D Gauss'
+            for i = 2:length(ave)
+                if ave(i) > 1
+                    b(:,i-1) = gausswin(ave(i));
+                end
+            end
+            b(:,4) = gausswin(p(2));
+        case 'Hamming'
+            for i = 2:length(ave)
+                if ave(i) > 1
+                    b(:,i-1) = hamming(ave(i));
+                end
+            end
+            b(:,4) = hamming(p(2));
+    end
+    Sx = zeros(dims);
+    if ave(2) > 1 % X Dimension
+        c = b(:,1); %X Dimension
+        for i = 1:dims(end)
+            for j = 1:dims(2)
+                for k = 1:dims(3)
+                    Sx(:,j,k,i) = filter(c,1,squeeze(HF(:,j,k,i)));
+                    %                     S = conv(c,squeeze(HF(:,j,k,i)));
+                    %                     Sx(:,j,k,i) = interp1(linspace(0,1,length(S)),S,linspace(0,1,dims(1)));
+                    %                     Sx(:,j,k,i) = circshift(Sx(:,j,k,i),floor(length(c)),1);
+                end
+            end
+            multiWaitbar(' Smoothing in X',i/dims(4));
+        end
+        HF = Sx;
+        clear Sx;
+    end
+    
+    if ave(3) > 1
+        c = b(:,2);
+        for i = 1:dims(4)
+            for j = 1:dims(1)
+                for k = 1:dims(3)
+                    Sx(j,:,k,i) = filter(c,1,squeeze(HF(j,:,k,i)));
+                end
+            end
+            multiWaitbar(' Smoothing in Y',i/dims(4));
+        end
+        HF = Sx;
+        clear Sx;
+    end
+    if ave(4) > 1
+        c = b(:,3);
+        for i = 1:dims(4)
+            for j = 1:dims(1)
+                for k = 1:dims(2)
+                    Sx(j,k,:,i) = filter(c,1,squeeze(HF(j,k,:,i)));
+                    %                       S = conv(c,squeeze(HF(j,k,:,i)));
+                    %                     Sx(j,k,:,i) = interp1(linspace(0,1,length(S)),S,linspace(0,1,dims(1)));
+                    
+                end
+            end
+            multiWaitbar(' Smoothing in Z',i/dims(4));
+        end
+        HF = Sx;
+        clear Sx
+    end
+    if p(2) > 1
+        x = HF;
+        c = b(:,4);
+        for i = 1:size(x,1)
+            for j = 1:size(x,2)
+                for k = 1:size(x,3)
+                    x2(i,j,k,:) = filter(c,1,squeeze(x(i,j,k,:)));
+                end
+            end
+            multiWaitbar('Smoothing in Time',i/size(x,1));
+        end
+        HF = x2;
+        clear x2;
+    end
+
+
 
 

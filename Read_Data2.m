@@ -8,7 +8,8 @@ if ~exist('ScanPt')
     ScanPt = 1;
 end
 ind = param.post.ind;
-if ind == 1
+sweep = param.sweep;
+if ind == 1 || sweep == 1
     froot = fname(1:end-9);
     fparam = [froot '_info.mat'];
     fLF = [froot '_LF.dat'];
@@ -83,6 +84,23 @@ if param.post.ind
             data(:,j,i) = SingleAvg(:,i+(j-1)*(numchans));
         end
     end
+elseif param.sweep
+        data2 = fread(fid,fliplr(dsize),'single');
+    dec = param.Scan.Avg;
+    leng = size(data2,1)/dec;
+    numchans = dsize(1);
+    data3 = reshape(data2,[prod(dsize),1]);
+    for i = 1:dec*numchans
+        SingleAvg(:,i) = data2(leng*(i-1)+1:leng*i);
+    end
+    numchans = 2; %Temp Hardcode
+    dec = dec/2; %Temp Hardcode
+    for i = 1:numchans
+        for j = 1:dec
+            data(:,j,i) = SingleAvg(:,i+(j-1)*(numchans));
+        end
+    end
+    data = squeeze(mean(data,2));
 else
     data = fread(fid,fliplr(dsize),'single');
 end
@@ -135,7 +153,7 @@ dsize = fread(fid,[1,n],'int32');
 blk_size = prod(dsize)*4;
 fseek(fid,blk_size*(ScanPt-1),'cof');
 data = fread(fid,[prod(dsize),1],'single');
-if param.post.ind
+if param.post.ind || param.sweep
     tsize = dsize(1)*dsize(2)*dsize(3)*dsize(4); %Slow Time, Channels, Fast Time, Averages
 else
     tsize = dsize(1)*dsize(2)*dsize(3);
@@ -147,7 +165,17 @@ end
 if param.post.ind
     data = reshape(data,[dsize(3),dsize(2),dsize(1),dsize(4)]);
     data = permute(data,[3,1,4,2]);
-        data = data(:,:,:,p);
+    data = data(:,:,:,p);
+elseif param.sweep
+    d2 = reshape(data,floor(param.Daq.HF.Samples),param.Scan.Sweep_Tpt*param.Scan.Xpt,param.Scan.Avg);
+    for i = 1:param.Scan.Xpt
+        for j = 1:param.Scan.Sweep_Tpt
+            HF(i,:,j,:) = d2(:,i+(param.Scan.Xpt*(j-1)),:);
+        end
+    end
+    data = mean(HF,4);
+    data = permute(data,[1 4 2 3]);
+    
 else
     data = reshape(data,fliplr(dsize));
     
@@ -158,5 +186,20 @@ end
 parm.dsize = dsize;
 parm.ScanPt = ScanPt;
 end
-
+%
+% figure;
+% for i = 1:size(d2,3)
+%     imagesc(squeeze(d2(:,:,i)))
+%     pause(0.5);
+% end
+% for i = 1:param.Scan.Xpt
+%     for j = 1:param.Scan.Sweep_Tpt
+%         HF(i,:,j,:) = d2(:,i+(param.Scan.Xpt*(j-1)),:);
+%     end
+% end
+% 
+% figure; for i = 1:size(HF,3)
+%     imagesc(HF2(:,:,i))
+%     pause(0.4)
+% end
 

@@ -22,7 +22,7 @@ function varargout = ae4d(varargin)
 
 % Edit the above text to modify the response to help ae4d
 
-% Last Modified by GUIDE v2.5 19-Aug-2019 16:04:30
+% Last Modified by GUIDE v2.5 27-Nov-2019 20:21:35
 
 % Begin initialization code - DO NOT EDIT
 
@@ -103,6 +103,7 @@ set(handles.tP,'String','5.5');
 set(handles.time_menu,'Value',2);
 set(handles.filter_menu,'Value',3);
 %set(handles.aeR, 'String','-9 0');
+
 
 % Update handles structure
 guidata(hObject, handles);
@@ -587,13 +588,15 @@ end
 
 param.lf_only = 1;
 param.post.ind = handles.ind_box.Value;
-
+param.sweep = handles.sweep.Value;
 
 if handles.newaescan.Value
     if param.post.ind
     [~,LF] = Read_Data2([path file],1,param);
     LFtemp = squeeze(LF(:,str2double(handles.ind_temp.String),:));
     LFall = LF;
+    elseif param.sweep
+        [~,LF] = Read_Data2([path file],1,param);
     else
     [~,LF] = Read_Data2([path file],1,param);
     end
@@ -673,7 +676,11 @@ for p = a_full%hf_num
     end
     
     %Gets Raw Data into cell array
+    if param.sweep 
+        HF1 = Read_Data2([path file],1,param,1);
+    else
     [~, HF1] = full_signal([path file],param,p); %Gets the raw data
+    end
     %         end
     if param.post.ind
 %         cuts = [str2double(handles.slow_cut1.String)*0.75, str2double(handles.slow_cut1.String), str2double(handles.slow_cut2.String), str2double(handles.slow_cut2.String) + (str2double(handles.slow_cut1.String) - str2double(handles.slow_cut1.String)*0.7)];
@@ -6957,12 +6964,15 @@ if hObject.Value
     set(handles.ind_temp,'Visible','On')
     set(handles.ind_template_text,'Visible','On')
     set(handles.ind_wave,'Visible','On');
+    set(handles.sweep,'Visible','Off');
+    set(handles.sweep,'Value',0);
 else
     set(handles.ind_manual,'Visible','Off')
     set(handles.ind_show,'Visible','Off')
     set(handles.ind_temp,'Visible','Off')
     set(handles.ind_template_text,'Visible','Off')
     set(handles.ind_wave,'Visible','Off');
+     set(handles.sweep,'Visible','On');
 end
 
 % Hint: get(hObject,'Value') returns toggle state of ind_box
@@ -7890,3 +7900,50 @@ function mean_menu_CreateFcn(hObject, eventdata, handles)
 if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
     set(hObject,'BackgroundColor','white');
 end
+
+
+
+function movietext_Callback(hObject, eventdata, handles)
+% hObject    handle to movietext (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of movietext as text
+%        str2double(get(hObject,'String')) returns contents of movietext as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function movietext_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to movietext (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
+
+
+% --- Executes on button press in sweep.
+function sweep_Callback(hObject, eventdata, handles)
+% hObject    handle to sweep (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+if hObject.Value
+    set(handles.ind_box,'Value',0);
+    set(handles.ind_box,'Visible',0);
+else
+       set(handles.ind_box,'Visible',1);
+end
+
+% Hint: get(hObject,'Value') returns toggle state of sweep
+
+
+% --- Executes during object creation, after setting all properties.
+function axes1_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to axes1 (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: place code in OpeningFcn to populate axes1

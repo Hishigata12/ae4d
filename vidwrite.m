@@ -91,31 +91,81 @@ p = 'n';
 % else
 %     h = 'hot';
 % end
-
-for i = 1:n
-    %     if handles.use_ext_fig.Value == 1
-%     if i == 1
-%         g = axes;
-        imshow(Xfilt(:,:,i)');
-%     else
-%         figure(145)
-%         squeeze(Xfilt(:,:,i))';
-%         %  pic.CData = squeeze(Xfilt(:,:,i))';
-%     end
-    %     else
-    %     imagesc(squeeze(Xfilt(:,:,i))')
-    %     end
-    title([p ' = ' num2str(i)])
-    colormap(h);
-    if ~isempty(aeR)
-        caxis(aeR)
+if handles.showlf.Value
+    LF = evalin('base','LF');
+    chan = str2double(handles.LF_chan.String);
+    param = evalin('base','param');
+    lf_ax = linspace(0,param.Duration,length(LF));
+    LF = LF(:,chan);
+    
+    %build time axis stuff
+    if handles.use_chop.Value
+        ax = evalin('base','ax_c');
+    else
+        ax = evalin('base','ax');
     end
-    frame = getframe;
+    tR = str2num(handles.tR.String);
+    if length(tR) == 1
+        tR = [tR tR];
+    end
+    
+    dims = size(Xfilt);
+    
+    if length(dims) == 3
+        q.t = 1:dims(3);
+    else
+        q.t = 1;
+    end
+    
+    tInd = q.t(find(ax.stime >= tR(1)):find(ax.stime >= tR(2)));
+    
+    tP = str2double(handles.tP.String);
+    
+    tpoint = find(ax.stime >= tP,1);
+    
+    lfInd = find(lf_ax >= tR(1)):find(lf_ax >= tR(2));
+    lfdif = length(lfInd)/length(tInd);
+    
+     for k = tInd
+     plot(lf_ax(lfInd),LF(lfInd),'w')
+            hold('on')
+%             xlim([tR(1) tR(2)]);
+            %  plot(handles.axes4,lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
+%             plot(handles.axes4,lf_ax(round(k*lfdif)),LF(round(k*lfdif)),'ro','MarkerFaceColor','r')
+            plot(lf_ax(lfInd(round(k*lfdif))),LF(lfInd(round(k*lfdif))),'ro','MarkerFaceColor','r')
+            hold('off');
+            set(gca,'Color','k');
+             frame = getframe;
     writeVideo(v,frame);
+     end
+else
+    for i = 1:n
+        %     if handles.use_ext_fig.Value == 1
+        %     if i == 1
+        %         g = axes;
+        imshow(Xfilt(:,:,i)');
+        %     else
+        %         figure(145)
+        %         squeeze(Xfilt(:,:,i))';
+        %         %  pic.CData = squeeze(Xfilt(:,:,i))';
+        %     end
+        %     else
+        %     imagesc(squeeze(Xfilt(:,:,i))')
+        %     end
+        title([p ' = ' num2str(i)])
+        colormap(h);
+        if ~isempty(handles.movietext.String)
+            text(1,15,handles.movietext.String,'Color','white','FontSize',14)
+        end
+        if ~isempty(aeR)
+            caxis(aeR)
+        end
+        frame = getframe;
+        writeVideo(v,frame);
+    end
 end
-
 close(v)
-% 
+%
 % if exist('x') == 0
 %     x(1) = 1;
 %     x(2) = size(y,1);

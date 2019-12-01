@@ -61,6 +61,11 @@ fspec = '* %d percent complete \n*';
 
 if mode == 0
     
+    if param.sweep
+        Fs_us = param.Scan.Sweep_Tpt/param.Scan.Duration_ms*1000;
+        f_us = linspace(0,Fs_us,param.Scan.Sweep_Tpt);
+        L_us = length(f_us);
+    end
     Fc1 = find(f_us > c(1),1);%/Fs_us*2;
     Fc2 = find(f_us > c(2),1);%Fs_us*2;
     
